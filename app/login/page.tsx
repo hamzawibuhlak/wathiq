@@ -37,8 +37,7 @@ export default function LoginPage() {
     }
 
     localStorage.setItem('user', JSON.stringify(user));
-    localStorage.setItem('token', token);
-    document.cookie = `token=${token}; path=/; SameSite=Lax; Secure`;
+    document.cookie = `access_token=${token}; path=/; SameSite=Lax; Secure`;
 
 
     setUser(user);
