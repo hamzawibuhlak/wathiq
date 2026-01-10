@@ -4,26 +4,18 @@ import type { NextRequest } from 'next/server';
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // 🔹 تجاهل أي طلب API / Axios
-  const isApiRequest =
-    request.headers.get('accept')?.includes('application/json');
-
-  if (isApiRequest) {
-    return NextResponse.next();
-  }
-
   const publicPaths = ['/login'];
-  const isPublicPath = publicPaths.some((path) =>
-    pathname.startsWith(path)
-  );
+  const isPublicPath = publicPaths.includes(pathname);
 
   const token = request.cookies.get('access_token')?.value;
 
-  if (!isPublicPath && !token && pathname !== '/') {
+  // غير مسجل دخول → رجّعه لصفحة الدخول
+  if (!token && !isPublicPath) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  if (isPublicPath && token) {
+  // مسجل دخول ويحاول يدخل login
+  if (token && isPublicPath) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
@@ -31,7 +23,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|favicon.ico).*)',
-  ],
+  matcher: ['/((?!api|_next|favicon.ico).*)'],
 };

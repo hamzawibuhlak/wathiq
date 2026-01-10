@@ -1,26 +1,23 @@
 import { create } from 'zustand';
-import type { User } from '@/types';
 
 interface AuthState {
-  user: User | null;
-  isAuthenticated: boolean;
-  setUser: (user: User | null) => void;
+  user: any | null;
+  setUser: (user: any) => void;
   logout: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
-  isAuthenticated: false,
-  setUser: (user) =>
-    set({
-      user,
-      isAuthenticated: !!user,
-    }),
+
+  setUser: (user) => set({ user }),
+
   logout: () => {
-    set({ user: null, isAuthenticated: false });
-    // Only clear user data, token is in HttpOnly cookie
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('user');
-    }
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+
+    document.cookie =
+      'access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+
+    set({ user: null });
   },
 }));

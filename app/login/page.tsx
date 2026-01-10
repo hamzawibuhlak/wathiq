@@ -20,43 +20,32 @@ export default function LoginPage() {
   setLoading(true);
 
   try {
-    const response = await authService.login(email, password);
+  const response = await authService.login(email, password);
 
-    const user =
-      response.data?.user ||
-      response.data?.data?.user;
+  const user = response.data.user;
+  const token = response.data.access_token;
 
-    const token =
-      response.data?.access_token ||
-      response.data?.token ||
-      response.data?.data?.access_token ||
-      response.data?.data?.token;
-
-    if (!user || !token) {
-      throw new Error('Invalid login response');
-    }
-
-    localStorage.setItem('user', JSON.stringify(user));
-    document.cookie = `access_token=${token}; path=/; SameSite=Lax; Secure`;
-
-
-    setUser(user);
-
-    if (user.role === 'Client' || user.role?.name === 'Client') {
-      router.push('/client/dashboard');
-    } else {
-      router.push('/dashboard');
-    }
-  } catch (err: any) {
-    console.error('Login error:', err);
-    setError(
-      err.response?.data?.message ||
-      err.message ||
-      'فشل تسجيل الدخول. يرجى التحقق من البيانات.'
-    );
-  } finally {
-    setLoading(false);
+  if (!user || !token) {
+    throw new Error('Invalid login response');
   }
+    // حفظ التوكن في كوكي (لـ middleware)
+  document.cookie = `access_token=${token}; path=/; SameSite=Lax`;
+  // حفظ المستخدم في localStorage
+  localStorage.setItem('user', JSON.stringify(user));
+
+  setUser(user);
+
+  router.push('/dashboard');
+} catch (err: any) {
+  console.error(err);
+  setError(
+    err.response?.data?.message ||
+      'فشل تسجيل الدخول'
+  );
+} finally {
+  setLoading(false);
+}
+
 };
 
   return (

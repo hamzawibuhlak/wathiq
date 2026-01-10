@@ -4,12 +4,12 @@ import type { Conversation, Message } from '@/types';
 export const chatService = {
   // Conversations
   async getConversations(): Promise<Conversation[]> {
-    const response = await apiClient.get<Conversation[]>('/conversations');
+    const response = await apiClient.get<Conversation[]>('/api/conversations');
     return response.data;
   },
 
   async getConversation(id: string): Promise<Conversation> {
-    const response = await apiClient.get<Conversation>(`/conversations/${id}`);
+    const response = await apiClient.get<Conversation>(`/api/conversations/${id}`);
     return response.data;
   },
 
@@ -17,7 +17,7 @@ export const chatService = {
     participantIds: string[];
     caseId?: string;
   }): Promise<Conversation> {
-    const response = await apiClient.post<Conversation>('/conversations', data);
+    const response = await apiClient.post<Conversation>('/api/conversations', data);
     return response.data;
   },
 

@@ -15,18 +15,13 @@ export default function DashboardLayout({
   const { user, setUser } = useAuthStore();
 
   useEffect(() => {
-    // Check if user data exists in localStorage
-    const storedUser = localStorage.getItem('user');
-
-    if (!storedUser) {
-      router.push('/login');
-      return;
-    }
-
     if (!user) {
-      setUser(JSON.parse(storedUser));
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
     }
-  }, [user, setUser, router]);
+  }, [user, setUser]);
 
   if (!user) {
     return (
@@ -44,7 +39,9 @@ export default function DashboardLayout({
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         <TopBar />
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto p-6">
+          {children}
+        </main>
       </div>
     </div>
   );
