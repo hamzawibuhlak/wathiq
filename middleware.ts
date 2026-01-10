@@ -4,12 +4,20 @@ import type { NextRequest } from 'next/server';
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // 🔹 تجاهل أي طلب API / Axios
+  const isApiRequest =
+    request.headers.get('accept')?.includes('application/json');
+
+  if (isApiRequest) {
+    return NextResponse.next();
+  }
+
   const publicPaths = ['/login'];
   const isPublicPath = publicPaths.some((path) =>
     pathname.startsWith(path)
   );
 
-  const token = request.cookies.get('token')?.value;
+  const token = request.cookies.get('access_token')?.value;
 
   if (!isPublicPath && !token && pathname !== '/') {
     return NextResponse.redirect(new URL('/login', request.url));
@@ -23,5 +31,7 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico).*)',
+  ],
 };
