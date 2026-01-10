@@ -15,33 +15,48 @@ export default function LoginPage() {
   const setUser = useAuthStore((state) => state.setUser);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+  e.preventDefault();
+  setError('');
+  setLoading(true);
 
-    try {
-      const response = await authService.login(email, password);
-      const { user, access_token } = response.data;
+  try {
+    const response = await authService.login(email, password);
 
-      localStorage.setItem('user', JSON.stringify(user));
-      localStorage.setItem('token', access_token);
+    const user =
+      response.data?.user ||
+      response.data?.data?.user;
 
-      setUser(user);
+    const token =
+      response.data?.access_token ||
+      response.data?.token ||
+      response.data?.data?.access_token ||
+      response.data?.data?.token;
 
-      if (user.role === 'Client' || user.role?.name === 'Client') {
-        router.push('/client/dashboard');
-      } else {
-        router.push('/dashboard');
-      }
-    } catch (err: any) {
-      setError(
-        err.response?.data?.message ||
-          'فشل تسجيل الدخول. يرجى التحقق من البيانات.'
-      );
-    } finally {
-      setLoading(false);
+    if (!user || !token) {
+      throw new Error('Invalid login response');
     }
-  };
+
+    localStorage.setItem('user', JSON.stringify(user));
+    localStorage.setItem('token', token);
+
+    setUser(user);
+
+    if (user.role === 'Client' || user.role?.name === 'Client') {
+      router.push('/client/dashboard');
+    } else {
+      router.push('/dashboard');
+    }
+  } catch (err: any) {
+    console.error('Login error:', err);
+    setError(
+      err.response?.data?.message ||
+      err.message ||
+      'فشل تسجيل الدخول. يرجى التحقق من البيانات.'
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div
