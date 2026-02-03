@@ -112,6 +112,7 @@ export class HearingsService {
                             id: true,
                             title: true,
                             caseNumber: true,
+                            opposingParty: true,
                             client: { select: { id: true, name: true } },
                         },
                     },
@@ -127,6 +128,7 @@ export class HearingsService {
                         select: {
                             id: true,
                             name: true,
+                            avatar: true,
                         },
                     },
                 },
@@ -260,8 +262,16 @@ export class HearingsService {
                         id: true,
                         title: true,
                         caseNumber: true,
+                        opposingParty: true,
                         client: { select: { id: true, name: true, phone: true } },
-                        assignedTo: { select: { id: true, name: true } },
+                        assignedTo: { select: { id: true, name: true, avatar: true } },
+                    },
+                },
+                assignedTo: {
+                    select: {
+                        id: true,
+                        name: true,
+                        avatar: true,
                     },
                 },
             },

@@ -27,8 +27,8 @@ export function HearingCard({ hearing, onDelete }: HearingCardProps) {
     const date = new Date(hearing.hearingDate);
     const isToday = new Date().toDateString() === date.toDateString();
 
-    // Get lawyer info from case.assignedTo
-    const lawyer = hearing.case?.assignedTo;
+    // Get lawyer info from hearing.assignedTo (direct) or fallback to case.assignedTo
+    const lawyer = (hearing as any).assignedTo || hearing.case?.assignedTo;
 
     return (
         <div className={cn(
