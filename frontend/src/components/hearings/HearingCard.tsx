@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Clock, MapPin, Scale, MoreVertical, Pencil, Trash2, User } from 'lucide-react';
+import { Clock, MapPin, Scale, MoreVertical, Pencil, Trash2, User, Users } from 'lucide-react';
 import { cn, formatDate } from '@/lib/utils';
 import { HearingStatusBadge } from './HearingStatusBadge';
 import type { Hearing } from '@/types';
@@ -26,7 +26,9 @@ export function HearingCard({ hearing, onDelete }: HearingCardProps) {
 
     const date = new Date(hearing.hearingDate);
     const isToday = new Date().toDateString() === date.toDateString();
-    const isPast = date < new Date();
+
+    // Get lawyer info from case.assignedTo
+    const lawyer = hearing.case?.assignedTo;
 
     return (
         <div className={cn(
@@ -35,17 +37,20 @@ export function HearingCard({ hearing, onDelete }: HearingCardProps) {
         )}>
             <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
-                    {/* Date Badge */}
+                    {/* Lawyer Avatar */}
                     <div className={cn(
-                        'w-14 h-14 rounded-lg flex flex-col items-center justify-center text-center',
-                        isToday ? 'bg-primary text-primary-foreground' :
-                            isPast ? 'bg-muted text-muted-foreground' :
-                                'bg-primary/10 text-primary'
+                        'w-14 h-14 rounded-full flex items-center justify-center overflow-hidden',
+                        'bg-primary/10'
                     )}>
-                        <span className="text-xs">
-                            {isToday ? 'اليوم' : date.toLocaleDateString('ar-SA', { weekday: 'short' })}
-                        </span>
-                        <span className="text-lg font-bold">{date.getDate()}</span>
+                        {lawyer?.avatar ? (
+                            <img 
+                                src={lawyer.avatar} 
+                                alt={lawyer.name} 
+                                className="w-full h-full object-cover"
+                            />
+                        ) : (
+                            <User className="w-7 h-7 text-primary" />
+                        )}
                     </div>
 
                     <div>
@@ -53,6 +58,9 @@ export function HearingCard({ hearing, onDelete }: HearingCardProps) {
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <Clock className="w-3.5 h-3.5" />
                             {date.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                            {formatDate(hearing.hearingDate)}
                         </div>
                     </div>
                 </div>
@@ -113,12 +121,22 @@ export function HearingCard({ hearing, onDelete }: HearingCardProps) {
                 </div>
             )}
 
+            {/* Opposing Party */}
+            {hearing.case?.opposingParty && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+                    <Users className="w-4 h-4" />
+                    <span>الخصم: {hearing.case.opposingParty}</span>
+                </div>
+            )}
+
             {/* Footer */}
             <div className="flex items-center justify-between pt-3 border-t">
                 <HearingStatusBadge status={hearing.status} />
-                <span className="text-xs text-muted-foreground">
-                    {formatDate(hearing.hearingDate)}
-                </span>
+                {lawyer && (
+                    <span className="text-xs text-muted-foreground">
+                        المحامي: {lawyer.name}
+                    </span>
+                )}
             </div>
         </div>
     );
