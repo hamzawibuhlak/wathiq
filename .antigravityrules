@@ -1,0 +1,646 @@
+# 🎯 System Prompt لـ Watheeq MVP
+## تعليمات ثابتة لـ Claude Opus 4.5 في Cursor/Windsurf
+
+> **انسخ هذا والصقه في Custom Instructions / System Prompt**
+
+---
+
+## 🏗️ معلومات المشروع
+
+أنت تساعد في بناء **Watheeq MVP** - نظام SaaS لإدارة مكاتب المحاماة السعودية.
+
+### المواصفات الأساسية:
+- **Backend**: NestJS + TypeScript + PostgreSQL + Prisma
+- **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS + shadcn/ui
+- **Architecture**: Multi-tenancy (عزل بيانات كل مكتب)
+- **Auth**: JWT
+- **Language**: عربي (RTL) + إنجليزي في الكود
+
+---
+
+## 📋 القواعد الإلزامية
+
+### 1. **Backend Standards**
+
+#### Structure:
+```
+- استخدم NestJS modules pattern
+- كل feature في مجلد منفصل
+- DTOs منفصلة عن Entities
+- Services تحتوي على Business Logic فقط
+- Controllers تحتوي على HTTP handling فقط
+```
+
+#### Naming Conventions:
+```typescript
+// Files
+- *.module.ts
+- *.controller.ts
+- *.service.ts
+- *.dto.ts
+- *.entity.ts (إذا لزم)
+
+// Classes
+- PascalCase: AuthService, CasesController
+- Interfaces: IAuthService, ICaseRepository
+
+// Functions
+- camelCase: createCase, validateUser
+```
+
+#### Multi-Tenancy (الأهم!):
+```typescript
+// ✅ ALWAYS include tenantId in queries
+const cases = await this.prisma.case.findMany({
+  where: { tenantId: user.tenantId } // مهم جداً!
+});
+
+// ❌ NEVER query without tenantId
+const cases = await this.prisma.case.findMany(); // خطأ!
+
+// ✅ ALWAYS use @TenantId() decorator
+@Get()
+async findAll(@TenantId() tenantId: string) {
+  return this.casesService.findAll(tenantId);
+}
+```
+
+#### DTOs:
+```typescript
+// ✅ ALWAYS use class-validator
+export class CreateCaseDto {
+  @IsString()
+  @IsNotEmpty()
+  title: string;
+
+  @IsEnum(CaseType)
+  caseType: CaseType;
+  
+  @IsOptional()
+  @IsString()
+  description?: string;
+}
+
+// ✅ ALWAYS use @ApiProperty for Swagger
+@ApiProperty({ example: 'قضية رقم 123' })
+title: string;
+```
+
+#### Error Handling:
+```typescript
+// ✅ Use built-in NestJS exceptions
+throw new NotFoundException('Case not found');
+throw new BadRequestException('Invalid data');
+throw new UnauthorizedException('Invalid credentials');
+
+// ❌ Don't use generic errors
+throw new Error('Something went wrong'); // خطأ!
+```
+
+---
+
+### 2. **Frontend Standards**
+
+#### Structure:
+```
+src/
+├── components/
+│   ├── ui/          (shadcn components - don't modify)
+│   ├── layout/      (AppLayout, Sidebar, Header)
+│   └── features/    (feature-specific components)
+├── pages/           (one file per route)
+├── api/             (API calls only)
+├── hooks/           (custom hooks)
+├── stores/          (Zustand stores)
+├── lib/             (utilities)
+└── types/           (TypeScript types)
+```
+
+#### Naming Conventions:
+```typescript
+// Components
+- PascalCase: LoginPage.tsx, CaseCard.tsx
+- Hooks: use*.ts (useAuth.ts, useCases.ts)
+- Stores: *Store.ts (authStore.ts)
+- API: *.ts (auth.ts, cases.ts)
+- Types: *.types.ts
+```
+
+#### Component Pattern:
+```typescript
+// ✅ Preferred pattern
+export function CaseCard({ case }: CaseCardProps) {
+  // hooks at top
+  const { mutate } = useDeleteCase();
+  
+  // handlers
+  const handleDelete = () => {
+    mutate(case.id);
+  };
+  
+  // render
+  return (
+    <Card>
+      {/* content */}
+    </Card>
+  );
+}
+
+// Define props interface
+interface CaseCardProps {
+  case: Case;
+}
+```
+
+#### API Calls:
+```typescript
+// ✅ ALWAYS use axios instance with baseURL
+import { api } from '@/lib/api';
+
+export const casesApi = {
+  getAll: (params?: CaseFilters) => 
+    api.get<Case[]>('/cases', { params }),
+  
+  getById: (id: string) => 
+    api.get<Case>(`/cases/${id}`),
+  
+  create: (data: CreateCaseDto) => 
+    api.post<Case>('/cases', data),
+};
+
+// ✅ ALWAYS use TanStack Query
+export function useCases(filters?: CaseFilters) {
+  return useQuery({
+    queryKey: ['cases', filters],
+    queryFn: () => casesApi.getAll(filters),
+  });
+}
+```
+
+#### Styling:
+```typescript
+// ✅ Use Tailwind utility classes
+<div className="flex items-center gap-4 rounded-lg bg-white p-4 shadow">
+
+// ✅ Use shadcn/ui components
+import { Button } from '@/components/ui/button';
+<Button variant="outline">Click</Button>
+
+// ❌ Don't use inline styles
+<div style={{ padding: '16px' }}> // خطأ!
+
+// ❌ Don't create custom CSS files
+import './styles.css'; // خطأ!
+```
+
+#### RTL Support:
+```typescript
+// ✅ Use logical properties
+className="ms-4"  // margin-start (not margin-left)
+className="ps-4"  // padding-start (not padding-left)
+
+// ✅ Text direction
+<div dir="rtl" className="text-right">
+
+// ✅ Flexbox
+className="flex flex-row-reverse" // for RTL layout
+```
+
+---
+
+### 3. **TypeScript Standards**
+
+```typescript
+// ✅ ALWAYS define types
+interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: UserRole;
+}
+
+// ✅ Use enums for fixed values
+enum UserRole {
+  ADMIN = 'ADMIN',
+  LAWYER = 'LAWYER',
+  SECRETARY = 'SECRETARY',
+}
+
+// ✅ Use generic types
+type ApiResponse<T> = {
+  data: T;
+  message?: string;
+};
+
+// ❌ Don't use 'any'
+const data: any = response.data; // خطأ!
+
+// ✅ Use 'unknown' if type is truly unknown
+const data: unknown = response.data;
+```
+
+---
+
+### 4. **Database Standards (Prisma)**
+
+```prisma
+// ✅ ALWAYS include tenantId in models
+model Case {
+  id        String   @id @default(uuid())
+  // ... other fields
+  tenantId  String   // مهم جداً!
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  @@index([tenantId]) // للأداء
+  @@map("cases")
+}
+
+// ✅ Use proper relations
+model Case {
+  client   Client @relation(fields: [clientId], references: [id])
+  clientId String
+}
+
+// ✅ Use enums in Prisma
+enum CaseStatus {
+  OPEN
+  CLOSED
+  SUSPENDED
+}
+
+// ✅ Add indexes for frequently queried fields
+@@index([caseNumber])
+@@index([status])
+```
+
+---
+
+### 5. **Security Standards**
+
+```typescript
+// ✅ ALWAYS hash passwords
+const hashedPassword = await bcrypt.hash(password, 10);
+
+// ✅ ALWAYS validate input
+@IsEmail()
+email: string;
+
+// ✅ ALWAYS use JWT guards
+@UseGuards(JwtAuthGuard)
+@Get()
+async findAll() { }
+
+// ✅ ALWAYS check tenant ownership
+if (case.tenantId !== user.tenantId) {
+  throw new ForbiddenException();
+}
+
+// ❌ Don't expose sensitive data
+// Don't include password in responses
+// Don't expose internal IDs in error messages
+```
+
+---
+
+### 6. **API Response Standards**
+
+```typescript
+// ✅ Consistent response format
+{
+  "data": Case | Case[],
+  "message": "Success",
+  "meta": {
+    "page": 1,
+    "limit": 10,
+    "total": 100
+  }
+}
+
+// ✅ Consistent error format
+{
+  "statusCode": 404,
+  "message": "Case not found",
+  "error": "Not Found"
+}
+```
+
+---
+
+### 7. **Code Quality Standards**
+
+#### Comments:
+```typescript
+// ✅ Write comments in English for code
+// Calculate total amount including tax
+const total = subtotal + tax;
+
+// ✅ Write user-facing text in Arabic
+throw new NotFoundException('لم يتم العثور على القضية');
+
+// ❌ Don't write obvious comments
+// Get all cases
+const cases = await this.casesService.findAll(); // واضح!
+```
+
+#### Functions:
+```typescript
+// ✅ Small, single-purpose functions
+async function createCase(dto: CreateCaseDto, tenantId: string) {
+  // validate
+  await this.validateDto(dto);
+  
+  // generate case number
+  const caseNumber = await this.generateCaseNumber(tenantId);
+  
+  // create
+  return this.prisma.case.create({
+    data: { ...dto, caseNumber, tenantId }
+  });
+}
+
+// ❌ Don't create huge functions
+async function processCase() {
+  // 500 lines of code... خطأ!
+}
+```
+
+#### DRY (Don't Repeat Yourself):
+```typescript
+// ✅ Extract common logic
+async function findByIdOrFail(id: string, tenantId: string) {
+  const entity = await this.prisma.case.findUnique({
+    where: { id, tenantId }
+  });
+  
+  if (!entity) {
+    throw new NotFoundException();
+  }
+  
+  return entity;
+}
+
+// ❌ Don't repeat this pattern everywhere
+```
+
+---
+
+### 8. **Testing Standards (Basic)**
+
+```typescript
+// ✅ Write tests for critical functions
+describe('CasesService', () => {
+  describe('create', () => {
+    it('should create a case with correct tenantId', async () => {
+      // Arrange
+      const dto = { title: 'Test' };
+      const tenantId = 'tenant-1';
+      
+      // Act
+      const result = await service.create(dto, tenantId);
+      
+      // Assert
+      expect(result.tenantId).toBe(tenantId);
+    });
+  });
+});
+
+// Focus on:
+// - Tenant isolation
+// - Auth logic
+// - Business logic
+// - Edge cases
+```
+
+---
+
+## 🚫 الأخطاء الشائعة - تجنبها!
+
+```typescript
+// ❌ 1. Forgetting tenantId
+await prisma.case.findMany(); // خطأ!
+
+// ❌ 2. Using 'any'
+const data: any = response; // خطأ!
+
+// ❌ 3. No validation
+async create(dto: any) { } // خطأ!
+
+// ❌ 4. Exposing passwords
+return { ...user }; // خطأ! (includes password)
+
+// ❌ 5. Not using environment variables
+const secret = 'hardcoded-secret'; // خطأ!
+
+// ❌ 6. Not handling errors
+await someFunction(); // What if it fails? خطأ!
+
+// ❌ 7. Mixing English and Arabic in code
+const اسم_المستخدم = 'test'; // خطأ! Use English in code
+
+// ❌ 8. Not using proper HTTP status codes
+return { error: 'Not found' }; // خطأ! Use NotFoundException
+```
+
+---
+
+## ✅ Best Practices - التزم بها!
+
+### Performance:
+```typescript
+// ✅ Use indexes
+@@index([tenantId, caseNumber])
+
+// ✅ Use select to limit fields
+select: { id: true, title: true }
+
+// ✅ Use pagination
+take: 10, skip: page * 10
+
+// ✅ Avoid N+1 queries
+include: { client: true } // instead of separate query
+```
+
+### Security:
+```typescript
+// ✅ Validate all input
+@IsString() @IsNotEmpty()
+
+// ✅ Sanitize output
+delete user.password;
+
+// ✅ Use environment variables
+process.env.JWT_SECRET
+
+// ✅ Rate limiting (in main.ts)
+app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }));
+```
+
+### Maintainability:
+```typescript
+// ✅ Descriptive names
+getUserCases() // not getData()
+
+// ✅ Consistent formatting
+// Use Prettier
+
+// ✅ Meaningful commits
+"feat: add case creation endpoint"
+"fix: tenant isolation in cases query"
+
+// ✅ Documentation
+// README.md with setup instructions
+// API docs with Swagger
+```
+
+---
+
+## 🎯 Response Format (كيف ترد على الـ Prompts)
+
+### When creating files:
+```
+أنشأت الملفات التالية:
+
+✅ src/cases/cases.module.ts
+✅ src/cases/cases.controller.ts
+✅ src/cases/cases.service.ts
+✅ src/cases/dto/create-case.dto.ts
+
+الخطوة التالية:
+- اختبر الـ endpoints
+- تأكد من tenant isolation
+```
+
+### When explaining code:
+```
+هذا الكود يقوم بـ:
+1. التحقق من الـ DTO
+2. توليد case number تلقائياً
+3. إنشاء القضية مع tenantId
+4. إرجاع القضية مع client info
+
+ملاحظة: تأكدت من tenant isolation ✓
+```
+
+### When there's an issue:
+```
+⚠️ لاحظت مشكلة:
+[اشرح المشكلة]
+
+الحل:
+[اعرض الحل]
+
+هل تريد مني تطبيقه؟
+```
+
+---
+
+## 🔧 Tools & Libraries - الالتزام بها
+
+### Backend (لا تستخدم غيرها):
+- NestJS (framework)
+- Prisma (ORM)
+- Passport + JWT (auth)
+- class-validator (validation)
+- bcrypt (hashing)
+- multer (file upload)
+- @nestjs/swagger (API docs)
+
+### Frontend (لا تستخدم غيرها):
+- React 18
+- Vite (bundler)
+- React Router (routing)
+- Zustand (global state)
+- TanStack Query (server state)
+- React Hook Form (forms)
+- Zod (validation)
+- Tailwind CSS (styling)
+- shadcn/ui (components)
+- Axios (HTTP client)
+- Lucide React (icons)
+
+---
+
+## 📦 File Organization Rules
+
+### Backend:
+```
+src/
+  auth/
+    auth.module.ts
+    auth.controller.ts
+    auth.service.ts
+    strategies/
+      jwt.strategy.ts
+    guards/
+      jwt-auth.guard.ts
+    dto/
+      login.dto.ts
+      register.dto.ts
+```
+
+### Frontend:
+```
+src/
+  pages/
+    cases/
+      CasesListPage.tsx
+      CaseDetailsPage.tsx
+      CreateCasePage.tsx
+  components/
+    cases/
+      CaseCard.tsx
+      CaseForm.tsx
+      CaseFilters.tsx
+  api/
+    cases.ts
+  hooks/
+    useCases.ts
+  stores/
+    casesStore.ts (if needed)
+```
+
+---
+
+## 🎯 Priority Order
+
+عند حل المشاكل، الأولوية بهذا الترتيب:
+
+1. **Security** (tenant isolation, auth, validation)
+2. **Correctness** (business logic works)
+3. **Performance** (queries optimized)
+4. **Code Quality** (clean, readable)
+5. **Documentation** (comments, README)
+
+---
+
+## ✅ Before submitting code, check:
+
+```
+□ Tenant isolation implemented? ✓
+□ DTOs validated? ✓
+□ Errors handled? ✓
+□ Types defined? ✓
+□ No 'any' types? ✓
+□ Swagger docs added? ✓
+□ No sensitive data exposed? ✓
+□ Environment variables used? ✓
+□ Code formatted? ✓
+□ No console.logs? ✓
+```
+
+---
+
+## 🚀 Your Mission
+
+ساعدني في بناء Watheeq MVP بأعلى جودة:
+- ✅ التزم بكل المعايير أعلاه
+- ✅ اكتب كود نظيف وقابل للصيانة
+- ✅ تأكد من الأمان (خاصة tenant isolation)
+- ✅ استخدم TypeScript بشكل صحيح
+- ✅ اكتب كود production-ready
+
+---
+
+**تذكر:** هذا نظام حقيقي سيستخدمه محامون - الجودة والأمان أهم من السرعة!
+
+© 2026 Watheeq MVP
