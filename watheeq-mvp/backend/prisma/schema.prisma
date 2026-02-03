@@ -1,0 +1,569 @@
+// =====================================================
+// Watheeq MVP - Prisma Schema
+// Multi-tenant Law Office Management System
+// =====================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =====================================================
+// ENUMS
+// =====================================================
+
+enum UserRole {
+  OWNER
+  ADMIN
+  LAWYER
+  SECRETARY
+}
+
+enum CaseStatus {
+  OPEN
+  IN_PROGRESS
+  SUSPENDED
+  CLOSED
+  ARCHIVED
+}
+
+enum CaseType {
+  CRIMINAL
+  CIVIL
+  COMMERCIAL
+  LABOR
+  FAMILY
+  ADMINISTRATIVE
+  REAL_ESTATE
+  OTHER
+}
+
+enum HearingStatus {
+  SCHEDULED
+  COMPLETED
+  POSTPONED
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  PENDING    // مستحق (تاريخ مستقبلي)
+  SENT
+  PAID
+  OVERDUE    // متأخر
+  CANCELLED
+}
+
+enum CasePriority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum DocumentType {
+  CONTRACT
+  POWER_OF_ATTORNEY
+  COURT_DOCUMENT
+  COURT_ORDER
+  PLEADING
+  EVIDENCE
+  CORRESPONDENCE
+  INVOICE
+  OTHER
+}
+
+// =====================================================
+// TENANT (Law Office)
+// =====================================================
+
+model Tenant {
+  id          String   @id @default(uuid())
+  name        String   // اسم المكتب
+  nameEn      String?  // English name (optional)
+  email       String   @unique
+  phone       String?
+  address     String?
+  city        String?
+  licenseNumber String? // رقم الترخيص
+  taxNumber   String?  // الرقم الضريبي
+  commercialReg String? // السجل التجاري
+  website     String?  // الموقع الإلكتروني
+  logo        String?
+  isActive    Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+
+  // Relations
+  users          User[]
+  clients        Client[]
+  cases          Case[]
+  hearings       Hearing[]
+  documents      Document[]
+  invoices       Invoice[]
+  emailTemplates EmailTemplate[]
+  emailLogs      EmailLog[]
+  smsLogs        SmsLog[]
+  notifications  Notification[]
+  rolePermissions RolePermission[]
+  activityLogs   ActivityLog[]
+
+  @@map("tenants")
+}
+
+// =====================================================
+// USER
+// =====================================================
+
+model User {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  password    String
+  name        String   // الاسم الكامل
+  phone       String?
+  role        UserRole @default(LAWYER)
+  avatar      String?
+  isActive    Boolean  @default(true)
+  lastLoginAt DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Multi-tenancy
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Relations
+  assignedCases Case[]    @relation("AssignedLawyer")
+  createdCases  Case[]    @relation("CaseCreator")
+  assignedHearings Hearing[] @relation("HearingLawyer")
+  createdHearings  Hearing[] @relation("HearingCreator")
+  documents     Document[]
+  createdInvoices Invoice[]
+  visibleClients Client[] @relation("ClientVisibility") // العملاء المرئيين لهذا المستخدم
+  notifications Notification[]
+  activityLogs  ActivityLog[]
+
+  @@index([tenantId])
+  @@index([email])
+  @@map("users")
+}
+
+// =====================================================
+// CLIENT
+// =====================================================
+
+model Client {
+  id              String   @id @default(uuid())
+  name            String   // اسم العميل
+  email           String?
+  phone           String
+  nationalId      String?  // رقم الهوية
+  companyName     String?  // اسم الشركة (للعملاء التجاريين)
+  commercialReg   String?  // السجل التجاري
+  address         String?
+  city            String?
+  notes           String?
+  isActive        Boolean  @default(true)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Multi-tenancy
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Relations
+  cases       Case[]
+  hearings    Hearing[]
+  invoices    Invoice[]
+  visibleToUsers User[] @relation("ClientVisibility") // المستخدمين الذين يمكنهم رؤية هذا العميل
+
+  @@index([tenantId])
+  @@index([phone])
+  @@index([nationalId])
+  @@map("clients")
+}
+
+// =====================================================
+// CASE (القضية)
+// =====================================================
+
+model Case {
+  id              String      @id @default(uuid())
+  caseNumber      String      // رقم القضية (auto-generated)
+  title           String      // عنوان القضية
+  description     String?     // وصف القضية
+  caseType        CaseType    @default(OTHER)
+  status          CaseStatus  @default(OPEN)
+  courtName       String?     // اسم المحكمة
+  courtCaseNumber String?     // رقم القضية في المحكمة
+  filingDate      DateTime?   // تاريخ رفع الدعوى
+  nextHearingDate DateTime?   // تاريخ الجلسة القادمة
+  notes           String?
+  priority        CasePriority @default(MEDIUM)  // أولوية القضية
+  opposingParty   String?     // الخصم
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  // Multi-tenancy
+  tenantId        String
+  tenant          Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Relations
+  clientId        String
+  client          Client      @relation(fields: [clientId], references: [id])
+  
+  assignedToId    String?
+  assignedTo      User?       @relation("AssignedLawyer", fields: [assignedToId], references: [id])
+  
+  createdById     String
+  createdBy       User        @relation("CaseCreator", fields: [createdById], references: [id])
+
+  hearings        Hearing[]
+  documents       Document[]
+  invoices        Invoice[]
+
+  @@unique([tenantId, caseNumber])
+  @@index([tenantId])
+  @@index([status])
+  @@index([clientId])
+  @@index([assignedToId])
+  @@map("cases")
+}
+
+// =====================================================
+// HEARING (الجلسة)
+// =====================================================
+
+model Hearing {
+  id          String   @id @default(uuid())
+  
+  caseId      String
+  case        Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  
+  clientId    String?
+  client      Client?  @relation(fields: [clientId], references: [id])
+  
+  // المحامي المسؤول عن الجلسة
+  assignedToId String?
+  assignedTo   User?    @relation("HearingLawyer", fields: [assignedToId], references: [id])
+  
+  // من أنشأ الجلسة
+  createdById  String?
+  createdBy    User?    @relation("HearingCreator", fields: [createdById], references: [id])
+  
+  hearingDate DateTime
+  courtName   String?
+  courtroom   String?
+  status      HearingStatus @default(SCHEDULED)
+  notes       String?
+  
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([tenantId])
+  @@index([caseId])
+  @@index([clientId])
+  @@index([assignedToId])
+  @@index([createdById])
+  @@map("hearings")
+}
+
+// =====================================================
+// DOCUMENT (المستند)
+// =====================================================
+
+model Document {
+  id              String       @id @default(uuid())
+  title           String       // عنوان المستند
+  description     String?
+  fileName        String       // اسم الملف الأصلي
+  filePath        String       // مسار الملف في التخزين
+  fileSize        Int          // حجم الملف بالبايت
+  mimeType        String       // نوع الملف
+  documentType    DocumentType @default(OTHER)
+  
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  // Multi-tenancy
+  tenantId        String
+  tenant          Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Relations
+  caseId          String?
+  case            Case?        @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  
+  uploadedById    String
+  uploadedBy      User         @relation(fields: [uploadedById], references: [id])
+
+  @@index([tenantId])
+  @@index([caseId])
+  @@index([documentType])
+  @@map("documents")
+}
+
+// =====================================================
+// INVOICE (الفاتورة)
+// =====================================================
+
+model Invoice {
+  id              String        @id @default(uuid())
+  invoiceNumber   String        // رقم الفاتورة (auto-generated)
+  description     String?       // وصف الفاتورة
+  amount          Decimal       @db.Decimal(10, 2)  // المبلغ
+  taxAmount       Decimal       @default(0) @db.Decimal(10, 2)  // الضريبة
+  totalAmount     Decimal       @db.Decimal(10, 2)  // المبلغ الإجمالي
+  status          InvoiceStatus @default(DRAFT)
+  issueDate       DateTime      @default(now())  // تاريخ الإصدار
+  dueDate         DateTime      // تاريخ الاستحقاق
+  paidAt          DateTime?     // تاريخ الدفع
+  paymentProof    String?       // مسار ملف إثبات الدفع
+  notes           String?
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Multi-tenancy
+  tenantId        String
+  tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Relations
+  clientId        String
+  client          Client        @relation(fields: [clientId], references: [id])
+  
+  caseId          String?
+  case            Case?         @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  
+  createdById     String
+  createdBy       User          @relation(fields: [createdById], references: [id])
+  
+  items           InvoiceItem[] // بنود الفاتورة
+
+  @@unique([tenantId, invoiceNumber])
+  @@index([tenantId])
+  @@index([clientId])
+  @@index([status])
+  @@map("invoices")
+}
+
+// =====================================================
+// INVOICE ITEM (بند الفاتورة)
+// =====================================================
+
+model InvoiceItem {
+  id          String   @id @default(uuid())
+  description String   // وصف البند
+  quantity    Int      // الكمية
+  unitPrice   Decimal  @db.Decimal(10, 2)  // سعر الوحدة
+  total       Decimal  @db.Decimal(10, 2)  // الإجمالي
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relation
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  
+  @@index([invoiceId])
+  @@map("invoice_items")
+}
+
+// =====================================================
+// EMAIL TEMPLATE (قالب البريد الإلكتروني)
+// =====================================================
+
+model EmailTemplate {
+  id          String   @id @default(uuid())
+  name        String   // e.g., "hearing_reminder", "invoice_sent"
+  subject     String
+  body        String   @db.Text
+  variables   Json     // Available variables for template
+  isActive    Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Multi-tenancy
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([name])
+  @@map("email_templates")
+}
+
+// =====================================================
+// EMAIL LOG (سجل البريد الإلكتروني)
+// =====================================================
+
+model EmailLog {
+  id          String    @id @default(uuid())
+  to          String
+  subject     String
+  body        String    @db.Text
+  status      String    // SENT, FAILED, PENDING
+  sentAt      DateTime?
+  error       String?   @db.Text
+  
+  createdAt   DateTime  @default(now())
+  
+  // Multi-tenancy
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([status])
+  @@map("email_logs")
+}
+
+// =====================================================
+// SMS LOG (سجل الرسائل النصية)
+// =====================================================
+
+model SmsLog {
+  id        String    @id @default(uuid())
+  to        String
+  message   String    @db.Text
+  status    String    // SENT, FAILED, PENDING
+  sentAt    DateTime?
+  error     String?   @db.Text
+  response  String?   @db.Text
+  
+  createdAt DateTime  @default(now())
+  
+  // Multi-tenancy
+  tenantId  String
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([status])
+  @@map("sms_logs")
+}
+
+// =====================================================
+// NOTIFICATION (الإشعارات الداخلية)
+// =====================================================
+
+model Notification {
+  id        String   @id @default(uuid())
+  title     String
+  message   String   @db.Text
+  type      String   // INFO, WARNING, SUCCESS, ERROR
+  link      String?  // Optional link to related resource
+  isRead    Boolean  @default(false)
+  
+  createdAt DateTime @default(now())
+  
+  // User relation
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Multi-tenancy
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tenantId])
+  @@index([isRead])
+  @@map("notifications")
+}
+
+// =====================================================
+// NOTIFICATION SETTINGS (إعدادات الإشعارات)
+// =====================================================
+
+model NotificationSettings {
+  id                  String   @id @default(uuid())
+  emailEnabled        Boolean  @default(true)
+  smsEnabled          Boolean  @default(false)
+  hearingReminders    Boolean  @default(true)
+  caseUpdates         Boolean  @default(true)
+  invoiceReminders    Boolean  @default(true)
+  dailyDigest         Boolean  @default(false)
+  reminderHoursBefore Int      @default(24)
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  // User relation
+  userId              String   @unique
+  
+  // Multi-tenancy
+  tenantId            String
+
+  @@index([tenantId])
+  @@map("notification_settings")
+}
+
+// =====================================================
+// PERMISSION (الصلاحيات)
+// =====================================================
+
+model Permission {
+  id          String   @id @default(uuid())
+  name        String   // e.g., "cases.create", "invoices.delete"
+  description String?
+  module      String   // e.g., "cases", "invoices", "clients"
+  action      String   // e.g., "create", "read", "update", "delete"
+  createdAt   DateTime @default(now())
+
+  rolePermissions RolePermission[]
+
+  @@unique([module, action])
+  @@map("permissions")
+}
+
+// =====================================================
+// ROLE PERMISSION (صلاحيات الأدوار)
+// =====================================================
+
+model RolePermission {
+  id           String     @id @default(uuid())
+  role         String     // OWNER, ADMIN, LAWYER, SECRETARY
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  tenantId     String
+  tenant       Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@unique([role, permissionId, tenantId])
+  @@index([tenantId])
+  @@index([role])
+  @@map("role_permissions")
+}
+
+// =====================================================
+// ACTIVITY LOG (سجل النشاطات)
+// =====================================================
+
+model ActivityLog {
+  id          String   @id @default(uuid())
+  action      String   // CREATE, UPDATE, DELETE, VIEW
+  entity      String   // Case, Invoice, Client, etc.
+  entityId    String?
+  description String   @db.Text
+  ipAddress   String?
+  userAgent   String?  @db.Text
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([tenantId])
+  @@index([entity])
+  @@index([createdAt])
+  @@map("activity_logs")
+}

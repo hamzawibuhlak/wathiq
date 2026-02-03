@@ -1,0 +1,139 @@
+# ═══════════════════════════════════════════════════════════════════
+# WATHEEQ MVP - DEVELOPMENT DOCKER COMPOSE
+# For local development with hot-reload
+# ═══════════════════════════════════════════════════════════════════
+
+version: '3.8'
+
+services:
+  # ═══════════════════════════════════════════════════════════════════
+  # PostgreSQL Database
+  # ═══════════════════════════════════════════════════════════════════
+  postgres:
+    image: postgres:15-alpine
+    container_name: watheeq_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-watheeq}
+      POSTGRES_USER: ${POSTGRES_USER:-watheeq}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-watheeq_secret}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-watheeq} -d ${POSTGRES_DB:-watheeq}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - watheeq_network
+
+  # ═══════════════════════════════════════════════════════════════════
+  # Redis Cache (Optional)
+  # ═══════════════════════════════════════════════════════════════════
+  redis:
+    image: redis:7-alpine
+    container_name: watheeq_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - watheeq_network
+
+  # ═══════════════════════════════════════════════════════════════════
+  # Backend (NestJS) - Development with Hot Reload
+  # ═══════════════════════════════════════════════════════════════════
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: watheeq_backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://${POSTGRES_USER:-watheeq}:${POSTGRES_PASSWORD:-watheeq_secret}@postgres:5432/${POSTGRES_DB:-watheeq}?schema=public
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      PORT: 3000
+      REDIS_URL: redis://redis:6379
+      UPLOAD_DIR: /app/uploads
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - backend_uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - watheeq_network
+
+  # ═══════════════════════════════════════════════════════════════════
+  # Frontend (Vite) - Development with Hot Reload
+  # ═══════════════════════════════════════════════════════════════════
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: watheeq_frontend
+    restart: unless-stopped
+    environment:
+      VITE_API_URL: http://localhost:3000/api
+      VITE_APP_NAME: Watheeq
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - watheeq_network
+  # ═══════════════════════════════════════════════════════════════════
+  # Meilisearch (Optional - Full-text Search)
+  # ═══════════════════════════════════════════════════════════════════
+  # meilisearch:
+  #   image: getmeili/meilisearch:v1.5
+  #   container_name: watheeq_meilisearch
+  #   restart: unless-stopped
+  #   environment:
+  #     MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-your-meilisearch-master-key}
+  #     MEILI_NO_ANALYTICS: true
+  #   ports:
+  #     - "7700:7700"
+  #   volumes:
+  #     - meilisearch_data:/meili_data
+  #   networks:
+  #     - watheeq_network
+
+  # ═══════════════════════════════════════════════════════════════════
+  # Volumes
+  # ═══════════════════════════════════════════════════════════════════
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  backend_uploads:
+    driver: local
+  # meilisearch_data:
+  #   driver: local
+
+  # ═══════════════════════════════════════════════════════════════════
+  # Networks
+  # ═══════════════════════════════════════════════════════════════════
+networks:
+  watheeq_network:
+    driver: bridge
