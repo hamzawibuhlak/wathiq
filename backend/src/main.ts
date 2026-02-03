@@ -12,10 +12,8 @@ async function bootstrap() {
         logger: ['error', 'warn', 'log', 'debug'],
     });
 
-    // Global prefix (exclude uploads for static file serving)
-    app.setGlobalPrefix('api', {
-        exclude: ['/uploads/(.*)'],
-    });
+    // Global prefix
+    app.setGlobalPrefix('api');
 
     // CORS configuration
     app.enableCors({
