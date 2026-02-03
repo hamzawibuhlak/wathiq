@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { User, Camera, Lock, Eye, EyeOff } from 'lucide-react';
-import { Button, Input, Label, Card, CardHeader, CardTitle, CardContent } from '@/components/ui';
+import { Button, Input, Label, Card, CardHeader, CardTitle, CardContent, ImageCropModal } from '@/components/ui';
 import { useAuthStore } from '@/stores/auth.store';
 import { useUpdateProfile, useChangePassword, useUploadAvatar } from '@/hooks/use-settings';
 
@@ -30,6 +30,7 @@ export function ProfilePage() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
     const [showNewPassword, setShowNewPassword] = useState(false);
+    const [imageToCrop, setImageToCrop] = useState<string | null>(null);
 
     const updateProfileMutation = useUpdateProfile();
     const changePasswordMutation = useChangePassword();
@@ -70,8 +71,26 @@ export function ProfilePage() {
     const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            uploadAvatarMutation.mutate(file);
+            // Read file and show crop modal
+            const reader = new FileReader();
+            reader.addEventListener('load', () => {
+                setImageToCrop(reader.result as string);
+            });
+            reader.readAsDataURL(file);
         }
+        // Reset input so the same file can be selected again
+        e.target.value = '';
+    };
+
+    const handleCropComplete = (croppedImage: Blob) => {
+        // Convert blob to file and upload
+        const file = new File([croppedImage], 'avatar.jpg', { type: 'image/jpeg' });
+        uploadAvatarMutation.mutate(file);
+        setImageToCrop(null);
+    };
+
+    const handleCloseCropModal = () => {
+        setImageToCrop(null);
     };
 
     const getRoleLabel = (role?: string) => {
@@ -86,6 +105,16 @@ export function ProfilePage() {
 
     return (
         <div className="p-6 space-y-6">
+            {/* Image Crop Modal */}
+            {imageToCrop && (
+                <ImageCropModal
+                    imageSrc={imageToCrop}
+                    onCropComplete={handleCropComplete}
+                    onClose={handleCloseCropModal}
+                    aspectRatio={1}
+                />
+            )}
+
             {/* Avatar Section */}
             <Card>
                 <CardHeader>

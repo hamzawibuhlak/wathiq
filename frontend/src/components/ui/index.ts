@@ -8,4 +8,5 @@ export { ConfirmDialogProvider, useConfirmDialog } from './confirm-dialog';
 export { Tabs, TabsList, TabsTrigger, TabsContent } from './tabs';
 export { UserAvatar } from './UserAvatar';
 export { Checkbox } from './checkbox';
+export { ImageCropModal } from './ImageCropModal';
 
