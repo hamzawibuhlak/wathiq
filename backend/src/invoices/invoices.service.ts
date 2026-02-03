@@ -1,9 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
 import { UpdateInvoiceDto } from './dto/update-invoice.dto';
 import { FilterInvoicesDto } from './dto/filter-invoices.dto';
 import { Prisma, InvoiceStatus } from '@prisma/client';
+import { EmailService } from '../email/email.service';
+import { SmsService } from '../sms/sms.service';
 
 // Response interfaces
 export interface PaginatedResponse<T> {
@@ -29,7 +31,11 @@ export interface InvoiceStats {
 
 @Injectable()
 export class InvoicesService {
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly emailService: EmailService,
+        private readonly smsService: SmsService,
+    ) { }
 
     /**
      * Get all invoices with pagination and filters
@@ -382,5 +388,105 @@ export class InvoicesService {
 
         const number = (count + 1).toString().padStart(4, '0');
         return `INV-${year}-${number}`;
+    }
+
+    /**
+     * Send invoice via email
+     */
+    async sendEmail(id: string, tenantId: string) {
+        const invoice = await this.prisma.invoice.findFirst({
+            where: { id, tenantId },
+            include: {
+                client: { select: { name: true, email: true } },
+                case: { select: { title: true, caseNumber: true } },
+            },
+        });
+
+        if (!invoice) {
+            throw new NotFoundException('الفاتورة غير موجودة');
+        }
+
+        if (!invoice.client?.email) {
+            throw new BadRequestException('العميل لا يملك بريد إلكتروني');
+        }
+
+        // Get tenant info for the email
+        const tenant = await this.prisma.tenant.findUnique({
+            where: { id: tenantId },
+            select: { name: true },
+        });
+
+        const result = await this.emailService.sendInvoice({
+            to: invoice.client.email,
+            clientName: invoice.client.name,
+            invoiceNumber: invoice.invoiceNumber,
+            amount: Number(invoice.totalAmount),
+            dueDate: invoice.dueDate,
+            firmName: tenant?.name || 'مكتب المحاماة',
+            caseTitle: invoice.case?.title,
+        });
+
+        if (!result.success) {
+            throw new InternalServerErrorException('فشل إرسال البريد الإلكتروني: ' + result.error);
+        }
+
+        return {
+            message: 'تم إرسال الفاتورة بنجاح',
+            data: { sentTo: invoice.client.email },
+        };
+    }
+
+    /**
+     * Send invoice SMS to client
+     */
+    async sendSms(id: string, tenantId: string) {
+        const invoice = await this.prisma.invoice.findFirst({
+            where: { id, tenantId },
+            include: {
+                client: { select: { name: true, phone: true } },
+            },
+        });
+
+        if (!invoice) {
+            throw new NotFoundException('الفاتورة غير موجودة');
+        }
+
+        if (!invoice.client?.phone) {
+            throw new BadRequestException('العميل لا يملك رقم هاتف');
+        }
+
+        // Get tenant info
+        const tenant = await this.prisma.tenant.findUnique({
+            where: { id: tenantId },
+            select: { name: true },
+        });
+
+        const formatCurrency = (amount: number) => {
+            return new Intl.NumberFormat('ar-SA', {
+                style: 'currency',
+                currency: 'SAR',
+            }).format(amount);
+        };
+
+        const message = `السلام عليكم ${invoice.client.name}،
+فاتورة رقم: ${invoice.invoiceNumber}
+المبلغ: ${formatCurrency(Number(invoice.totalAmount))}
+${invoice.dueDate ? `تاريخ الاستحقاق: ${invoice.dueDate.toLocaleDateString('ar-SA')}` : ''}
+${tenant?.name || 'مكتب المحاماة'}`;
+
+        const result = await this.smsService.sendSMS({
+            to: invoice.client.phone,
+            message,
+            tenantId,
+        });
+
+        if (!result.success) {
+            throw new InternalServerErrorException('فشل إرسال الرسالة النصية: ' + result.error);
+        }
+
+        return {
+            message: 'تم إرسال الرسالة بنجاح',
+            data: { sentTo: invoice.client.phone },
+        };
     }
 }

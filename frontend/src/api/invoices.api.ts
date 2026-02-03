@@ -51,6 +51,12 @@ export const invoicesApi = {
 
     getStats: () =>
         api.get('/invoices/stats').then((res) => res.data),
+
+    sendEmail: (id: string) =>
+        api.post<ApiResponse<{ sentTo: string }>>(`/invoices/${id}/send-email`).then((res) => res.data),
+
+    sendSms: (id: string) =>
+        api.post<ApiResponse<{ sentTo: string }>>(`/invoices/${id}/send-sms`).then((res) => res.data),
 };
 
 export default invoicesApi;

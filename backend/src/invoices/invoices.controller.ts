@@ -114,4 +114,30 @@ export class InvoicesController {
     ) {
         return this.invoicesService.remove(id, tenantId);
     }
+
+    @Post(':id/send-email')
+    @Roles(UserRole.OWNER, UserRole.ADMIN)
+    @ApiOperation({ summary: 'إرسال الفاتورة بالبريد الإلكتروني' })
+    @ApiResponse({ status: 200, description: 'تم إرسال الفاتورة بنجاح' })
+    @ApiResponse({ status: 400, description: 'العميل لا يملك بريد إلكتروني' })
+    @ApiResponse({ status: 404, description: 'الفاتورة غير موجودة' })
+    async sendEmail(
+        @Param('id', ParseUUIDPipe) id: string,
+        @TenantId() tenantId: string,
+    ) {
+        return this.invoicesService.sendEmail(id, tenantId);
+    }
+
+    @Post(':id/send-sms')
+    @Roles(UserRole.OWNER, UserRole.ADMIN)
+    @ApiOperation({ summary: 'إرسال رسالة SMS للعميل بخصوص الفاتورة' })
+    @ApiResponse({ status: 200, description: 'تم إرسال الرسالة بنجاح' })
+    @ApiResponse({ status: 400, description: 'العميل لا يملك رقم هاتف' })
+    @ApiResponse({ status: 404, description: 'الفاتورة غير موجودة' })
+    async sendSms(
+        @Param('id', ParseUUIDPipe) id: string,
+        @TenantId() tenantId: string,
+    ) {
+        return this.invoicesService.sendSms(id, tenantId);
+    }
 }

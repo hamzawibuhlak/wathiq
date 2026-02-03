@@ -1,15 +1,19 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowRight, Pencil, Printer, CheckCircle, AlertTriangle } from 'lucide-react';
+import { ArrowRight, Pencil, Printer, CheckCircle, AlertTriangle, Mail, MessageSquare, Loader2 } from 'lucide-react';
 import { Button, Card, CardContent } from '@/components/ui';
 import { InvoiceTemplate, InvoiceStatusBadge } from '@/components/invoices';
 import { useInvoice, useMarkInvoiceAsPaid } from '@/hooks/use-invoices';
 import { useFirmSettings } from '@/hooks/use-settings';
 import { useReactToPrint } from 'react-to-print';
+import { invoicesApi } from '@/api/invoices.api';
+import toast from 'react-hot-toast';
 
 export function InvoiceDetailsPage() {
     const { id } = useParams<{ id: string }>();
     const printRef = useRef<HTMLDivElement>(null);
+    const [isSendingEmail, setIsSendingEmail] = useState(false);
+    const [isSendingSms, setIsSendingSms] = useState(false);
 
     const { data: invoiceData, isLoading, error } = useInvoice(id!);
     const markPaidMutation = useMarkInvoiceAsPaid();
@@ -38,6 +42,38 @@ export function InvoiceDetailsPage() {
     const handleMarkPaid = () => {
         if (invoice) {
             markPaidMutation.mutate(invoice.id);
+        }
+    };
+
+    const handleSendEmail = async () => {
+        if (!invoice?.client?.email) {
+            toast.error('العميل لا يملك بريد إلكتروني');
+            return;
+        }
+        setIsSendingEmail(true);
+        try {
+            await invoicesApi.sendEmail(invoice.id);
+            toast.success(`تم إرسال الفاتورة إلى ${invoice.client.email}`);
+        } catch (error) {
+            toast.error('فشل إرسال البريد الإلكتروني');
+        } finally {
+            setIsSendingEmail(false);
+        }
+    };
+
+    const handleSendSms = async () => {
+        if (!invoice?.client?.phone) {
+            toast.error('العميل لا يملك رقم هاتف');
+            return;
+        }
+        setIsSendingSms(true);
+        try {
+            await invoicesApi.sendSms(invoice.id);
+            toast.success(`تم إرسال الرسالة إلى ${invoice.client.phone}`);
+        } catch (error) {
+            toast.error('فشل إرسال الرسالة النصية');
+        } finally {
+            setIsSendingSms(false);
         }
     };
 
@@ -85,7 +121,7 @@ export function InvoiceDetailsPage() {
                     </Link>
                     <InvoiceStatusBadge status={invoice.status} />
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                     {invoice.status !== 'PAID' && (
                         <Button
                             variant="outline"
@@ -96,6 +132,30 @@ export function InvoiceDetailsPage() {
                             تحديد كمدفوعة
                         </Button>
                     )}
+                    <Button 
+                        variant="outline" 
+                        onClick={handleSendEmail}
+                        disabled={isSendingEmail || !invoice.client?.email}
+                    >
+                        {isSendingEmail ? (
+                            <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                        ) : (
+                            <Mail className="w-4 h-4 ml-2" />
+                        )}
+                        إرسال بالإيميل
+                    </Button>
+                    <Button 
+                        variant="outline" 
+                        onClick={handleSendSms}
+                        disabled={isSendingSms || !invoice.client?.phone}
+                    >
+                        {isSendingSms ? (
+                            <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                        ) : (
+                            <MessageSquare className="w-4 h-4 ml-2" />
+                        )}
+                        إرسال SMS
+                    </Button>
                     <Button variant="outline" onClick={() => handlePrint()}>
                         <Printer className="w-4 h-4 ml-2" />
                         طباعة
@@ -110,40 +170,26 @@ export function InvoiceDetailsPage() {
             </div>
 
             {/* Invoice Preview */}
-            <Card>
+            <Card className="print-card">
                 <CardContent className="p-6">
-                    <div id="print-area">
-                        <InvoiceTemplate ref={printRef} invoice={invoice} company={company} />
-                    </div>
+                    <InvoiceTemplate ref={printRef} invoice={invoice} company={company} />
                 </CardContent>
             </Card>
 
-            {/* Print Styles */}
+            {/* Print Styles - Global styles for react-to-print */}
             <style>{`
-        @media print {
-          body * {
-            visibility: hidden;
-          }
-          #print-area, #print-area * {
-            visibility: visible;
-          }
-          #print-area {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            direction: rtl;
-            background: white;
-            padding: 20px;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-          @page {
-            size: A4;
-            margin: 10mm;
-          }
-        }
-      `}</style>
+                @media print {
+                    @page {
+                        size: A4;
+                        margin: 10mm;
+                    }
+                    
+                    body {
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }
+                }
+            `}</style>
         </div>
     );
 }

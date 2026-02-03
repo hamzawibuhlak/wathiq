@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Receipt, MoreVertical, Eye, Pencil, Trash2, CheckCircle } from 'lucide-react';
 import type { Invoice } from '@/types';
 import { formatDate } from '@/lib/utils';
@@ -14,6 +14,7 @@ interface InvoiceCardProps {
 export function InvoiceCard({ invoice, onMarkPaid, onDelete }: InvoiceCardProps) {
     const [showMenu, setShowMenu] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
+    const navigate = useNavigate();
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
@@ -34,8 +35,19 @@ export function InvoiceCard({ invoice, onMarkPaid, onDelete }: InvoiceCardProps)
 
     const isOverdue = invoice.status !== 'PAID' && invoice.dueDate && new Date(invoice.dueDate) < new Date();
 
+    const handleCardClick = (e: React.MouseEvent) => {
+        // Don't navigate if clicking on menu or its children
+        if (menuRef.current?.contains(e.target as Node)) {
+            return;
+        }
+        navigate(`/invoices/${invoice.id}`);
+    };
+
     return (
-        <div className="bg-card rounded-xl border p-5 hover:shadow-md transition-shadow">
+        <div 
+            className="bg-card rounded-xl border p-5 hover:shadow-md transition-shadow cursor-pointer"
+            onClick={handleCardClick}
+        >
             <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">

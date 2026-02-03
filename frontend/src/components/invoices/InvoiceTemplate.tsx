@@ -30,7 +30,7 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
         const tenantName = company?.name || 'مكتب وثيق للمحاماة';
 
         return (
-            <div ref={ref} className="bg-white p-8 max-w-[800px] mx-auto" dir="rtl">
+            <div ref={ref} className="bg-white p-8 max-w-[800px] mx-auto print:p-4 print:max-w-none" dir="rtl" style={{ colorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}>
                 {/* Header */}
                 <div className="flex justify-between items-start mb-8 pb-4 border-b-2 border-gray-200">
                     <div>
