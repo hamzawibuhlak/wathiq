@@ -17,14 +17,16 @@ export interface CalendarFilters {
 }
 
 export interface CreateHearingData {
+    hearingNumber: string;
     hearingDate: string;
+    clientId?: string;
+    caseId?: string;
+    assignedToId: string;
+    opponentName?: string;
     courtName?: string;
-    courtroom?: string;
+    judgeName?: string;
     notes?: string;
     status?: string;
-    caseId: string;
-    clientId?: string;
-    assignedToId?: string;
 }
 
 export interface UpdateHearingData extends Partial<CreateHearingData> { }

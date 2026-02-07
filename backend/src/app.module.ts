@@ -29,6 +29,14 @@ import { EmailModule } from './email/email.module';
 import { PermissionsModule } from './permissions/permissions.module';
 import { ActivityLogsModule } from './activity-logs/activity-logs.module';
 import { ExportsModule } from './exports/exports.module';
+import { WhatsAppModule } from './whatsapp/whatsapp.module';
+import { ClientPortalModule } from './client-portal/client-portal.module';
+import { WebSocketModule } from './websocket/websocket.module';
+import { OcrModule } from './ocr/ocr.module';
+import { TasksModule } from './tasks/tasks.module';
+import { WorkflowsModule } from './workflows/workflows.module';
+import { AnalyticsModule } from './analytics/analytics.module';
+import { AppController } from './app.controller';
 
 @Module({
     imports: [
@@ -75,7 +83,15 @@ import { ExportsModule } from './exports/exports.module';
         PermissionsModule,
         ActivityLogsModule,
         ExportsModule,
+        WhatsAppModule,
+        ClientPortalModule,
+        WebSocketModule,
+        OcrModule,
+        TasksModule,
+        WorkflowsModule,
+        AnalyticsModule,
     ],
+    controllers: [AppController],
     providers: [
         // Global Exception Filter
         {

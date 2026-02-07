@@ -10,6 +10,46 @@ export interface Notification {
     createdAt: string;
 }
 
+export interface NotificationSettings {
+    emailEnabled: boolean;
+    smsEnabled: boolean;
+    hearingReminders: boolean;
+    caseUpdates: boolean;
+    invoiceReminders: boolean;
+    dailyDigest: boolean;
+    reminderHoursBefore: number;
+}
+
+export interface Message {
+    id: string;
+    subject: string;
+    content: string;
+    isRead: boolean;
+    senderId: string;
+    receiverId: string;
+    sender?: {
+        id: string;
+        name: string;
+        avatar?: string;
+        email?: string;
+    };
+    receiver?: {
+        id: string;
+        name: string;
+        avatar?: string;
+        email?: string;
+    };
+    createdAt: string;
+}
+
+export interface Recipient {
+    id: string;
+    name: string;
+    email: string;
+    avatar?: string;
+    role: string;
+}
+
 export interface EmailLog {
     id: string;
     to: string;
@@ -42,6 +82,41 @@ export const notificationsApi = {
     markAllAsRead: () => api.patch('/notifications/read-all').then(res => res.data),
 
     delete: (id: string) => api.delete(`/notifications/${id}`).then(res => res.data),
+
+    getSettings: () => api.get<{ data: NotificationSettings }>('/notifications/settings').then(res => res.data),
+
+    updateSettings: (settings: Partial<NotificationSettings>) =>
+        api.put<{ data: NotificationSettings }>('/notifications/settings', settings).then(res => res.data),
+};
+
+// Messages API
+export const messagesApi = {
+    getInbox: (params?: { limit?: number; offset?: number }) =>
+        api.get<{ data: Message[]; total: number }>('/messages/inbox', { params }).then(res => res.data),
+
+    getSent: (params?: { limit?: number; offset?: number }) =>
+        api.get<{ data: Message[]; total: number }>('/messages/sent', { params }).then(res => res.data),
+
+    getById: (id: string) =>
+        api.get<{ data: Message }>(`/messages/${id}`).then(res => res.data),
+
+    getUnreadCount: () =>
+        api.get<{ data: { count: number } }>('/messages/unread-count').then(res => res.data),
+
+    getRecipients: () =>
+        api.get<{ data: Recipient[] }>('/messages/recipients').then(res => res.data),
+
+    send: (data: { subject: string; content: string; receiverId: string }) =>
+        api.post<{ data: Message }>('/messages', data).then(res => res.data),
+
+    markAsRead: (id: string) =>
+        api.patch(`/messages/${id}/read`).then(res => res.data),
+
+    markAllAsRead: () =>
+        api.patch('/messages/read-all').then(res => res.data),
+
+    delete: (id: string) =>
+        api.delete(`/messages/${id}`).then(res => res.data),
 };
 
 // Email API

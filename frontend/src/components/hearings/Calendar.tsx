@@ -167,7 +167,7 @@ export function Calendar({ hearings, currentDate, onMonthChange, isLoading }: Ca
                                                         'bg-blue-100 text-blue-700'
                                         )}
                                     >
-                                        {new Date(hearing.hearingDate).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })} - {hearing.title}
+                                        {new Date(hearing.hearingDate).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })} - {hearing.courtName || (hearing as any).hearingNumber || 'جلسة'}
                                     </Link>
                                 ))}
                                 {dayHearings.length > 3 && (

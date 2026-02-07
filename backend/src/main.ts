@@ -1,3 +1,9 @@
+import * as crypto from 'crypto';
+// Polyfill for Node.js 18 crypto issue with @nestjs/schedule
+if (!globalThis.crypto) {
+    (globalThis as any).crypto = crypto;
+}
+
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';

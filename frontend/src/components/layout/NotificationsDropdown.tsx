@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import {
     useNotifications,
     useUnreadCount,
@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Bell, Check, Info, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
+import { Bell, Check, Info, AlertTriangle, CheckCircle, XCircle, ArrowLeft } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -111,46 +111,61 @@ export function NotificationsDropdown() {
                         لا توجد إشعارات
                     </div>
                 ) : (
-                    <div className="max-h-[400px] overflow-y-auto">
-                        {notifications.map((notification: Notification) => (
-                            <DropdownMenuItem
-                                key={notification.id}
-                                className={cn(
-                                    'flex items-start gap-3 p-3 cursor-pointer',
-                                    !notification.isRead && 'bg-muted/50',
-                                )}
-                                onClick={() => handleNotificationClick(notification)}
+                    <>
+                        <div className="max-h-[300px] overflow-y-auto">
+                            {notifications.slice(0, 5).map((notification: Notification) => (
+                                <DropdownMenuItem
+                                    key={notification.id}
+                                    className={cn(
+                                        'flex items-start gap-3 p-3 cursor-pointer',
+                                        !notification.isRead && 'bg-muted/50',
+                                    )}
+                                    onClick={() => handleNotificationClick(notification)}
+                                >
+                                    <div className="mt-0.5">
+                                        {getTypeIcon(notification.type)}
+                                    </div>
+
+                                    <div className="flex-1 space-y-1 min-w-0">
+                                        <p className="text-sm font-medium leading-none">
+                                            {notification.title}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground line-clamp-2">
+                                            {notification.message}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            {formatDistanceToNow(new Date(notification.createdAt), {
+                                                addSuffix: true,
+                                                locale: ar,
+                                            })}
+                                        </p>
+                                    </div>
+
+                                    {!notification.isRead && (
+                                        <div
+                                            className={cn(
+                                                'w-2 h-2 rounded-full flex-shrink-0 mt-1',
+                                                getTypeColor(notification.type),
+                                            )}
+                                        />
+                                    )}
+                                </DropdownMenuItem>
+                            ))}
+                        </div>
+                        
+                        <DropdownMenuSeparator />
+                        
+                        <div className="p-2">
+                            <Link
+                                to="/notifications"
+                                onClick={() => setOpen(false)}
+                                className="flex items-center justify-center gap-2 w-full py-2 text-sm text-primary hover:bg-muted rounded-md transition-colors"
                             >
-                                <div className="mt-0.5">
-                                    {getTypeIcon(notification.type)}
-                                </div>
-
-                                <div className="flex-1 space-y-1 min-w-0">
-                                    <p className="text-sm font-medium leading-none">
-                                        {notification.title}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground line-clamp-2">
-                                        {notification.message}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                        {formatDistanceToNow(new Date(notification.createdAt), {
-                                            addSuffix: true,
-                                            locale: ar,
-                                        })}
-                                    </p>
-                                </div>
-
-                                {!notification.isRead && (
-                                    <div
-                                        className={cn(
-                                            'w-2 h-2 rounded-full flex-shrink-0 mt-1',
-                                            getTypeColor(notification.type),
-                                        )}
-                                    />
-                                )}
-                            </DropdownMenuItem>
-                        ))}
-                    </div>
+                                عرض جميع الإشعارات
+                                <ArrowLeft className="w-4 h-4" />
+                            </Link>
+                        </div>
+                    </>
                 )}
             </DropdownMenuContent>
         </DropdownMenu>

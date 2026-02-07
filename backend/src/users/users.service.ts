@@ -30,11 +30,15 @@ const userSelect = {
     phone: true,
     role: true,
     avatar: true,
+    title: true,
     isActive: true,
+    isVerified: true,
     lastLoginAt: true,
+    lastLoginIp: true,
     createdAt: true,
     updatedAt: true,
     tenantId: true,
+    createdById: true,
 };
 
 @Injectable()
@@ -279,5 +283,112 @@ export class UsersService {
         });
 
         return { data: lawyers };
+    }
+
+    /**
+     * Change user role
+     */
+    async changeRole(id: string, newRole: UserRole, tenantId: string, currentUserId: string) {
+        const user = await this.findOne(id, tenantId);
+
+        // Cannot change own role
+        if (id === currentUserId) {
+            throw new ForbiddenException('لا يمكنك تغيير دورك الخاص');
+        }
+
+        // Cannot change OWNER role
+        if (user.data.role === UserRole.OWNER) {
+            throw new ForbiddenException('لا يمكن تغيير دور المالك');
+        }
+
+        // Cannot promote to OWNER
+        if (newRole === UserRole.OWNER) {
+            throw new ForbiddenException('لا يمكن ترقية مستخدم لدور مالك');
+        }
+
+        await this.prisma.user.update({
+            where: { id },
+            data: { role: newRole },
+        });
+
+        return { message: 'تم تغيير الدور بنجاح' };
+    }
+
+    /**
+     * Deactivate user
+     */
+    async deactivate(id: string, tenantId: string, currentUserId: string) {
+        const user = await this.findOne(id, tenantId);
+
+        if (id === currentUserId) {
+            throw new ForbiddenException('لا يمكنك تعطيل حسابك الخاص');
+        }
+
+        if (user.data.role === UserRole.OWNER) {
+            throw new ForbiddenException('لا يمكن تعطيل حساب المالك');
+        }
+
+        await this.prisma.user.update({
+            where: { id },
+            data: { isActive: false },
+        });
+
+        return { message: 'تم تعطيل المستخدم بنجاح' };
+    }
+
+    /**
+     * Get user statistics
+     */
+    async getStats(tenantId: string) {
+        const [total, active, byRole] = await Promise.all([
+            this.prisma.user.count({ where: { tenantId } }),
+            this.prisma.user.count({ where: { tenantId, isActive: true } }),
+            this.prisma.user.groupBy({
+                by: ['role'],
+                where: { tenantId },
+                _count: true,
+            }),
+        ]);
+
+        const roleStats = byRole.reduce((acc, item) => {
+            acc[item.role] = item._count;
+            return acc;
+        }, {} as Record<string, number>);
+
+        return {
+            data: {
+                total,
+                active,
+                inactive: total - active,
+                byRole: roleStats,
+            },
+        };
+    }
+
+    /**
+     * Update last login info
+     */
+    async updateLastLogin(id: string, ipAddress?: string) {
+        await this.prisma.user.update({
+            where: { id },
+            data: {
+                lastLoginAt: new Date(),
+                lastLoginIp: ipAddress,
+            },
+        });
+    }
+
+    /**
+     * Verify user email
+     */
+    async verifyEmail(id: string, tenantId: string) {
+        await this.findOne(id, tenantId);
+
+        await this.prisma.user.update({
+            where: { id },
+            data: { isVerified: true },
+        });
+
+        return { message: 'تم تأكيد البريد الإلكتروني بنجاح' };
     }
 }

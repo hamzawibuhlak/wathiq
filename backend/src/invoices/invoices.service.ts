@@ -424,6 +424,7 @@ export class InvoicesService {
             dueDate: invoice.dueDate,
             firmName: tenant?.name || 'مكتب المحاماة',
             caseTitle: invoice.case?.title,
+            tenantId: tenantId,
         });
 
         if (!result.success) {

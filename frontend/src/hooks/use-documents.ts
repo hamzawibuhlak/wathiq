@@ -55,19 +55,12 @@ export function useDeleteDocument() {
 // Download document
 export function useDownloadDocument() {
     return useMutation({
-        mutationFn: async ({ id, fileName }: { id: string; fileName: string }) => {
-            const blob = await documentsApi.download(id);
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = fileName;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
+        mutationFn: async ({ id }: { id: string; fileName: string }) => {
+            // Use the new download method that opens in a new tab
+            documentsApi.download(id);
         },
         onSuccess: () => {
-            toast.success('تم تحميل المستند');
+            toast.success('جارٍ تحميل المستند');
         },
         onError: () => {
             toast.error('حدث خطأ أثناء تحميل المستند');

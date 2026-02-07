@@ -434,4 +434,386 @@ export class ExportsService {
     const buffer = await workbook.xlsx.writeBuffer();
     return buffer;
   }
+
+  // ========== Documents Export ==========
+  async exportDocuments(tenantId: string, filters?: any) {
+    const whereClause: any = { tenantId };
+    
+    if (filters?.caseId) {
+      whereClause.caseId = filters.caseId;
+    }
+    if (filters?.documentType) {
+      whereClause.documentType = filters.documentType;
+    }
+    if (filters?.startDate || filters?.endDate) {
+      whereClause.createdAt = {};
+      if (filters.startDate) whereClause.createdAt.gte = filters.startDate;
+      if (filters.endDate) whereClause.createdAt.lte = filters.endDate;
+    }
+
+    const documents = await this.prisma.document.findMany({
+      where: whereClause,
+      include: {
+        case: { select: { caseNumber: true, title: true } },
+        uploadedBy: { select: { name: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'Watheeq';
+    workbook.created = new Date();
+
+    const worksheet = workbook.addWorksheet('المستندات', {
+      views: [{ rightToLeft: true }],
+    });
+
+    worksheet.columns = [
+      { header: 'عنوان المستند', key: 'title', width: 30 },
+      { header: 'اسم الملف', key: 'fileName', width: 30 },
+      { header: 'النوع', key: 'documentType', width: 15 },
+      { header: 'الحجم (MB)', key: 'fileSize', width: 12 },
+      { header: 'القضية', key: 'case', width: 25 },
+      { header: 'رفع بواسطة', key: 'uploadedBy', width: 20 },
+      { header: 'تاريخ الرفع', key: 'createdAt', width: 20 },
+    ];
+
+    const headerRow = worksheet.getRow(1);
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF6366F1' }, // Indigo
+    };
+    headerRow.alignment = { horizontal: 'center' };
+
+    const documentTypes: Record<string, string> = {
+      CONTRACT: 'عقد',
+      POWER_OF_ATTORNEY: 'توكيل',
+      COURT_DOCUMENT: 'مستند محكمة',
+      EVIDENCE: 'دليل',
+      CORRESPONDENCE: 'مراسلة',
+      ID_DOCUMENT: 'وثيقة هوية',
+      FINANCIAL: 'مستند مالي',
+      OTHER: 'أخرى',
+    };
+
+    documents.forEach(doc => {
+      worksheet.addRow({
+        title: doc.title,
+        fileName: doc.fileName,
+        documentType: documentTypes[doc.documentType] || doc.documentType,
+        fileSize: (doc.fileSize / (1024 * 1024)).toFixed(2),
+        case: doc.case ? `${doc.case.caseNumber} - ${doc.case.title}` : '-',
+        uploadedBy: doc.uploadedBy?.name || '-',
+        createdAt: new Date(doc.createdAt).toLocaleDateString('ar-SA'),
+      });
+    });
+
+    // Summary row
+    worksheet.addRow([]);
+    const totalSize = documents.reduce((sum, d) => sum + d.fileSize, 0);
+    worksheet.addRow([
+      `إجمالي المستندات: ${documents.length}`,
+      '',
+      '',
+      `${(totalSize / (1024 * 1024)).toFixed(2)} MB`,
+      '',
+      '',
+      '',
+    ]);
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    return buffer;
+  }
+
+  // ========== Tasks Export ==========
+  async exportTasks(tenantId: string, filters?: any) {
+    const whereClause: any = { tenantId };
+    
+    if (filters?.status) {
+      whereClause.status = filters.status;
+    }
+    if (filters?.assignedToId) {
+      whereClause.assignedToId = filters.assignedToId;
+    }
+    if (filters?.startDate || filters?.endDate) {
+      whereClause.createdAt = {};
+      if (filters.startDate) whereClause.createdAt.gte = filters.startDate;
+      if (filters.endDate) whereClause.createdAt.lte = filters.endDate;
+    }
+
+    const tasks = await this.prisma.task.findMany({
+      where: whereClause,
+      include: {
+        case: { select: { caseNumber: true, title: true } },
+        assignedTo: { select: { name: true } },
+        createdBy: { select: { name: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'Watheeq';
+    workbook.created = new Date();
+
+    const worksheet = workbook.addWorksheet('المهام', {
+      views: [{ rightToLeft: true }],
+    });
+
+    worksheet.columns = [
+      { header: 'عنوان المهمة', key: 'title', width: 35 },
+      { header: 'الحالة', key: 'status', width: 15 },
+      { header: 'الأولوية', key: 'priority', width: 12 },
+      { header: 'المسند إليه', key: 'assignedTo', width: 20 },
+      { header: 'القضية', key: 'case', width: 25 },
+      { header: 'تاريخ الاستحقاق', key: 'dueDate', width: 18 },
+      { header: 'تاريخ الإنشاء', key: 'createdAt', width: 18 },
+      { header: 'أنشئت بواسطة', key: 'createdBy', width: 18 },
+    ];
+
+    const headerRow = worksheet.getRow(1);
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF22C55E' }, // Green
+    };
+    headerRow.alignment = { horizontal: 'center' };
+
+    const taskStatuses: Record<string, string> = {
+      TODO: 'للتنفيذ',
+      IN_PROGRESS: 'قيد التنفيذ',
+      REVIEW: 'قيد المراجعة',
+      BLOCKED: 'معلقة',
+      COMPLETED: 'مكتملة',
+      CANCELLED: 'ملغية',
+    };
+
+    const taskPriorities: Record<string, string> = {
+      LOW: 'منخفضة',
+      MEDIUM: 'متوسطة',
+      HIGH: 'عالية',
+      URGENT: 'عاجلة',
+    };
+
+    tasks.forEach(task => {
+      worksheet.addRow({
+        title: task.title,
+        status: taskStatuses[task.status] || task.status,
+        priority: taskPriorities[task.priority] || task.priority,
+        assignedTo: task.assignedTo?.name || '-',
+        case: task.case ? `${task.case.caseNumber} - ${task.case.title}` : '-',
+        dueDate: task.dueDate ? new Date(task.dueDate).toLocaleDateString('ar-SA') : '-',
+        createdAt: new Date(task.createdAt).toLocaleDateString('ar-SA'),
+        createdBy: task.createdBy?.name || '-',
+      });
+    });
+
+    // Summary section
+    worksheet.addRow([]);
+    const completed = tasks.filter(t => t.status === 'COMPLETED').length;
+    const inProgress = tasks.filter(t => t.status === 'IN_PROGRESS').length;
+    const overdue = tasks.filter(t => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'COMPLETED').length;
+    
+    worksheet.addRow([`إجمالي المهام: ${tasks.length}`, '', '', '', '', '', '', '']);
+    worksheet.addRow([`المكتملة: ${completed}`, `قيد التنفيذ: ${inProgress}`, `المتأخرة: ${overdue}`, '', '', '', '', '']);
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    return buffer;
+  }
+
+  // ========== Generic Report Export ==========
+
+  async exportReportData(
+    data: { title: string; columns: { header: string; key: string }[]; data: any[]; generatedAt: Date },
+    format: 'PDF' | 'EXCEL' | 'CSV' | 'JSON',
+    filename: string,
+  ): Promise<{ filePath: string; fileSize: number }> {
+    const fs = await import('fs/promises');
+    const path = await import('path');
+    const exportsDir = path.join(process.cwd(), 'uploads', 'exports');
+    
+    // Ensure exports directory exists
+    await fs.mkdir(exportsDir, { recursive: true }).catch(() => {});
+
+    switch (format) {
+      case 'EXCEL':
+        return this.exportReportToExcel(data, filename, exportsDir);
+      case 'CSV':
+        return this.exportReportToCSV(data, filename, exportsDir);
+      case 'JSON':
+        return this.exportReportToJSON(data, filename, exportsDir);
+      case 'PDF':
+        return this.exportReportToHTML(data, filename, exportsDir); // HTML for now, can be converted to PDF
+      default:
+        throw new Error('Unsupported export format');
+    }
+  }
+
+  private async exportReportToExcel(
+    data: any,
+    filename: string,
+    exportsDir: string,
+  ): Promise<{ filePath: string; fileSize: number }> {
+    const path = await import('path');
+    const fs = await import('fs/promises');
+    
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'Watheeq';
+    workbook.created = new Date();
+
+    const worksheet = workbook.addWorksheet(data.title || 'التقرير', {
+      views: [{ rightToLeft: true }],
+    });
+
+    // Title Row
+    worksheet.mergeCells('A1:F1');
+    const titleCell = worksheet.getCell('A1');
+    titleCell.value = data.title;
+    titleCell.font = { bold: true, size: 16 };
+    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    worksheet.getRow(1).height = 30;
+
+    // Date Row
+    worksheet.addRow([`تاريخ التقرير: ${new Date(data.generatedAt).toLocaleDateString('ar-SA')}`]);
+    worksheet.addRow([]);
+
+    // Headers
+    const headerRow = worksheet.addRow(data.columns.map((col: any) => col.header));
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF2563EB' },
+    };
+    headerRow.alignment = { horizontal: 'center' };
+
+    // Data Rows
+    data.data.forEach((item: any) => {
+      const row = data.columns.map((col: any) => item[col.key] ?? '');
+      worksheet.addRow(row);
+    });
+
+    // Auto-fit columns
+    data.columns.forEach((_col: any, index: number) => {
+      worksheet.getColumn(index + 1).width = 20;
+    });
+
+    const filePath = path.join(exportsDir, `${filename}.xlsx`);
+    await workbook.xlsx.writeFile(filePath);
+
+    const stats = await fs.stat(filePath);
+    return { filePath, fileSize: stats.size };
+  }
+
+  private async exportReportToCSV(
+    data: any,
+    filename: string,
+    exportsDir: string,
+  ): Promise<{ filePath: string; fileSize: number }> {
+    const path = await import('path');
+    const fs = await import('fs/promises');
+
+    const BOM = '\uFEFF';
+    const headers = data.columns.map((col: any) => `"${col.header}"`).join(',');
+    
+    const rows = data.data.map((item: any) => {
+      return data.columns.map((col: any) => {
+        const value = item[col.key] ?? '';
+        return `"${String(value).replace(/"/g, '""')}"`;
+      }).join(',');
+    });
+
+    const csv = BOM + [headers, ...rows].join('\n');
+    const filePath = path.join(exportsDir, `${filename}.csv`);
+    
+    await fs.writeFile(filePath, csv, 'utf8');
+    const stats = await fs.stat(filePath);
+    
+    return { filePath, fileSize: stats.size };
+  }
+
+  private async exportReportToJSON(
+    data: any,
+    filename: string,
+    exportsDir: string,
+  ): Promise<{ filePath: string; fileSize: number }> {
+    const path = await import('path');
+    const fs = await import('fs/promises');
+
+    const jsonData = {
+      title: data.title,
+      generatedAt: data.generatedAt,
+      columns: data.columns.map((col: any) => col.header),
+      data: data.data,
+      totalRecords: data.data.length,
+    };
+
+    const filePath = path.join(exportsDir, `${filename}.json`);
+    await fs.writeFile(filePath, JSON.stringify(jsonData, null, 2), 'utf8');
+    
+    const stats = await fs.stat(filePath);
+    return { filePath, fileSize: stats.size };
+  }
+
+  private async exportReportToHTML(
+    data: any,
+    filename: string,
+    exportsDir: string,
+  ): Promise<{ filePath: string; fileSize: number }> {
+    const path = await import('path');
+    const fs = await import('fs/promises');
+
+    const headerCells = data.columns.map((col: any) => `<th>${col.header}</th>`).join('');
+    const tableRows = data.data.map((item: any) => {
+      const cells = data.columns.map((col: any) => `<td>${item[col.key] ?? ''}</td>`).join('');
+      return `<tr>${cells}</tr>`;
+    }).join('\n');
+
+    const html = `<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>${data.title}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
+    * { box-sizing: border-box; }
+    body { font-family: 'Cairo', sans-serif; direction: rtl; padding: 20px; background: #f8fafc; }
+    .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 8px; padding: 30px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .header { text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #e5e7eb; }
+    .header h1 { color: #1e40af; margin: 0 0 10px 0; font-size: 24px; }
+    .header .date { color: #6b7280; font-size: 14px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th { background: #2563eb; color: white; padding: 12px 15px; text-align: right; font-weight: 600; }
+    td { padding: 12px 15px; border-bottom: 1px solid #e5e7eb; text-align: right; }
+    tr:nth-child(even) { background: #f9fafb; }
+    .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #9ca3af; font-size: 12px; }
+    @media print { body { background: white; padding: 0; } .container { box-shadow: none; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>${data.title}</h1>
+      <div class="date">تاريخ التقرير: ${new Date(data.generatedAt).toLocaleDateString('ar-SA')}</div>
+    </div>
+    <table>
+      <thead><tr>${headerCells}</tr></thead>
+      <tbody>${tableRows}</tbody>
+    </table>
+    <div class="footer">
+      <p>إجمالي السجلات: ${data.data.length}</p>
+      <p>تم إنشاء هذا التقرير بواسطة نظام وثيق</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+    const filePath = path.join(exportsDir, `${filename}.html`);
+    await fs.writeFile(filePath, html, 'utf8');
+    
+    const stats = await fs.stat(filePath);
+    return { filePath, fileSize: stats.size };
+  }
 }

@@ -13,10 +13,12 @@ export function CreateHearingPage() {
     const { data: lawyersData, isLoading: lawyersLoading } = useLawyers();
     const { data: clientsData, isLoading: clientsLoading } = useClients({ limit: 100 });
 
+    // Include clientId for filtering cases by client
     const cases = casesData?.data?.map((c) => ({
         id: c.id,
         title: c.title,
         caseNumber: c.caseNumber,
+        clientId: c.clientId,
     })) || [];
 
     // Extract lawyers from API response
@@ -30,14 +32,16 @@ export function CreateHearingPage() {
 
     const handleSubmit = (data: HearingFormData) => {
         createMutation.mutate({
+            hearingNumber: data.hearingNumber,
             hearingDate: data.hearingDate,
-            courtName: data.courtName,
-            courtroom: data.courtroom,
-            notes: data.notes,
-            status: data.status,
-            caseId: data.caseId,
             clientId: data.clientId || undefined,
-            assignedToId: data.assignedToId || undefined,
+            caseId: data.caseId || undefined,
+            assignedToId: data.assignedToId,
+            opponentName: data.opponentName || undefined,
+            courtName: data.courtName || undefined,
+            judgeName: data.judgeName || undefined,
+            notes: data.notes || undefined,
+            status: data.status,
         });
     };
 
@@ -90,4 +94,3 @@ export function CreateHearingPage() {
 }
 
 export default CreateHearingPage;
-

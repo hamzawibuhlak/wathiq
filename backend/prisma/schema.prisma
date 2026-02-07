@@ -23,6 +23,13 @@ enum UserRole {
   SECRETARY
 }
 
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  CANCELLED
+}
+
 enum CaseStatus {
   OPEN
   IN_PROGRESS
@@ -73,7 +80,17 @@ enum DocumentType {
   EVIDENCE
   CORRESPONDENCE
   INVOICE
+  RECEIPT
+  ID_DOCUMENT
   OTHER
+}
+
+enum OcrStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  NOT_APPLICABLE
 }
 
 // =====================================================
@@ -95,6 +112,23 @@ model Tenant {
   logo        String?
   isActive    Boolean  @default(true)
   
+  // SMTP Email Settings
+  smtpHost        String?  // SMTP Server Host
+  smtpPort        Int?     // SMTP Port (587 or 465)
+  smtpUser        String?  // SMTP Username (email)
+  smtpPass        String?  // SMTP Password (encrypted)
+  smtpFrom        String?  // From Email Address
+  smtpFromName    String?  // From Name
+  smtpSecure      Boolean  @default(false) // true for SSL (465), false for TLS (587)
+  smtpEnabled     Boolean  @default(false)
+  
+  // WhatsApp Settings
+  whatsappAccessToken     String?  // Meta WhatsApp API Access Token
+  whatsappPhoneNumberId   String?  // Phone Number ID
+  whatsappBusinessId      String?  // Business Account ID
+  whatsappWebhookToken    String?  // Webhook Verification Token
+  whatsappEnabled         Boolean  @default(false)
+  
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -105,6 +139,7 @@ model Tenant {
   cases          Case[]
   hearings       Hearing[]
   documents      Document[]
+  documentTemplates DocumentTemplate[]
   invoices       Invoice[]
   emailTemplates EmailTemplate[]
   emailLogs      EmailLog[]
@@ -112,6 +147,13 @@ model Tenant {
   notifications  Notification[]
   rolePermissions RolePermission[]
   activityLogs   ActivityLog[]
+  whatsappMessages WhatsAppMessage[]
+  whatsappTemplates WhatsAppTemplate[]
+  tasks          Task[]
+  workflows      Workflow[]
+  reports        Report[]
+  reportExecutions ReportExecution[]
+  userInvitations  UserInvitation[]
 
   @@map("tenants")
 }
@@ -128,8 +170,11 @@ model User {
   phone       String?
   role        UserRole @default(LAWYER)
   avatar      String?
+  title       String?  // المسمى الوظيفي
   isActive    Boolean  @default(true)
+  isVerified  Boolean  @default(false)
   lastLoginAt DateTime?
+  lastLoginIp String?
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -137,6 +182,11 @@ model User {
   // Multi-tenancy
   tenantId    String
   tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  // Created by (self-relation for tracking who created this user)
+  createdById String?
+  createdBy   User?    @relation("CreatedUsers", fields: [createdById], references: [id])
+  createdUsers User[]  @relation("CreatedUsers")
 
   // Relations
   assignedCases Case[]    @relation("AssignedLawyer")
@@ -148,6 +198,18 @@ model User {
   visibleClients Client[] @relation("ClientVisibility") // العملاء المرئيين لهذا المستخدم
   notifications Notification[]
   activityLogs  ActivityLog[]
+  assignedTasks Task[]    @relation("AssignedTasks")
+  createdTasks  Task[]    @relation("CreatedTasks")
+  taskComments  TaskComment[]
+  createdReports    Report[]          @relation("ReportCreator")
+  executedReports   ReportExecution[] @relation("ReportExecutor")
+  sentMessages      Message[]         @relation("SentMessages")
+  receivedMessages  Message[]         @relation("ReceivedMessages")
+  
+  // Session & Invitation relations
+  sessions           UserSession[]
+  sentInvitations    UserInvitation[] @relation("InviterUser")
+  acceptedInvitation UserInvitation?  @relation("AcceptedUser")
 
   @@index([tenantId])
   @@index([email])
@@ -183,6 +245,13 @@ model Client {
   hearings    Hearing[]
   invoices    Invoice[]
   visibleToUsers User[] @relation("ClientVisibility") // المستخدمين الذين يمكنهم رؤية هذا العميل
+  whatsappMessages WhatsAppMessage[]
+  
+  // Client portal access
+  portalAccessEnabled Boolean  @default(false)
+  portalPassword      String?  // Hashed password
+  lastPortalLogin     DateTime?
+  portalLoginToken    String?  @unique
 
   @@index([tenantId])
   @@index([phone])
@@ -229,6 +298,8 @@ model Case {
   hearings        Hearing[]
   documents       Document[]
   invoices        Invoice[]
+  whatsappMessages WhatsAppMessage[]
+  tasks           Task[]
 
   @@unique([tenantId, caseNumber])
   @@index([tenantId])
@@ -243,30 +314,37 @@ model Case {
 // =====================================================
 
 model Hearing {
-  id          String   @id @default(uuid())
+  id             String   @id @default(uuid())
   
-  caseId      String
-  case        Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  // رقم الجلسة من المحكمة
+  hearingNumber  String   @default("")
   
-  clientId    String?
-  client      Client?  @relation(fields: [clientId], references: [id])
+  caseId         String?
+  case           Case?    @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  
+  clientId       String?
+  client         Client?  @relation(fields: [clientId], references: [id])
   
   // المحامي المسؤول عن الجلسة
-  assignedToId String?
-  assignedTo   User?    @relation("HearingLawyer", fields: [assignedToId], references: [id])
+  assignedToId   String?
+  assignedTo     User?    @relation("HearingLawyer", fields: [assignedToId], references: [id])
   
   // من أنشأ الجلسة
-  createdById  String?
-  createdBy    User?    @relation("HearingCreator", fields: [createdById], references: [id])
+  createdById    String?
+  createdBy      User?    @relation("HearingCreator", fields: [createdById], references: [id])
   
-  hearingDate DateTime
-  courtName   String?
-  courtroom   String?
-  status      HearingStatus @default(SCHEDULED)
-  notes       String?
+  hearingDate    DateTime
+  courtName      String?
+  courtroom      String?
+  opponentName   String?   // اسم الخصم
+  judgeName      String?   // اسم القاضي
+  status         HearingStatus @default(SCHEDULED)
+  notes          String?
   
   tenantId    String
   tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  tasks       Task[]
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -292,6 +370,19 @@ model Document {
   fileSize        Int          // حجم الملف بالبايت
   mimeType        String       // نوع الملف
   documentType    DocumentType @default(OTHER)
+  tags            String[]     // Array of tags
+  
+  // Versioning
+  version         Int          @default(1)
+  isLatest        Boolean      @default(true)
+  parentId        String?      // Reference to previous version
+  parent          Document?    @relation("DocumentVersions", fields: [parentId], references: [id])
+  versions        Document[]   @relation("DocumentVersions")
+  
+  // OCR
+  ocrText         String?      @db.Text
+  ocrStatus       String       @default("PENDING")
+  ocrError        String?
   
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
@@ -310,7 +401,34 @@ model Document {
   @@index([tenantId])
   @@index([caseId])
   @@index([documentType])
+  @@index([parentId])
+  @@index([isLatest])
   @@map("documents")
+}
+
+// =====================================================
+// DOCUMENT TEMPLATE (قوالب المستندات)
+// =====================================================
+
+model DocumentTemplate {
+  id          String       @id @default(uuid())
+  name        String
+  description String?
+  category    DocumentType
+  filePath    String
+  fileSize    Int
+  mimeType    String
+  isActive    Boolean      @default(true)
+  
+  tenantId    String
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  
+  @@index([tenantId])
+  @@index([category])
+  @@map("document_templates")
 }
 
 // =====================================================
@@ -566,4 +684,400 @@ model ActivityLog {
   @@index([entity])
   @@index([createdAt])
   @@map("activity_logs")
+}
+
+// =====================================================
+// WHATSAPP MESSAGE (رسائل واتساب)
+// =====================================================
+
+model WhatsAppMessage {
+  id          String   @id @default(uuid())
+  messageId   String?  @unique // WhatsApp message ID
+  from        String   // Phone number (with country code)
+  to          String   // Phone number (with country code)
+  body        String   @db.Text
+  type        String   // text, image, document, audio, video, template
+  mediaUrl    String?
+  status      String   @default("SENT") // SENT, DELIVERED, READ, FAILED
+  direction   String   // INBOUND, OUTBOUND
+  clientId    String?
+  client      Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  caseId      String?
+  case        Case?    @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  tenantId    String?
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  error       String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([clientId])
+  @@index([from])
+  @@index([to])
+  @@index([createdAt])
+  @@map("whatsapp_messages")
+}
+
+// =====================================================
+// WHATSAPP TEMPLATE (قوالب واتساب)
+// =====================================================
+
+model WhatsAppTemplate {
+  id          String   @id @default(uuid())
+  name        String   // Template name (lowercase, underscore separated)
+  language    String   @default("ar") // ar, en
+  category    String   // MARKETING, UTILITY, AUTHENTICATION
+  header      String?
+  body        String   @db.Text
+  footer      String?
+  buttons     Json?    // Array of buttons
+  variables   Json?    // Array of variable names
+  status      String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  isActive    Boolean  @default(true)
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([name, tenantId])
+  @@index([tenantId])
+  @@map("whatsapp_templates")
+}
+
+// =====================================================
+// TASK (المهام)
+// =====================================================
+
+model Task {
+  id          String       @id @default(uuid())
+  title       String
+  description String?      @db.Text
+  status      TaskStatus   @default(TODO)
+  priority    TaskPriority @default(MEDIUM)
+  dueDate     DateTime?
+  
+  // Relations
+  caseId      String?
+  case        Case?        @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  
+  hearingId   String?
+  hearing     Hearing?     @relation(fields: [hearingId], references: [id], onDelete: SetNull)
+  
+  assignedToId String
+  assignedTo   User         @relation("AssignedTasks", fields: [assignedToId], references: [id])
+  
+  createdById  String
+  createdBy    User         @relation("CreatedTasks", fields: [createdById], references: [id])
+  
+  tenantId    String
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  // Task metadata
+  tags        String[]
+  completedAt DateTime?
+  
+  // Subtasks
+  parentId    String?
+  parent      Task?        @relation("SubTasks", fields: [parentId], references: [id])
+  subtasks    Task[]       @relation("SubTasks")
+  
+  // Comments
+  comments    TaskComment[]
+  
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  
+  @@index([tenantId])
+  @@index([assignedToId])
+  @@index([caseId])
+  @@index([status])
+  @@index([dueDate])
+  @@map("tasks")
+}
+
+model TaskComment {
+  id          String   @id @default(uuid())
+  content     String   @db.Text
+  
+  taskId      String
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([taskId])
+  @@map("task_comments")
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  REVIEW
+  BLOCKED
+  COMPLETED
+  CANCELLED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+// =====================================================
+// WORKFLOW (سير العمل الآلي)
+// =====================================================
+
+model Workflow {
+  id          String          @id @default(uuid())
+  name        String
+  description String?
+  isActive    Boolean         @default(true)
+  
+  // Trigger configuration
+  triggerType WorkflowTrigger
+  triggerConfig Json          // Flexible trigger configuration
+  
+  // Actions configuration
+  actions     Json            // Array of actions to perform
+  
+  tenantId    String
+  tenant      Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  // Execution tracking
+  executions  WorkflowExecution[]
+  
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  
+  @@index([tenantId])
+  @@index([triggerType])
+  @@map("workflows")
+}
+
+model WorkflowExecution {
+  id          String          @id @default(uuid())
+  workflowId  String
+  workflow    Workflow        @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  
+  status      ExecutionStatus @default(PENDING)
+  triggerData Json
+  result      Json?
+  error       String?
+  
+  startedAt   DateTime        @default(now())
+  completedAt DateTime?
+  
+  @@index([workflowId])
+  @@index([status])
+  @@map("workflow_executions")
+}
+
+enum WorkflowTrigger {
+  CASE_CREATED
+  CASE_STATUS_CHANGED
+  HEARING_SCHEDULED
+  HEARING_REMINDER
+  TASK_OVERDUE
+  DOCUMENT_UPLOADED
+  INVOICE_CREATED
+  INVOICE_OVERDUE
+  CLIENT_CREATED
+  MANUAL
+}
+
+enum ExecutionStatus {
+  PENDING
+  RUNNING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+// =====================================================
+// REPORT TYPES
+// =====================================================
+
+enum ReportType {
+  CASES_SUMMARY
+  CASES_DETAILED
+  HEARINGS_SCHEDULE
+  FINANCIAL_SUMMARY
+  CLIENT_ACTIVITY
+  LAWYER_PERFORMANCE
+  INVOICES_AGING
+  CUSTOM
+}
+
+enum ExportFormat {
+  PDF
+  EXCEL
+  CSV
+  JSON
+}
+
+// =====================================================
+// REPORT (التقارير)
+// =====================================================
+
+model Report {
+  id          String      @id @default(uuid())
+  name        String
+  description String?
+  reportType  ReportType
+  
+  // Configuration
+  config      Json        // Filters, columns, grouping, etc.
+  
+  // Metadata
+  createdById String
+  creator     User        @relation("ReportCreator", fields: [createdById], references: [id])
+  tenantId    String
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  // Timestamps
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  // Executions
+  executions  ReportExecution[]
+  
+  @@index([tenantId])
+  @@index([reportType])
+  @@map("reports")
+}
+
+// =====================================================
+// MESSAGE (الرسائل الداخلية)
+// =====================================================
+
+model Message {
+  id          String   @id @default(uuid())
+  subject     String
+  content     String   @db.Text
+  isRead      Boolean  @default(false)
+  
+  // Sender
+  senderId    String
+  sender      User     @relation("SentMessages", fields: [senderId], references: [id])
+  
+  // Receiver
+  receiverId  String
+  receiver    User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  
+  // Multi-tenancy
+  tenantId    String
+  
+  // Soft delete
+  deletedBySender   Boolean @default(false)
+  deletedByReceiver Boolean @default(false)
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([tenantId])
+  @@index([isRead])
+  @@map("messages")
+}
+
+// =====================================================
+// REPORT EXECUTION (تنفيذ التقارير)
+// =====================================================
+
+model ReportExecution {
+  id          String          @id @default(uuid())
+  reportId    String
+  report      Report          @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  
+  // Execution details
+  status      ExecutionStatus @default(PENDING)
+  format      ExportFormat
+  filePath    String?
+  fileSize    Int?
+  
+  // Metadata
+  executedById String
+  executor     User           @relation("ReportExecutor", fields: [executedById], references: [id])
+  tenantId     String
+  tenant       Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  // Error handling
+  error       String?
+  
+  // Timestamps
+  startedAt   DateTime        @default(now())
+  completedAt DateTime?
+  
+  @@index([tenantId])
+  @@index([reportId])
+  @@index([status])
+  @@map("report_executions")
+}
+
+// =====================================================
+// USER INVITATION (دعوات المستخدمين)
+// =====================================================
+
+model UserInvitation {
+  id             String           @id @default(uuid())
+  email          String
+  role           UserRole         @default(LAWYER)
+  status         InvitationStatus @default(PENDING)
+  
+  // Inviter
+  inviterId      String
+  inviter        User             @relation("InviterUser", fields: [inviterId], references: [id])
+  
+  // Accepted user (filled when invitation is accepted)
+  acceptedUserId String?          @unique
+  acceptedUser   User?            @relation("AcceptedUser", fields: [acceptedUserId], references: [id])
+  
+  // Token for accepting invitation
+  token          String           @unique
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  
+  // Multi-tenancy
+  tenantId       String
+  tenant         Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  
+  @@index([tenantId])
+  @@index([email])
+  @@index([token])
+  @@map("user_invitations")
+}
+
+// =====================================================
+// USER SESSION (جلسات المستخدمين)
+// =====================================================
+
+model UserSession {
+  id           String   @id @default(uuid())
+  
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  token        String   @unique
+  ipAddress    String?
+  userAgent    String?
+  deviceInfo   String?  // Device name/type
+  location     String?  // Approximate location from IP
+  isActive     Boolean  @default(true)
+  expiresAt    DateTime
+  lastActivity DateTime @default(now())
+  
+  createdAt    DateTime @default(now())
+  
+  @@index([userId])
+  @@index([token])
+  @@index([isActive])
+  @@map("user_sessions")
 }

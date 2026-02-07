@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
     ArrowRight,
@@ -12,13 +13,27 @@ import {
     AlertTriangle,
     CalendarDays,
     FileText,
+    Globe,
+    Key,
+    Copy,
+    Check,
 } from 'lucide-react';
 import { Button, Card, CardHeader, CardTitle, CardContent, Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { useClient } from '@/hooks/use-clients';
 import { formatDate, formatCurrency } from '@/lib/utils';
 import { CaseStatusBadge } from '@/components/cases';
 import { HearingStatusBadge } from '@/components/hearings';
 import { useAuthStore } from '@/stores/auth.store';
+import { clientPortalAdminApi } from '@/api/client-portal.api';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import toast from 'react-hot-toast';
 
 // Invoice status badge component
 function InvoiceStatusBadge({ status }: { status: string }) {
@@ -38,12 +53,49 @@ function InvoiceStatusBadge({ status }: { status: string }) {
 
 export function ClientDetailsPage() {
     const { id } = useParams<{ id: string }>();
+    const queryClient = useQueryClient();
 
     const { data: clientData, isLoading: clientLoading, error } = useClient(id!);
     const { user } = useAuthStore();
     const isLawyer = user?.role === 'LAWYER';
+    const canManagePortal = user?.role === 'OWNER' || user?.role === 'ADMIN';
+
+    const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+    const [tempPassword, setTempPassword] = useState('');
+    const [copied, setCopied] = useState(false);
 
     const client = clientData?.data;
+
+    // Portal mutations
+    const enablePortalMutation = useMutation({
+        mutationFn: () => clientPortalAdminApi.enableAccess(id!),
+        onSuccess: (data) => {
+            setTempPassword(data.temporaryPassword || '');
+            setShowPasswordDialog(true);
+            queryClient.invalidateQueries({ queryKey: ['client', id] });
+            toast.success('تم تفعيل بوابة العملاء');
+        },
+        onError: () => {
+            toast.error('فشل تفعيل البوابة');
+        },
+    });
+
+    const disablePortalMutation = useMutation({
+        mutationFn: () => clientPortalAdminApi.disableAccess(id!),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['client', id] });
+            toast.success('تم تعطيل بوابة العملاء');
+        },
+        onError: () => {
+            toast.error('فشل تعطيل البوابة');
+        },
+    });
+
+    const copyToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
 
     if (clientLoading) {
         return (
@@ -99,12 +151,39 @@ export function ClientDetailsPage() {
                         </Button>
                     </Link>
                 </div>
-                <Link to={`/clients/${id}/edit`}>
-                    <Button variant="outline">
-                        <Pencil className="w-4 h-4 ml-2" />
-                        تعديل
-                    </Button>
-                </Link>
+                <div className="flex gap-2">
+                    {canManagePortal && (
+                        <>
+                            {(client as any)?.portalAccessEnabled ? (
+                                <Button
+                                    variant="outline"
+                                    onClick={() => disablePortalMutation.mutate()}
+                                    disabled={disablePortalMutation.isPending}
+                                    className="text-red-600 border-red-200 hover:bg-red-50"
+                                >
+                                    <Globe className="w-4 h-4 ml-2" />
+                                    تعطيل البوابة
+                                </Button>
+                            ) : (
+                                <Button
+                                    variant="outline"
+                                    onClick={() => enablePortalMutation.mutate()}
+                                    disabled={enablePortalMutation.isPending}
+                                    className="text-green-600 border-green-200 hover:bg-green-50"
+                                >
+                                    <Key className="w-4 h-4 ml-2" />
+                                    تفعيل البوابة
+                                </Button>
+                            )}
+                        </>
+                    )}
+                    <Link to={`/clients/${id}/edit`}>
+                        <Button variant="outline">
+                            <Pencil className="w-4 h-4 ml-2" />
+                            تعديل
+                        </Button>
+                    </Link>
+                </div>
             </div>
 
             {/* Client Header */}
@@ -131,6 +210,12 @@ export function ClientDetailsPage() {
                                     }`}>
                                     {client.isActive ? 'نشط' : 'غير نشط'}
                                 </span>
+                                {(client as any).portalAccessEnabled && (
+                                    <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 flex items-center gap-1">
+                                        <Globe className="w-3 h-3" />
+                                        البوابة مفعلة
+                                    </span>
+                                )}
                             </div>
                             <p className="text-muted-foreground mb-4">
                                 {isCompany ? 'شركة' : 'فرد'} • عميل منذ {formatDate(client.createdAt)}
@@ -339,7 +424,7 @@ export function ClientDetailsPage() {
                                                 </div>
                                                 <div className="flex items-center gap-3">
                                                     <span className="font-semibold text-sm">
-                                                        {formatCurrency(inv.amount)}
+                                                        {formatCurrency(inv.totalAmount)}
                                                     </span>
                                                     <InvoiceStatusBadge status={inv.status} />
                                                 </div>
@@ -356,6 +441,50 @@ export function ClientDetailsPage() {
                     </TabsContent>
                 )}
             </Tabs>
+
+            {/* Portal Password Dialog */}
+            <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Key className="w-5 h-5 text-green-600" />
+                            تم تفعيل بوابة العملاء
+                        </DialogTitle>
+                        <DialogDescription>
+                            تم إرسال بيانات الدخول للعميل عبر البريد الإلكتروني
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <div className="bg-muted p-4 rounded-lg space-y-3">
+                            <div>
+                                <p className="text-sm text-muted-foreground mb-1">رقم الهاتف (اسم المستخدم)</p>
+                                <p className="font-mono text-sm" dir="ltr">{client?.phone}</p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-muted-foreground mb-1">كلمة المرور المؤقتة</p>
+                                <div className="flex items-center gap-2">
+                                    <code className="bg-background px-3 py-2 rounded border font-mono text-sm flex-1" dir="ltr">
+                                        {tempPassword}
+                                    </code>
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => copyToClipboard(tempPassword)}
+                                    >
+                                        {copied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                            يمكن للعميل الدخول من: <span className="font-mono" dir="ltr">bewathiq.com/portal</span>
+                        </p>
+                        <Button className="w-full" onClick={() => setShowPasswordDialog(false)}>
+                            تم
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

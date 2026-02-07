@@ -80,6 +80,71 @@ export const usersApi = {
 
     toggleActive: (id: string, isActive: boolean) =>
         api.patch<ApiResponse<User>>(`/users/${id}`, { isActive }).then((res) => res.data),
+
+    // New endpoints for Phase 10
+    getStats: () =>
+        api.get<ApiResponse<{ total: number; active: number; inactive: number; byRole: Record<string, number> }>>('/users/stats').then((res) => res.data),
+
+    changeRole: (id: string, role: string) =>
+        api.patch<ApiResponse<void>>(`/users/${id}/role`, { role }).then((res) => res.data),
+
+    deactivate: (id: string) =>
+        api.patch<ApiResponse<void>>(`/users/${id}/deactivate`).then((res) => res.data),
+
+    reactivate: (id: string) =>
+        api.patch<ApiResponse<void>>(`/users/${id}/reactivate`).then((res) => res.data),
+};
+
+// =====================
+// Invitations API
+// =====================
+export interface UserInvitation {
+    id: string;
+    email: string;
+    role: string;
+    status: 'PENDING' | 'ACCEPTED' | 'EXPIRED' | 'CANCELLED';
+    token: string;
+    expiresAt: string;
+    acceptedAt?: string;
+    createdAt: string;
+    inviter: { id: string; name: string; email: string };
+    acceptedUser?: { id: string; name: string; email: string };
+    tenant: { id: string; name: string; logo?: string };
+}
+
+export interface CreateInvitationData {
+    email: string;
+    role?: string;
+}
+
+export interface AcceptInvitationData {
+    token: string;
+    name: string;
+    password: string;
+    phone?: string;
+}
+
+export const invitationsApi = {
+    getAll: (status?: string) =>
+        api.get<ApiResponse<UserInvitation[]>>('/invitations', { params: status ? { status } : undefined }).then((res) => res.data),
+
+    getStats: () =>
+        api.get<ApiResponse<{ pending: number; accepted: number; expired: number; cancelled: number; total: number }>>('/invitations/stats').then((res) => res.data),
+
+    verifyToken: (token: string) =>
+        api.get<ApiResponse<UserInvitation>>(`/invitations/verify/${token}`).then((res) => res.data),
+
+    accept: (data: AcceptInvitationData) =>
+        api.post<ApiResponse<User>>('/invitations/accept', data).then((res) => res.data),
+
+    create: (data: CreateInvitationData) =>
+        api.post<ApiResponse<UserInvitation>>('/invitations', data).then((res) => res.data),
+
+    cancel: (id: string) =>
+        api.patch<ApiResponse<void>>(`/invitations/${id}/cancel`).then((res) => res.data),
+
+    resend: (id: string) =>
+        api.patch<ApiResponse<UserInvitation>>(`/invitations/${id}/resend`).then((res) => res.data),
 };
 
 // =====================
@@ -146,9 +211,51 @@ export const notificationsApi = {
         api.put<ApiResponse<NotificationSettings>>('/notifications/settings', data).then((res) => res.data),
 };
 
+// =====================
+// SMTP Email Settings API
+// =====================
+export interface SmtpSettings {
+    smtpHost: string | null;
+    smtpPort: number | null;
+    smtpUser: string | null;
+    smtpPass: string | null;
+    smtpFrom: string | null;
+    smtpFromName: string | null;
+    smtpSecure: boolean;
+    smtpEnabled: boolean;
+    hasPassword?: boolean;
+}
+
+export interface UpdateSmtpSettingsData {
+    smtpHost?: string;
+    smtpPort?: number;
+    smtpUser?: string;
+    smtpPass?: string;
+    smtpFrom?: string;
+    smtpFromName?: string;
+    smtpSecure?: boolean;
+    smtpEnabled?: boolean;
+}
+
+export interface TestEmailData {
+    testEmail: string;
+}
+
+export const smtpApi = {
+    get: () =>
+        api.get<ApiResponse<SmtpSettings>>('/tenants/smtp-settings').then((res) => res.data),
+
+    update: (data: UpdateSmtpSettingsData) =>
+        api.put<ApiResponse<SmtpSettings>>('/tenants/smtp-settings', data).then((res) => res.data),
+
+    test: (data: TestEmailData) =>
+        api.post<{ success: boolean; message: string }>('/tenants/smtp-settings/test', data).then((res) => res.data),
+};
+
 export default {
     profile: profileApi,
     users: usersApi,
     firm: firmApi,
     notifications: notificationsApi,
+    smtp: smtpApi,
 };

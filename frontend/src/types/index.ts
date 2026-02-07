@@ -168,28 +168,38 @@ export type HearingStatus = 'SCHEDULED' | 'COMPLETED' | 'POSTPONED' | 'CANCELLED
 
 export interface Hearing {
     id: string;
-    title: string;
+    hearingNumber: string;
     hearingDate: string;
     hearingTime?: string | null;
     courtName?: string | null;
-    location?: string | null;
+    courtroom?: string | null;
+    opponentName?: string | null;
+    judgeName?: string | null;
     notes: string | null;
     status: HearingStatus;
-    result: string | null;
     createdAt: string;
     updatedAt: string;
     tenantId: string;
-    caseId: string;
+    caseId?: string | null;
     case?: Case;
+    clientId: string;
+    client?: Client;
+    assignedToId?: string | null;
+    assignedTo?: User;
 }
 
 export interface CreateHearingRequest {
-    title: string;
+    hearingNumber: string;
     hearingDate: string;
-    location?: string;
+    clientId: string;
+    caseId?: string;
+    assignedToId?: string;
+    opponentName?: string;
+    courtName?: string;
+    judgeName?: string;
+    courtroom?: string;
     notes?: string;
     status?: HearingStatus;
-    caseId: string;
 }
 
 // =====================

@@ -1,4 +1,4 @@
-import { FileText, Image, File, Download, Trash2, Eye, MoreVertical, Check } from 'lucide-react';
+import { FileText, Image, File, Download, Trash2, Eye, MoreVertical, Check, History, Scan, Tag, Upload } from 'lucide-react';
 import type { Document } from '@/types';
 import { formatDate } from '@/lib/utils';
 import { useState, useRef, useEffect } from 'react';
@@ -9,6 +9,9 @@ interface DocumentCardProps {
     onPreview?: (doc: Document) => void;
     onDownload?: (doc: Document) => void;
     onDelete?: (id: string) => void;
+    onVersionHistory?: (doc: Document) => void;
+    onProcessOcr?: (doc: Document) => void;
+    onUploadNewVersion?: (doc: Document) => void;
     view?: 'grid' | 'list';
     isSelected?: boolean;
     onSelect?: (id: string, selected: boolean) => void;
@@ -21,7 +24,20 @@ const typeLabels: Record<string, string> = {
     EVIDENCE: 'دليل',
     COURT_ORDER: 'حكم محكمة',
     CORRESPONDENCE: 'مراسلة',
+    POWER_OF_ATTORNEY: 'وكالة',
+    COURT_DOCUMENT: 'مستند محكمة',
+    INVOICE: 'فاتورة',
+    RECEIPT: 'إيصال',
+    ID_DOCUMENT: 'وثيقة هوية',
     OTHER: 'أخرى',
+};
+
+const ocrStatusLabels: Record<string, { label: string; color: string }> = {
+    PENDING: { label: 'في الانتظار', color: 'bg-yellow-100 text-yellow-700' },
+    PROCESSING: { label: 'جارٍ المعالجة', color: 'bg-blue-100 text-blue-700' },
+    COMPLETED: { label: 'مكتمل', color: 'bg-green-100 text-green-700' },
+    FAILED: { label: 'فشل', color: 'bg-red-100 text-red-700' },
+    NOT_APPLICABLE: { label: 'غير متاح', color: 'bg-gray-100 text-gray-700' },
 };
 
 export function DocumentCard({
@@ -29,6 +45,9 @@ export function DocumentCard({
     onPreview,
     onDownload,
     onDelete,
+    onVersionHistory,
+    onProcessOcr,
+    onUploadNewVersion,
     view = 'grid',
     isSelected = false,
     onSelect,
@@ -192,6 +211,33 @@ export function DocumentCard({
                                 <Download className="w-4 h-4" />
                                 تحميل
                             </button>
+                            {onVersionHistory && (
+                                <button
+                                    onClick={() => { onVersionHistory?.(doc); setShowMenu(false); }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors"
+                                >
+                                    <History className="w-4 h-4" />
+                                    سجل الإصدارات
+                                </button>
+                            )}
+                            {onUploadNewVersion && (
+                                <button
+                                    onClick={() => { onUploadNewVersion?.(doc); setShowMenu(false); }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors"
+                                >
+                                    <Upload className="w-4 h-4" />
+                                    رفع إصدار جديد
+                                </button>
+                            )}
+                            {onProcessOcr && (doc as any).ocrStatus !== 'COMPLETED' && (
+                                <button
+                                    onClick={() => { onProcessOcr?.(doc); setShowMenu(false); }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors"
+                                >
+                                    <Scan className="w-4 h-4" />
+                                    استخراج النص (OCR)
+                                </button>
+                            )}
                             <button
                                 onClick={() => { onDelete?.(doc.id); setShowMenu(false); }}
                                 className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors"
@@ -210,10 +256,45 @@ export function DocumentCard({
                 <p className="text-sm text-muted-foreground mb-2 line-clamp-2">{doc.description}</p>
             )}
 
+            {/* Tags */}
+            {(doc as any).tags && (doc as any).tags.length > 0 && (
+                <div className="flex flex-wrap gap-1 mb-2">
+                    {(doc as any).tags.slice(0, 3).map((tag: string, idx: number) => (
+                        <span key={idx} className="flex items-center gap-1 px-2 py-0.5 bg-primary/10 text-primary rounded-full text-xs">
+                            <Tag className="w-3 h-3" />
+                            {tag}
+                        </span>
+                    ))}
+                    {(doc as any).tags.length > 3 && (
+                        <span className="px-2 py-0.5 bg-muted text-muted-foreground rounded-full text-xs">
+                            +{(doc as any).tags.length - 3}
+                        </span>
+                    )}
+                </div>
+            )}
+
             <div className="flex items-center justify-between pt-3 border-t text-xs text-muted-foreground">
-                <span className="px-2 py-0.5 bg-muted rounded">
-                    {typeLabels[doc.documentType] || doc.documentType}
-                </span>
+                <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 bg-muted rounded">
+                        {typeLabels[doc.documentType] || doc.documentType}
+                    </span>
+                    {/* OCR Status */}
+                    {(doc as any).ocrStatus && (doc as any).ocrStatus !== 'NOT_APPLICABLE' && (
+                        <span className={cn(
+                            "px-2 py-0.5 rounded flex items-center gap-1",
+                            ocrStatusLabels[(doc as any).ocrStatus]?.color || 'bg-gray-100'
+                        )}>
+                            <Scan className="w-3 h-3" />
+                            {ocrStatusLabels[(doc as any).ocrStatus]?.label || (doc as any).ocrStatus}
+                        </span>
+                    )}
+                    {/* Version indicator */}
+                    {(doc as any).version > 1 && (
+                        <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded">
+                            v{(doc as any).version}
+                        </span>
+                    )}
+                </div>
                 <span>{formatFileSize(doc.fileSize)}</span>
             </div>
         </div>

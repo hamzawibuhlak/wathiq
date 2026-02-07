@@ -8,8 +8,8 @@
 # ═══════════════════════════════════════════════════════════════════
 FROM node:20-alpine AS builder
 
-# Install build dependencies
-RUN apk add --no-cache openssl libc6-compat
+# Install build dependencies + poppler for PDF to image conversion + GraphicsMagick for pdf2pic
+RUN apk add --no-cache openssl libc6-compat poppler-utils graphicsmagick
 
 WORKDIR /app
 
@@ -30,15 +30,15 @@ COPY . .
 RUN npm run build
 
 # Remove devDependencies
-RUN npm prune --production
+RUN npm prune --production --legacy-peer-deps
 
 # ═══════════════════════════════════════════════════════════════════
 # STAGE 2: Production
 # ═══════════════════════════════════════════════════════════════════
 FROM node:20-alpine AS production
 
-# Install runtime dependencies
-RUN apk add --no-cache openssl
+# Install runtime dependencies + poppler for PDF to image conversion + GraphicsMagick + Ghostscript for pdf2pic
+RUN apk add --no-cache openssl poppler-utils graphicsmagick ghostscript
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && \

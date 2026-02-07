@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Clock, MapPin, Scale, MoreVertical, Pencil, Trash2, User, Users } from 'lucide-react';
+import { Clock, MapPin, Scale, MoreVertical, Pencil, Trash2, User, Users, Gavel, Hash } from 'lucide-react';
 import { cn, formatDate } from '@/lib/utils';
 import { HearingStatusBadge } from './HearingStatusBadge';
 import type { Hearing } from '@/types';
@@ -29,6 +29,9 @@ export function HearingCard({ hearing, onDelete }: HearingCardProps) {
 
     // Get lawyer info from hearing.assignedTo (direct) or fallback to case.assignedTo
     const lawyer = (hearing as any).assignedTo || hearing.case?.assignedTo;
+    
+    // Get opponent name from hearing directly or from case
+    const opponentName = (hearing as any).opponentName || hearing.case?.opposingParty;
 
     return (
         <div className={cn(
@@ -54,6 +57,13 @@ export function HearingCard({ hearing, onDelete }: HearingCardProps) {
                     </div>
 
                     <div>
+                        {/* Hearing Number */}
+                        {(hearing as any).hearingNumber && (
+                            <div className="flex items-center gap-1 text-xs text-primary font-medium mb-1">
+                                <Hash className="w-3 h-3" />
+                                {(hearing as any).hearingNumber}
+                            </div>
+                        )}
                         <h3 className="font-semibold">{hearing.courtName || 'جلسة'}</h3>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <Clock className="w-3.5 h-3.5" />
@@ -122,10 +132,18 @@ export function HearingCard({ hearing, onDelete }: HearingCardProps) {
             )}
 
             {/* Opposing Party */}
-            {hearing.case?.opposingParty && (
+            {opponentName && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
                     <Users className="w-4 h-4" />
-                    <span>الخصم: {hearing.case.opposingParty}</span>
+                    <span>الخصم: {opponentName}</span>
+                </div>
+            )}
+
+            {/* Judge Name */}
+            {(hearing as any).judgeName && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
+                    <Gavel className="w-4 h-4" />
+                    <span>القاضي: {(hearing as any).judgeName}</span>
                 </div>
             )}
 

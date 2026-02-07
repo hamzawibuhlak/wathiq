@@ -47,8 +47,11 @@ export class DashboardService {
 
     /**
      * Get comprehensive dashboard statistics
+     * - OWNER/ADMIN: see all statistics
+     * - LAWYER: see only their assigned cases/hearings/clients
+     * - Invoice stats (pending, revenue) only for OWNER/ADMIN/ACCOUNTANT
      */
-    async getStats(tenantId: string) {
+    async getStats(tenantId: string, userId?: string, userRole?: UserRole) {
         const now = new Date();
         const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const startOfTomorrow = new Date(startOfToday);
@@ -57,6 +60,16 @@ export class DashboardService {
         endOfTomorrow.setDate(endOfTomorrow.getDate() + 1);
         const endOfWeek = new Date(startOfToday);
         endOfWeek.setDate(endOfWeek.getDate() + 7);
+
+        // Determine permissions
+        const canSeeAll = userRole === UserRole.OWNER || userRole === UserRole.ADMIN;
+        const canSeeFinancials = userRole === UserRole.OWNER || userRole === UserRole.ADMIN;
+        
+        // Filters based on role
+        const hearingFilter = canSeeAll ? { tenantId } : { tenantId, assignedToId: userId };
+        const caseFilter = canSeeAll ? { tenantId } : { tenantId, assignedToId: userId };
+        // For clients: LAWYER sees only clients from their assigned cases
+        const clientFilter = canSeeAll ? { tenantId } : { tenantId, cases: { some: { assignedToId: userId } } };
 
         // Execute all queries in parallel
         const [
@@ -84,52 +97,52 @@ export class DashboardService {
             revenueSum,
             pendingSum,
         ] = await Promise.all([
-            // Cases queries
-            this.prisma.case.count({ where: { tenantId } }),
-            this.prisma.case.count({ where: { tenantId, status: { in: [CaseStatus.OPEN, CaseStatus.IN_PROGRESS] } } }),
-            this.prisma.case.count({ where: { tenantId, status: { in: [CaseStatus.CLOSED, CaseStatus.ARCHIVED] } } }),
+            // Cases queries - filtered by role
+            this.prisma.case.count({ where: caseFilter }),
+            this.prisma.case.count({ where: { ...caseFilter, status: { in: [CaseStatus.OPEN, CaseStatus.IN_PROGRESS, CaseStatus.SUSPENDED] } } }),
+            this.prisma.case.count({ where: { ...caseFilter, status: { in: [CaseStatus.CLOSED, CaseStatus.ARCHIVED] } } }),
             this.prisma.case.groupBy({
                 by: ['caseType'],
-                where: { tenantId },
+                where: caseFilter,
                 _count: true,
             }),
             this.prisma.case.groupBy({
                 by: ['status'],
-                where: { tenantId },
+                where: caseFilter,
                 _count: true,
             }),
-            // Hearings queries
-            this.prisma.hearing.count({ where: { tenantId } }),
+            // Hearings queries - filtered by role
+            this.prisma.hearing.count({ where: hearingFilter }),
             this.prisma.hearing.count({
                 where: {
-                    tenantId,
+                    ...hearingFilter,
                     hearingDate: { gte: startOfToday, lt: startOfTomorrow },
                 },
             }),
             this.prisma.hearing.count({
                 where: {
-                    tenantId,
+                    ...hearingFilter,
                     hearingDate: { gte: startOfTomorrow, lt: endOfTomorrow },
                 },
             }),
             this.prisma.hearing.count({
                 where: {
-                    tenantId,
+                    ...hearingFilter,
                     hearingDate: { gte: startOfToday, lte: endOfWeek },
                 },
             }),
             this.prisma.hearing.count({
                 where: {
-                    tenantId,
+                    ...hearingFilter,
                     hearingDate: { gte: now },
                     status: { in: [HearingStatus.SCHEDULED, HearingStatus.POSTPONED] },
                 },
             }),
-            // Clients queries
-            this.prisma.client.count({ where: { tenantId } }),
-            this.prisma.client.count({ where: { tenantId, isActive: true } }),
+            // Clients queries - filtered by role
+            this.prisma.client.count({ where: clientFilter }),
+            this.prisma.client.count({ where: { ...clientFilter, isActive: true } }),
             this.prisma.client.count({
-                where: { tenantId, cases: { some: {} } },
+                where: { ...clientFilter, cases: { some: {} } },
             }),
             // Invoices queries
             this.prisma.invoice.count({ where: { tenantId } }),
@@ -179,12 +192,12 @@ export class DashboardService {
                 withCases: clientsWithCases,
             },
             invoices: {
-                total: totalInvoices,
-                paid: paidInvoices,
-                pending: pendingInvoices,
-                overdue: overdueInvoices,
-                totalRevenue: Number(revenueSum._sum.totalAmount) || 0,
-                pendingAmount: Number(pendingSum._sum.totalAmount) || 0,
+                total: canSeeFinancials ? totalInvoices : 0,
+                paid: canSeeFinancials ? paidInvoices : 0,
+                pending: canSeeFinancials ? pendingInvoices : 0,
+                overdue: canSeeFinancials ? overdueInvoices : 0,
+                totalRevenue: canSeeFinancials ? (Number(revenueSum._sum.totalAmount) || 0) : 0,
+                pendingAmount: canSeeFinancials ? (Number(pendingSum._sum.totalAmount) || 0) : 0,
             },
         };
 
@@ -193,18 +206,31 @@ export class DashboardService {
 
     /**
      * Get upcoming hearings
+     * - OWNER/ADMIN: see all upcoming hearings
+     * - LAWYER: see only their assigned hearings
      */
-    async getUpcomingHearings(tenantId: string, days: number = 7) {
+    async getUpcomingHearings(tenantId: string, days: number = 7, userId?: string, userRole?: UserRole) {
         const now = new Date();
         const endDate = new Date();
         endDate.setDate(now.getDate() + days);
 
+        // Determine if user can see all hearings or only their assigned ones
+        const canSeeAllHearings = userRole === UserRole.OWNER || userRole === UserRole.ADMIN;
+        
+        // Build where clause
+        const whereClause: any = {
+            tenantId,
+            hearingDate: { gte: now, lte: endDate },
+            status: { in: [HearingStatus.SCHEDULED, HearingStatus.POSTPONED] },
+        };
+        
+        // Filter by assignedToId for LAWYER role
+        if (!canSeeAllHearings && userId) {
+            whereClause.assignedToId = userId;
+        }
+
         const hearings = await this.prisma.hearing.findMany({
-            where: {
-                tenantId,
-                hearingDate: { gte: now, lte: endDate },
-                status: { in: [HearingStatus.SCHEDULED, HearingStatus.POSTPONED] },
-            },
+            where: whereClause,
             include: {
                 case: {
                     select: {
@@ -212,6 +238,20 @@ export class DashboardService {
                         caseNumber: true,
                         title: true,
                         client: { select: { id: true, name: true, phone: true } },
+                    },
+                },
+                client: {
+                    select: {
+                        id: true,
+                        name: true,
+                        phone: true,
+                    },
+                },
+                assignedTo: {
+                    select: {
+                        id: true,
+                        name: true,
+                        avatar: true,
                     },
                 },
             },

@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateCaseDto } from './dto/create-case.dto';
 import { UpdateCaseDto } from './dto/update-case.dto';
 import { FilterCasesDto } from './dto/filter-cases.dto';
@@ -26,7 +27,10 @@ export interface CaseStats {
 
 @Injectable()
 export class CasesService {
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly notificationsService: NotificationsService,
+    ) { }
 
     /**
      * Get all cases with pagination, search, and filters
@@ -199,6 +203,18 @@ export class CasesService {
                 assignedTo: { select: { id: true, name: true } },
             },
         });
+
+        // Send notification to assigned lawyer (if assigned and different from creator)
+        if (dto.assignedToId && dto.assignedToId !== userId) {
+            await this.notificationsService.create({
+                title: 'قضية جديدة مسندة إليك',
+                message: `تم إسناد القضية "${caseData.title}" (${caseNumber}) إليك`,
+                type: 'INFO',
+                link: `/cases/${caseData.id}`,
+                userId: dto.assignedToId,
+                tenantId,
+            });
+        }
 
         return {
             data: caseData,

@@ -51,9 +51,42 @@ const ProfilePage = lazy(() => import('@/pages/settings/ProfilePage'));
 const UsersPage = lazy(() => import('@/pages/settings/UsersPage'));
 const FirmPage = lazy(() => import('@/pages/settings/FirmPage'));
 const NotificationsPage = lazy(() => import('@/pages/settings/NotificationsPage'));
+const WhatsAppSettingsPage = lazy(() => import('@/pages/settings/WhatsAppSettingsPage'));
+const EmailSettingsPage = lazy(() => import('@/pages/settings/EmailSettingsPage'));
 
 // Activity Logs
 const ActivityLogsPage = lazy(() => import('@/pages/activity-logs/ActivityLogsPage'));
+
+// WhatsApp
+const WhatsAppMessagesPage = lazy(() => import('@/pages/whatsapp/WhatsAppMessagesPage'));
+
+// Tasks
+const TasksListPage = lazy(() => import('@/pages/tasks/TasksListPage'));
+const TaskDetailsPage = lazy(() => import('@/pages/tasks/TaskDetailsPage'));
+
+// Workflows
+const WorkflowsListPage = lazy(() => import('@/pages/workflows/WorkflowsListPage'));
+
+// Notifications
+const NotificationsListPage = lazy(() => import('@/pages/notifications/NotificationsListPage'));
+
+// Analytics & Reports
+const AnalyticsDashboardPage = lazy(() => import('@/pages/analytics/AnalyticsDashboardPage'));
+const ReportsPage = lazy(() => import('@/pages/reports/ReportsPage'));
+
+// Messages
+const MessagesPage = lazy(() => import('@/pages/messages/MessagesPage'));
+
+// Accept Invitation (Public)
+const AcceptInvitationPage = lazy(() => import('@/pages/invitations/AcceptInvitationPage'));
+
+// Client Portal
+const PortalLoginPage = lazy(() => import('@/pages/portal/PortalLoginPage'));
+const PortalLayout = lazy(() => import('@/pages/portal/PortalLayout'));
+const PortalDashboardPage = lazy(() => import('@/pages/portal/PortalDashboardPage'));
+const PortalCasesPage = lazy(() => import('@/pages/portal/PortalCasesPage'));
+const PortalInvoicesPage = lazy(() => import('@/pages/portal/PortalInvoicesPage'));
+const PortalHearingsPage = lazy(() => import('@/pages/portal/PortalHearingsPage'));
 
 // 404 Page
 const NotFoundPage = () => (
@@ -151,15 +184,52 @@ function App() {
                             <Route path="profile" element={<ProfilePage />} />
                             <Route path="users" element={<UsersPage />} />
                             <Route path="firm" element={<FirmPage />} />
+                            <Route path="email" element={<EmailSettingsPage />} />
+                            <Route path="whatsapp" element={<WhatsAppSettingsPage />} />
                             <Route path="notifications" element={<NotificationsPage />} />
                         </Route>
 
                         {/* Activity Logs */}
                         <Route path="/activity-logs" element={<ActivityLogsPage />} />
+
+                        {/* WhatsApp */}
+                        <Route path="/whatsapp" element={<WhatsAppMessagesPage />} />
+
+                        {/* Tasks */}
+                        <Route path="/tasks" element={<TasksListPage />} />
+                        <Route path="/tasks/:id" element={<TaskDetailsPage />} />
+
+                        {/* Workflows */}
+                        <Route path="/workflows" element={<WorkflowsListPage />} />
+
+                        {/* Notifications */}
+                        <Route path="/notifications" element={<NotificationsListPage />} />
+
+                        {/* Analytics & Reports */}
+                        <Route path="/analytics" element={<AnalyticsDashboardPage />} />
+                        <Route path="/reports" element={<ReportsPage />} />
+
+                        {/* Messages */}
+                        <Route path="/messages" element={<MessagesPage />} />
+                        <Route path="/messages/:id" element={<MessagesPage />} />
                     </Route>
 
                     {/* Default Routes */}
                     <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+                    {/* Public Routes - Accept Invitation */}
+                    <Route path="/invitation/:token" element={<AcceptInvitationPage />} />
+
+                    {/* Client Portal Routes */}
+                    <Route path="/portal/login" element={<PortalLoginPage />} />
+                    <Route path="/portal" element={<PortalLayout />}>
+                        <Route index element={<Navigate to="/portal/dashboard" replace />} />
+                        <Route path="dashboard" element={<PortalDashboardPage />} />
+                        <Route path="cases" element={<PortalCasesPage />} />
+                        <Route path="invoices" element={<PortalInvoicesPage />} />
+                        <Route path="hearings" element={<PortalHearingsPage />} />
+                    </Route>
+
                     <Route path="*" element={<NotFoundPage />} />
                 </Routes>
             </Suspense>

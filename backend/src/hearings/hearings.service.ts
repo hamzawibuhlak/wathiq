@@ -62,11 +62,9 @@ export class HearingsService {
         // Build where clause
         const where: Prisma.HearingWhereInput = { tenantId };
 
-        // ⚡ LAWYER role restriction: only see hearings from assigned cases
+        // ⚡ LAWYER role restriction: only see their assigned hearings
         if (userRole === UserRole.LAWYER && userId) {
-            where.case = {
-                assignedToId: userId,
-            };
+            where.assignedToId = userId;
         }
 
         // Case filter
@@ -178,9 +176,9 @@ export class HearingsService {
             },
         };
 
-        // LAWYER role restriction
+        // LAWYER role restriction: only see their assigned hearings
         if (userRole === UserRole.LAWYER && userId) {
-            where.case = { assignedToId: userId };
+            where.assignedToId = userId;
         }
 
         const hearings = await this.prisma.hearing.findMany({
@@ -249,9 +247,9 @@ export class HearingsService {
             },
         };
 
-        // LAWYER role restriction
+        // LAWYER role restriction: only see their assigned hearings
         if (userRole === UserRole.LAWYER && userId) {
-            where.case = { assignedToId: userId };
+            where.assignedToId = userId;
         }
 
         const hearings = await this.prisma.hearing.findMany({
@@ -354,19 +352,41 @@ export class HearingsService {
      * Create new hearing
      */
     async create(dto: CreateHearingDto, tenantId: string, userId: string) {
-        // Verify case exists and belongs to tenant
-        const caseExists = await this.prisma.case.findFirst({
-            where: { id: dto.caseId, tenantId },
-        });
+        // Verify client exists if provided
+        if (dto.clientId) {
+            const clientExists = await this.prisma.client.findFirst({
+                where: { id: dto.clientId, tenantId },
+            });
 
-        if (!caseExists) {
-            throw new NotFoundException('القضية غير موجودة');
+            if (!clientExists) {
+                throw new NotFoundException('العميل غير موجود');
+            }
+        }
+
+        // Verify case exists if provided
+        if (dto.caseId) {
+            const caseExists = await this.prisma.case.findFirst({
+                where: { id: dto.caseId, tenantId },
+            });
+
+            if (!caseExists) {
+                throw new NotFoundException('القضية غير موجودة');
+            }
         }
 
         const hearing = await this.prisma.hearing.create({
             data: {
-                ...dto,
+                hearingNumber: dto.hearingNumber || '',
                 hearingDate: new Date(dto.hearingDate),
+                clientId: dto.clientId || null,
+                caseId: dto.caseId || null,
+                assignedToId: dto.assignedToId || null,
+                opponentName: dto.opponentName || null,
+                courtName: dto.courtName || null,
+                judgeName: dto.judgeName || null,
+                courtroom: dto.courtroom || null,
+                status: dto.status,
+                notes: dto.notes || null,
                 tenantId,
                 createdById: userId,
             },
@@ -377,6 +397,12 @@ export class HearingsService {
                         title: true,
                         caseNumber: true,
                         client: { select: { name: true } },
+                    },
+                },
+                client: {
+                    select: {
+                        id: true,
+                        name: true,
                     },
                 },
             },
@@ -466,8 +492,8 @@ export class HearingsService {
             clientName: hearing.client.name,
             hearingDate: hearing.hearingDate,
             courtName: hearing.courtName || '',
-            caseTitle: hearing.case.title,
-            caseNumber: hearing.case.caseNumber,
+            caseTitle: hearing.case?.title || '',
+            caseNumber: hearing.case?.caseNumber || '',
         });
 
         if (!result.success) {

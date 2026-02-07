@@ -1,6 +1,7 @@
 import api from './client';
 import type { ApiResponse } from '@/types';
 
+// Existing interfaces (keep backward compatibility)
 export interface DashboardStats {
     overview: {
         cases: { total: number; active: number; closed: number };
@@ -58,7 +59,52 @@ export interface PerformanceData {
     };
 }
 
+// New Report Template Types
+export type ReportType =
+    | 'CASES_SUMMARY'
+    | 'CASES_DETAILED'
+    | 'HEARINGS_SCHEDULE'
+    | 'FINANCIAL_SUMMARY'
+    | 'CLIENT_ACTIVITY'
+    | 'LAWYER_PERFORMANCE'
+    | 'INVOICES_AGING';
+
+export type ExportFormat = 'EXCEL' | 'CSV' | 'JSON' | 'PDF';
+
+export interface ReportTemplate {
+    id: string;
+    name: string;
+    description?: string;
+    reportType: ReportType;
+    config: Record<string, any>;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface ReportExecution {
+    id: string;
+    reportId: string;
+    status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+    format: ExportFormat;
+    filePath?: string;
+    error?: string;
+    createdAt: string;
+    completedAt?: string;
+}
+
+export interface CreateReportDto {
+    name: string;
+    description?: string;
+    reportType: ReportType;
+    config?: Record<string, any>;
+}
+
+export interface ExecuteReportDto {
+    format: ExportFormat;
+}
+
 export const reportsApi = {
+    // === Legacy endpoints (backward compatibility) ===
     getDashboardStats: () =>
         api.get<ApiResponse<DashboardStats>>('/reports/dashboard').then((res) => res.data),
 
@@ -72,6 +118,42 @@ export const reportsApi = {
 
     getPerformanceReport: () =>
         api.get<ApiResponse<PerformanceData[]>>('/reports/performance').then((res) => res.data),
+
+    // === New Report Templates CRUD ===
+    
+    // Create a new report template
+    createTemplate: (data: CreateReportDto) =>
+        api.post<ApiResponse<ReportTemplate>>('/reports', data).then((res) => res.data),
+
+    // Get all report templates
+    getTemplates: () =>
+        api.get<ApiResponse<ReportTemplate[]>>('/reports/templates').then((res) => res.data),
+
+    // Get single report template
+    getTemplate: (id: string) =>
+        api.get<ApiResponse<ReportTemplate>>(`/reports/templates/${id}`).then((res) => res.data),
+
+    // Update report template
+    updateTemplate: (id: string, data: Partial<CreateReportDto>) =>
+        api.patch<ApiResponse<ReportTemplate>>(`/reports/templates/${id}`, data).then((res) => res.data),
+
+    // Delete report template
+    deleteTemplate: (id: string) =>
+        api.delete<ApiResponse<void>>(`/reports/templates/${id}`).then((res) => res.data),
+
+    // === Report Execution ===
+    
+    // Execute a report template (generate file)
+    executeReport: (id: string, format: ExportFormat) =>
+        api.post<ApiResponse<ReportExecution>>(`/reports/templates/${id}/execute`, { format }).then((res) => res.data),
+
+    // Get execution status
+    getExecution: (id: string) =>
+        api.get<ApiResponse<ReportExecution>>(`/reports/executions/${id}`).then((res) => res.data),
+
+    // Download executed report
+    downloadExecution: (id: string) =>
+        api.get(`/reports/executions/${id}/download`, { responseType: 'blob' }),
 };
 
 export default reportsApi;

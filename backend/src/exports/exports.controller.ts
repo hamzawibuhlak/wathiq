@@ -182,4 +182,74 @@ export class ExportsController {
 
     res.send(buffer);
   }
+
+  @Get('documents')
+  @Roles('OWNER', 'ADMIN', 'LAWYER')
+  @ApiOperation({ summary: 'تصدير المستندات إلى Excel' })
+  @ApiQuery({ name: 'caseId', required: false })
+  @ApiQuery({ name: 'documentType', required: false })
+  @ApiQuery({ name: 'startDate', required: false })
+  @ApiQuery({ name: 'endDate', required: false })
+  async exportDocuments(
+    @CurrentUser() user: any,
+    @Res() res: Response,
+    @Query('caseId') caseId?: string,
+    @Query('documentType') documentType?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    const filters: any = {};
+    if (caseId) filters.caseId = caseId;
+    if (documentType) filters.documentType = documentType;
+    if (startDate) filters.startDate = new Date(startDate);
+    if (endDate) filters.endDate = new Date(endDate);
+
+    const buffer = await this.exportsService.exportDocuments(user.tenantId, filters);
+
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=documents-${new Date().getTime()}.xlsx`,
+    );
+
+    res.send(buffer);
+  }
+
+  @Get('tasks')
+  @Roles('OWNER', 'ADMIN', 'LAWYER')
+  @ApiOperation({ summary: 'تصدير المهام إلى Excel' })
+  @ApiQuery({ name: 'status', required: false })
+  @ApiQuery({ name: 'assignedToId', required: false })
+  @ApiQuery({ name: 'startDate', required: false })
+  @ApiQuery({ name: 'endDate', required: false })
+  async exportTasks(
+    @CurrentUser() user: any,
+    @Res() res: Response,
+    @Query('status') status?: string,
+    @Query('assignedToId') assignedToId?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    const filters: any = {};
+    if (status) filters.status = status;
+    if (assignedToId) filters.assignedToId = assignedToId;
+    if (startDate) filters.startDate = new Date(startDate);
+    if (endDate) filters.endDate = new Date(endDate);
+
+    const buffer = await this.exportsService.exportTasks(user.tenantId, filters);
+
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=tasks-${new Date().getTime()}.xlsx`,
+    );
+
+    res.send(buffer);
+  }
 }

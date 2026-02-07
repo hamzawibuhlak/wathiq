@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { Settings, User, Users, Building2, Bell } from 'lucide-react';
+import { Settings, User, Users, Building2, Bell, MessageCircle, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth.store';
 
@@ -7,6 +7,8 @@ const settingsTabs = [
     { path: '/settings/profile', label: 'الملف الشخصي', icon: User },
     { path: '/settings/users', label: 'المستخدمين', icon: Users, adminOnly: true },
     { path: '/settings/firm', label: 'المكتب', icon: Building2, adminOnly: true },
+    { path: '/settings/email', label: 'البريد الإلكتروني', icon: Mail, adminOnly: true },
+    { path: '/settings/whatsapp', label: 'الواتساب', icon: MessageCircle, adminOnly: true },
     { path: '/settings/notifications', label: 'الإشعارات', icon: Bell },
 ];
 

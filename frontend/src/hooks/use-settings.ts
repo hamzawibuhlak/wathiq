@@ -4,6 +4,7 @@ import {
     usersApi,
     firmApi,
     notificationsApi,
+    invitationsApi,
     UpdateProfileData,
     ChangePasswordData,
     CreateUserData,
@@ -11,6 +12,8 @@ import {
     UsersFilters,
     UpdateFirmData,
     NotificationSettings,
+    CreateInvitationData,
+    AcceptInvitationData,
 } from '@/api/settings.api';
 import { useAuthStore } from '@/stores/auth.store';
 import toast from 'react-hot-toast';
@@ -153,6 +156,146 @@ export function useToggleUserActive() {
         },
         onError: () => {
             toast.error('حدث خطأ أثناء تحديث حالة المستخدم');
+        },
+    });
+}
+
+export function useUserStats() {
+    return useQuery({
+        queryKey: ['users', 'stats'],
+        queryFn: () => usersApi.getStats(),
+        staleTime: 1000 * 60 * 2,
+    });
+}
+
+export function useChangeUserRole() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ id, role }: { id: string; role: string }) =>
+            usersApi.changeRole(id, role),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['users'] });
+            toast.success('تم تغيير الدور بنجاح');
+        },
+        onError: () => {
+            toast.error('حدث خطأ أثناء تغيير الدور');
+        },
+    });
+}
+
+export function useDeactivateUser() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (id: string) => usersApi.deactivate(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['users'] });
+            toast.success('تم تعطيل المستخدم بنجاح');
+        },
+        onError: () => {
+            toast.error('حدث خطأ أثناء تعطيل المستخدم');
+        },
+    });
+}
+
+export function useReactivateUser() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (id: string) => usersApi.reactivate(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['users'] });
+            toast.success('تم تفعيل المستخدم بنجاح');
+        },
+        onError: () => {
+            toast.error('حدث خطأ أثناء تفعيل المستخدم');
+        },
+    });
+}
+
+// =====================
+// Invitations Hooks
+// =====================
+
+export function useInvitations(status?: string) {
+    return useQuery({
+        queryKey: ['invitations', status],
+        queryFn: () => invitationsApi.getAll(status),
+        staleTime: 1000 * 60 * 2,
+    });
+}
+
+export function useInvitationStats() {
+    return useQuery({
+        queryKey: ['invitations', 'stats'],
+        queryFn: () => invitationsApi.getStats(),
+        staleTime: 1000 * 60 * 2,
+    });
+}
+
+export function useVerifyInvitation(token: string) {
+    return useQuery({
+        queryKey: ['invitations', 'verify', token],
+        queryFn: () => invitationsApi.verifyToken(token),
+        enabled: !!token,
+        retry: false,
+    });
+}
+
+export function useCreateInvitation() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (data: CreateInvitationData) => invitationsApi.create(data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['invitations'] });
+            toast.success('تم إرسال الدعوة بنجاح');
+        },
+        onError: () => {
+            toast.error('حدث خطأ أثناء إرسال الدعوة');
+        },
+    });
+}
+
+export function useAcceptInvitation() {
+    return useMutation({
+        mutationFn: (data: AcceptInvitationData) => invitationsApi.accept(data),
+        onSuccess: () => {
+            toast.success('تم قبول الدعوة بنجاح');
+        },
+        onError: () => {
+            toast.error('حدث خطأ أثناء قبول الدعوة');
+        },
+    });
+}
+
+export function useCancelInvitation() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (id: string) => invitationsApi.cancel(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['invitations'] });
+            toast.success('تم إلغاء الدعوة بنجاح');
+        },
+        onError: () => {
+            toast.error('حدث خطأ أثناء إلغاء الدعوة');
+        },
+    });
+}
+
+export function useResendInvitation() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (id: string) => invitationsApi.resend(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['invitations'] });
+            toast.success('تم إعادة إرسال الدعوة بنجاح');
+        },
+        onError: () => {
+            toast.error('حدث خطأ');
         },
     });
 }

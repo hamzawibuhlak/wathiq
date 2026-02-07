@@ -12,10 +12,22 @@ interface StatCardProps {
 }
 
 const colorClasses = {
-    primary: 'bg-primary/10 text-primary',
-    success: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400',
-    warning: 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400',
-    destructive: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
+    primary: {
+        icon: 'bg-primary/10 text-primary',
+        gradient: 'from-primary/5 to-transparent',
+    },
+    success: {
+        icon: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+        gradient: 'from-emerald-500/5 to-transparent',
+    },
+    warning: {
+        icon: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+        gradient: 'from-amber-500/5 to-transparent',
+    },
+    destructive: {
+        icon: 'bg-red-500/10 text-red-600 dark:text-red-400',
+        gradient: 'from-red-500/5 to-transparent',
+    },
 };
 
 export function StatCard({
@@ -29,39 +41,51 @@ export function StatCard({
 }: StatCardProps) {
     if (isLoading) {
         return (
-            <div className="bg-card rounded-xl border p-6 animate-pulse">
-                <div className="flex items-center justify-between mb-4">
-                    <div className="w-12 h-12 bg-muted rounded-lg" />
-                    <div className="w-16 h-4 bg-muted rounded" />
+            <div className="bg-card rounded-2xl border p-5 animate-pulse">
+                <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 bg-muted rounded-xl" />
+                    <div className="flex-1">
+                        <div className="w-16 h-3 bg-muted rounded mb-2" />
+                        <div className="w-12 h-6 bg-muted rounded" />
+                    </div>
                 </div>
-                <div className="w-24 h-8 bg-muted rounded mb-2" />
-                <div className="w-20 h-4 bg-muted rounded" />
             </div>
         );
     }
 
     return (
-        <div className="bg-card rounded-xl border p-6 hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-                <div className={cn('w-12 h-12 rounded-lg flex items-center justify-center', colorClasses[color])}>
-                    <Icon className="w-6 h-6" />
+        <div className={cn(
+            'bg-card rounded-2xl border p-5 hover:shadow-md transition-all duration-200',
+            'bg-gradient-to-br',
+            colorClasses[color].gradient
+        )}>
+            <div className="flex items-center gap-3">
+                <div className={cn(
+                    'w-10 h-10 rounded-xl flex items-center justify-center',
+                    colorClasses[color].icon
+                )}>
+                    <Icon className="w-5 h-5" />
                 </div>
-                {change !== undefined && (
-                    <span
-                        className={cn(
-                            'text-sm font-medium px-2 py-1 rounded-full',
-                            trend === 'up' && 'bg-green-100 text-green-600',
-                            trend === 'down' && 'bg-red-100 text-red-600',
-                            trend === 'neutral' && 'bg-gray-100 text-gray-600'
+                <div className="flex-1 min-w-0">
+                    <p className="text-xs text-muted-foreground mb-0.5 truncate">{title}</p>
+                    <div className="flex items-baseline gap-2">
+                        <span className="text-2xl font-bold">{value}</span>
+                        {change !== undefined && (
+                            <span
+                                className={cn(
+                                    'text-xs font-medium px-1.5 py-0.5 rounded-md',
+                                    trend === 'up' && 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30',
+                                    trend === 'down' && 'bg-red-100 text-red-600 dark:bg-red-900/30',
+                                    trend === 'neutral' && 'bg-muted text-muted-foreground'
+                                )}
+                            >
+                                {trend === 'up' && '+'}
+                                {change}%
+                            </span>
                         )}
-                    >
-                        {trend === 'up' && '+'}
-                        {change}%
-                    </span>
-                )}
+                    </div>
+                </div>
             </div>
-            <div className="text-3xl font-bold mb-1">{value}</div>
-            <div className="text-sm text-muted-foreground">{title}</div>
         </div>
     );
 }

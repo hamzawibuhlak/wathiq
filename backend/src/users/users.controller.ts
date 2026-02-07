@@ -26,6 +26,14 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { TenantId } from '../common/decorators/tenant-id.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UserRole } from '@prisma/client';
+import { IsEnum, IsNotEmpty } from 'class-validator';
+
+// DTO for changing role
+export class ChangeRoleDto {
+    @IsNotEmpty({ message: 'الدور مطلوب' })
+    @IsEnum(UserRole, { message: 'الدور غير صالح' })
+    role: UserRole;
+}
 
 @ApiTags('Users')
 @ApiBearerAuth('JWT-auth')
@@ -33,6 +41,14 @@ import { UserRole } from '@prisma/client';
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class UsersController {
     constructor(private readonly usersService: UsersService) { }
+
+    // ========== إحصائيات المستخدمين ==========
+    @Get('stats')
+    @Roles(UserRole.OWNER, UserRole.ADMIN)
+    @ApiOperation({ summary: 'إحصائيات المستخدمين' })
+    async getStats(@TenantId() tenantId: string) {
+        return this.usersService.getStats(tenantId);
+    }
 
     // ========== المحامين فقط - للاختيار في القضايا ==========
     @Get('lawyers')
@@ -64,11 +80,11 @@ export class UsersController {
         return this.usersService.update(userId, updateUserDto, tenantId);
     }
 
-    // ========== إدارة المستخدمين - OWNER فقط ==========
+    // ========== إدارة المستخدمين - OWNER/ADMIN ==========
     @Get()
     @ApiOperation({ summary: 'الحصول على جميع المستخدمين في المكتب' })
     @ApiResponse({ status: 200, description: 'قائمة المستخدمين' })
-    @Roles(UserRole.OWNER)
+    @Roles(UserRole.OWNER, UserRole.ADMIN)
     async findAll(
         @TenantId() tenantId: string,
         @Query() filterDto: FilterUsersDto,
@@ -80,7 +96,7 @@ export class UsersController {
     @ApiOperation({ summary: 'الحصول على تفاصيل مستخدم' })
     @ApiResponse({ status: 200, description: 'تفاصيل المستخدم' })
     @ApiResponse({ status: 404, description: 'المستخدم غير موجود' })
-    @Roles(UserRole.OWNER)
+    @Roles(UserRole.OWNER, UserRole.ADMIN)
     async findOne(
         @Param('id', ParseUUIDPipe) id: string,
         @TenantId() tenantId: string,
@@ -93,7 +109,7 @@ export class UsersController {
     @ApiResponse({ status: 201, description: 'تم إنشاء المستخدم بنجاح' })
     @ApiResponse({ status: 400, description: 'بيانات غير صالحة' })
     @ApiResponse({ status: 409, description: 'البريد الإلكتروني مستخدم بالفعل' })
-    @Roles(UserRole.OWNER)
+    @Roles(UserRole.OWNER, UserRole.ADMIN)
     async create(
         @Body() createUserDto: CreateUserDto,
         @TenantId() tenantId: string,
@@ -105,13 +121,61 @@ export class UsersController {
     @ApiOperation({ summary: 'تعديل مستخدم' })
     @ApiResponse({ status: 200, description: 'تم تحديث المستخدم بنجاح' })
     @ApiResponse({ status: 404, description: 'المستخدم غير موجود' })
-    @Roles(UserRole.OWNER)
+    @Roles(UserRole.OWNER, UserRole.ADMIN)
     async update(
         @Param('id', ParseUUIDPipe) id: string,
         @Body() updateUserDto: UpdateUserDto,
         @TenantId() tenantId: string,
     ) {
         return this.usersService.update(id, updateUserDto, tenantId);
+    }
+
+    @Patch(':id/role')
+    @ApiOperation({ summary: 'تغيير دور مستخدم' })
+    @ApiResponse({ status: 200, description: 'تم تغيير الدور بنجاح' })
+    @ApiResponse({ status: 404, description: 'المستخدم غير موجود' })
+    @Roles(UserRole.OWNER)
+    async changeRole(
+        @Param('id', ParseUUIDPipe) id: string,
+        @Body() dto: ChangeRoleDto,
+        @TenantId() tenantId: string,
+        @CurrentUser('id') currentUserId: string,
+    ) {
+        return this.usersService.changeRole(id, dto.role, tenantId, currentUserId);
+    }
+
+    @Patch(':id/deactivate')
+    @ApiOperation({ summary: 'تعطيل مستخدم' })
+    @ApiResponse({ status: 200, description: 'تم تعطيل المستخدم بنجاح' })
+    @Roles(UserRole.OWNER, UserRole.ADMIN)
+    async deactivate(
+        @Param('id', ParseUUIDPipe) id: string,
+        @TenantId() tenantId: string,
+        @CurrentUser('id') currentUserId: string,
+    ) {
+        return this.usersService.deactivate(id, tenantId, currentUserId);
+    }
+
+    @Patch(':id/reactivate')
+    @ApiOperation({ summary: 'إعادة تفعيل مستخدم' })
+    @ApiResponse({ status: 200, description: 'تم تفعيل المستخدم بنجاح' })
+    @Roles(UserRole.OWNER, UserRole.ADMIN)
+    async reactivate(
+        @Param('id', ParseUUIDPipe) id: string,
+        @TenantId() tenantId: string,
+    ) {
+        return this.usersService.reactivate(id, tenantId);
+    }
+
+    @Patch(':id/verify')
+    @ApiOperation({ summary: 'تأكيد بريد مستخدم' })
+    @ApiResponse({ status: 200, description: 'تم تأكيد البريد بنجاح' })
+    @Roles(UserRole.OWNER, UserRole.ADMIN)
+    async verifyEmail(
+        @Param('id', ParseUUIDPipe) id: string,
+        @TenantId() tenantId: string,
+    ) {
+        return this.usersService.verifyEmail(id, tenantId);
     }
 
     @Delete(':id')

@@ -27,8 +27,12 @@ export class DashboardController {
     @Get('stats')
     @ApiOperation({ summary: 'الحصول على إحصائيات لوحة التحكم الشاملة' })
     @ApiResponse({ status: 200, description: 'إحصائيات لوحة التحكم' })
-    async getStats(@TenantId() tenantId: string) {
-        return this.dashboardService.getStats(tenantId);
+    async getStats(
+        @TenantId() tenantId: string,
+        @CurrentUser('id') userId: string,
+        @CurrentUser('role') userRole: UserRole,
+    ) {
+        return this.dashboardService.getStats(tenantId, userId, userRole);
     }
 
     @Get('upcoming-hearings')
@@ -38,8 +42,10 @@ export class DashboardController {
     async getUpcomingHearings(
         @TenantId() tenantId: string,
         @Query('days') days?: number,
+        @CurrentUser('id') userId?: string,
+        @CurrentUser('role') userRole?: UserRole,
     ) {
-        return this.dashboardService.getUpcomingHearings(tenantId, days);
+        return this.dashboardService.getUpcomingHearings(tenantId, days, userId, userRole);
     }
 
     @Get('recent-cases')

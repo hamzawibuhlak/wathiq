@@ -1,23 +1,113 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PrismaService } from '../common/prisma/prisma.service';
 import * as nodemailer from 'nodemailer';
 
 @Injectable()
 export class EmailService {
-    private transporter: nodemailer.Transporter;
     private readonly logger = new Logger(EmailService.name);
 
-    constructor(private configService: ConfigService) {
-        // Create reusable transporter
-        this.transporter = nodemailer.createTransport({
+    constructor(
+        private configService: ConfigService,
+        private prisma: PrismaService,
+    ) { }
+
+    /**
+     * Get transporter for a specific tenant (uses tenant SMTP settings if available)
+     */
+    private async getTransporter(tenantId?: string): Promise<nodemailer.Transporter> {
+        // Try to get tenant-specific SMTP settings
+        if (tenantId) {
+            const tenant = await this.prisma.tenant.findUnique({
+                where: { id: tenantId },
+                select: {
+                    smtpHost: true,
+                    smtpPort: true,
+                    smtpUser: true,
+                    smtpPass: true,
+                    smtpSecure: true,
+                    smtpEnabled: true,
+                },
+            });
+
+            if (tenant?.smtpEnabled && tenant.smtpHost && tenant.smtpUser && tenant.smtpPass) {
+                return nodemailer.createTransport({
+                    host: tenant.smtpHost,
+                    port: tenant.smtpPort || 587,
+                    secure: tenant.smtpSecure || false,
+                    auth: {
+                        user: tenant.smtpUser,
+                        pass: tenant.smtpPass,
+                    },
+                });
+            }
+        }
+
+        // Fallback to default SMTP from environment
+        return nodemailer.createTransport({
             host: this.configService.get('SMTP_HOST', 'smtp.gmail.com'),
             port: this.configService.get('SMTP_PORT', 587),
-            secure: false, // true for 465, false for other ports
+            secure: false,
             auth: {
                 user: this.configService.get('SMTP_USER'),
                 pass: this.configService.get('SMTP_PASS'),
             },
         });
+    }
+
+    /**
+     * Get "from" address for a tenant
+     */
+    private async getFromAddress(tenantId?: string): Promise<string> {
+        if (tenantId) {
+            const tenant = await this.prisma.tenant.findUnique({
+                where: { id: tenantId },
+                select: {
+                    name: true,
+                    smtpFrom: true,
+                    smtpFromName: true,
+                    smtpUser: true,
+                    smtpEnabled: true,
+                },
+            });
+
+            if (tenant?.smtpEnabled && (tenant.smtpFrom || tenant.smtpUser)) {
+                const fromName = tenant.smtpFromName || tenant.name || 'وثيق';
+                const fromEmail = tenant.smtpFrom || tenant.smtpUser;
+                return `"${fromName}" <${fromEmail}>`;
+            }
+        }
+
+        return this.configService.get('SMTP_FROM', 'noreply@watheeq.sa');
+    }
+
+    /**
+     * Send generic email
+     */
+    async sendEmail(data: {
+        to: string;
+        subject: string;
+        body: string;
+        tenantId?: string;
+    }): Promise<{ success: boolean; error?: string }> {
+        try {
+            const transporter = await this.getTransporter(data.tenantId);
+            const from = await this.getFromAddress(data.tenantId);
+
+            const mailOptions = {
+                from,
+                to: data.to,
+                subject: data.subject,
+                html: data.body,
+            };
+
+            await transporter.sendMail(mailOptions);
+            this.logger.log(`Email sent to ${data.to}`);
+            return { success: true };
+        } catch (error) {
+            this.logger.error('Failed to send email:', error);
+            return { success: false, error: error.message };
+        }
     }
 
     /**
@@ -30,176 +120,113 @@ export class EmailService {
         courtName: string;
         caseTitle: string;
         caseNumber: string;
+        tenantId?: string;
     }): Promise<{ success: boolean; error?: string }> {
         try {
+            const transporter = await this.getTransporter(data.tenantId);
+            const from = await this.getFromAddress(data.tenantId);
+
             const formattedDate = new Intl.DateTimeFormat('ar-SA', {
                 dateStyle: 'full',
                 timeStyle: 'short',
             }).format(new Date(data.hearingDate));
 
+            // Get tenant logo
+            let logoHtml = '';
+            let firmName = 'وثيق';
+            if (data.tenantId) {
+                const tenant = await this.prisma.tenant.findUnique({
+                    where: { id: data.tenantId },
+                    select: { logo: true, name: true },
+                });
+                if (tenant?.name) firmName = tenant.name;
+                if (tenant?.logo) {
+                    const logoUrl = tenant.logo.startsWith('http') ? tenant.logo : `https://bewathiq.com${tenant.logo}`;
+                    logoHtml = `<img src="${logoUrl}" alt="${tenant.name}" style="max-height:50px;max-width:150px;margin-bottom:10px;">`;
+                }
+            }
+
+            const htmlContent = `<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family:Arial,Tahoma,sans-serif;line-height:1.8;color:#1f2937;background:#f3f4f6;margin:0;padding:20px;direction:rtl;text-align:right;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" dir="rtl" style="max-width:600px;margin:0 auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.1);">
+<tr>
+<td style="background:linear-gradient(135deg,#2563eb 0%,#1d4ed8 100%);color:white;padding:30px;text-align:center;">
+${logoHtml}
+<h2 style="margin:0;font-size:24px;font-weight:600;">تذكير بجلسة قضائية</h2>
+</td>
+</tr>
+<tr>
+<td style="padding:30px;direction:rtl;text-align:right;">
+<p style="font-size:18px;margin:0 0 20px 0;text-align:right;">عزيزي/عزيزتي <strong>${data.clientName}</strong>،</p>
+<p style="margin:0 0 20px 0;text-align:right;">نود تذكيركم بموعد جلستكم القضائية القادمة:</p>
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;margin:20px 0;">
+<tr>
+<td style="padding:15px;border-bottom:1px solid #e5e7eb;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0">
+<tr>
+<td style="text-align:right;color:#6b7280;font-size:13px;font-weight:600;">القضية</td>
+</tr>
+<tr>
+<td style="text-align:right;color:#111827;font-size:15px;font-weight:500;padding-top:4px;">${data.caseTitle}</td>
+</tr>
+<tr>
+<td style="text-align:right;color:#6b7280;font-size:13px;padding-top:2px;">رقم: ${data.caseNumber}</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td style="padding:15px;border-bottom:1px solid #e5e7eb;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0">
+<tr>
+<td style="text-align:right;color:#6b7280;font-size:13px;font-weight:600;">التاريخ والوقت</td>
+</tr>
+<tr>
+<td style="text-align:right;color:#111827;font-size:15px;font-weight:500;padding-top:4px;">${formattedDate}</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td style="padding:15px;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0">
+<tr>
+<td style="text-align:right;color:#6b7280;font-size:13px;font-weight:600;">المحكمة</td>
+</tr>
+<tr>
+<td style="text-align:right;color:#111827;font-size:15px;font-weight:500;padding-top:4px;">${data.courtName || 'سيتم تحديدها'}</td>
+</tr>
+</table>
+</td>
+</tr>
+</table>
+<p style="text-align:center;color:#dc2626;font-size:15px;margin:25px 0;font-weight:500;">يرجى الحضور في الموعد المحدد وإحضار جميع المستندات المطلوبة.</p>
+<p style="margin-top:30px;text-align:right;">مع تحيات فريق المكتب</p>
+</td>
+</tr>
+<tr>
+<td style="background:#f9fafb;text-align:center;padding:20px;border-top:1px solid #e5e7eb;">
+<div style="font-size:18px;font-weight:700;color:#2563eb;margin-bottom:8px;">${firmName}</div>
+<p style="margin:0;color:#6b7280;font-size:13px;">نظام وثيق لإدارة مكاتب المحاماة</p>
+</td>
+</tr>
+</table>
+</body>
+</html>`;
+
             const mailOptions = {
-                from: this.configService.get('SMTP_FROM', 'noreply@watheeq.sa'),
+                from,
                 to: data.to,
                 subject: `تذكير بجلسة قضائية - ${data.caseTitle}`,
-                html: `
-          <!DOCTYPE html>
-          <html dir="rtl" lang="ar">
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <style>
-              body { 
-                font-family: 'Segoe UI', Tahoma, Arial, sans-serif; 
-                line-height: 1.8; 
-                color: #1f2937;
-                background: #f3f4f6;
-                margin: 0;
-                padding: 20px;
-              }
-              .container { 
-                max-width: 600px; 
-                margin: 0 auto; 
-                background: white;
-                border-radius: 12px;
-                overflow: hidden;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-              }
-              .header { 
-                background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); 
-                color: white; 
-                padding: 30px; 
-                text-align: center;
-              }
-              .header h2 {
-                margin: 0;
-                font-size: 24px;
-                font-weight: 600;
-              }
-              .content { 
-                padding: 30px;
-              }
-              .greeting {
-                font-size: 18px;
-                margin-bottom: 20px;
-              }
-              .info-card { 
-                background: #f9fafb;
-                border: 1px solid #e5e7eb;
-                border-radius: 8px;
-                padding: 20px;
-                margin: 20px 0;
-              }
-              .info-row { 
-                display: flex;
-                align-items: flex-start;
-                margin: 12px 0;
-                padding-bottom: 12px;
-                border-bottom: 1px solid #e5e7eb;
-              }
-              .info-row:last-child {
-                border-bottom: none;
-                padding-bottom: 0;
-                margin-bottom: 0;
-              }
-              .icon {
-                font-size: 20px;
-                margin-left: 12px;
-                min-width: 24px;
-              }
-              .info-content {
-                flex: 1;
-              }
-              .label { 
-                font-weight: 600; 
-                color: #6b7280;
-                font-size: 13px;
-                margin-bottom: 4px;
-              }
-              .value { 
-                color: #111827;
-                font-size: 15px;
-                font-weight: 500;
-              }
-              .cta {
-                text-align: center;
-                margin: 30px 0;
-              }
-              .cta-text {
-                color: #4b5563;
-                font-size: 15px;
-              }
-              .footer { 
-                background: #f9fafb;
-                text-align: center; 
-                padding: 20px;
-                border-top: 1px solid #e5e7eb;
-              }
-              .footer p {
-                margin: 0;
-                color: #6b7280; 
-                font-size: 13px;
-              }
-              .logo {
-                font-size: 20px;
-                font-weight: 700;
-                color: #2563eb;
-                margin-bottom: 8px;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <div class="header">
-                <h2>🔔 تذكير بجلسة قضائية</h2>
-              </div>
-              <div class="content">
-                <p class="greeting">عزيزي/عزيزتي <strong>${data.clientName}</strong>،</p>
-                <p>نود تذكيركم بموعد جلستكم القضائية القادمة:</p>
-                
-                <div class="info-card">
-                  <div class="info-row">
-                    <span class="icon">📋</span>
-                    <div class="info-content">
-                      <div class="label">القضية</div>
-                      <div class="value">${data.caseTitle}</div>
-                      <div style="color: #6b7280; font-size: 13px; margin-top: 2px;">رقم: ${data.caseNumber}</div>
-                    </div>
-                  </div>
-                  
-                  <div class="info-row">
-                    <span class="icon">📅</span>
-                    <div class="info-content">
-                      <div class="label">التاريخ والوقت</div>
-                      <div class="value">${formattedDate}</div>
-                    </div>
-                  </div>
-                  
-                  <div class="info-row">
-                    <span class="icon">🏛️</span>
-                    <div class="info-content">
-                      <div class="label">المحكمة</div>
-                      <div class="value">${data.courtName || 'سيتم تحديدها'}</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="cta">
-                  <p class="cta-text">يرجى الحضور في الموعد المحدد وإحضار جميع المستندات المطلوبة.</p>
-                </div>
-
-                <p style="margin-top: 30px;">مع تحيات فريق المكتب</p>
-              </div>
-              <div class="footer">
-                <div class="logo">⚖️ وثيق</div>
-                <p>هذا إشعار تلقائي من نظام وثيق لإدارة مكاتب المحاماة</p>
-              </div>
-            </div>
-          </body>
-          </html>
-        `,
+                html: htmlContent,
             };
 
-            await this.transporter.sendMail(mailOptions);
+            await transporter.sendMail(mailOptions);
             this.logger.log(`Hearing reminder sent to ${data.to}`);
             return { success: true };
         } catch (error) {
@@ -219,6 +246,7 @@ export class EmailService {
         dueDate: Date | null;
         firmName: string;
         caseTitle?: string;
+        tenantId?: string;
     }): Promise<{ success: boolean; error?: string }> {
         return this.sendInvoiceEmail({
             to: data.to,
@@ -228,6 +256,7 @@ export class EmailService {
             dueDate: data.dueDate || new Date(),
             firmName: data.firmName,
             caseTitle: data.caseTitle,
+            tenantId: data.tenantId,
         });
     }
 
@@ -242,80 +271,106 @@ export class EmailService {
         dueDate: Date;
         firmName?: string;
         caseTitle?: string;
+        tenantId?: string;
     }): Promise<{ success: boolean; error?: string }> {
         try {
-            const formattedDueDate = new Intl.DateTimeFormat('ar-SA', {
-                dateStyle: 'long',
-            }).format(new Date(data.dueDate));
+            const transporter = await this.getTransporter(data.tenantId);
+            const from = await this.getFromAddress(data.tenantId);
 
+            // Get tenant logo
+            let logoHtml = '';
+            if (data.tenantId) {
+                const tenant = await this.prisma.tenant.findUnique({
+                    where: { id: data.tenantId },
+                    select: { logo: true, name: true },
+                });
+                if (tenant?.logo) {
+                    const logoUrl = tenant.logo.startsWith('http') ? tenant.logo : `https://bewathiq.com${tenant.logo}`;
+                    logoHtml = `<img src="${logoUrl}" alt="${tenant.name}" style="max-height:50px;max-width:150px;margin-bottom:10px;">`;
+                }
+            }
+
+            const formattedDueDate = new Intl.DateTimeFormat('ar-SA', { dateStyle: 'long' }).format(new Date(data.dueDate));
             const firmName = data.firmName || 'مكتب المحاماة';
+            const formattedAmount = data.amount.toLocaleString('ar-SA');
+
+            const caseRow = data.caseTitle ? `
+<tr>
+<td style="padding:12px 15px;border-bottom:1px solid #e5e7eb;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0">
+<tr>
+<td style="text-align:right;color:#6b7280;">القضية</td>
+<td style="text-align:left;font-weight:600;color:#111827;">${data.caseTitle}</td>
+</tr>
+</table>
+</td>
+</tr>` : '';
+
+            const htmlContent = `<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family:Arial,Tahoma,sans-serif;line-height:1.6;color:#333;background:#f3f4f6;margin:0;padding:20px;direction:rtl;text-align:right;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" dir="rtl" style="max-width:600px;margin:0 auto;background:white;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.1);">
+<tr>
+<td style="background:linear-gradient(135deg,#10b981 0%,#059669 100%);color:white;padding:25px;text-align:center;">
+${logoHtml}
+<h2 style="margin:0;font-size:22px;">فاتورة جديدة</h2>
+</td>
+</tr>
+<tr>
+<td style="padding:25px;direction:rtl;text-align:right;">
+<p style="font-size:15px;text-align:right;margin:0 0 15px 0;">عزيزي/عزيزتي <strong>${data.clientName}</strong>،</p>
+<p style="text-align:right;margin:0 0 20px 0;">تم إصدار فاتورة جديدة باسمكم من <strong>${firmName}</strong>:</p>
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;margin:15px 0;">
+<tr>
+<td style="padding:12px 15px;border-bottom:1px solid #e5e7eb;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0">
+<tr>
+<td style="text-align:right;color:#6b7280;">رقم الفاتورة</td>
+<td style="text-align:left;font-weight:600;color:#111827;">${data.invoiceNumber}</td>
+</tr>
+</table>
+</td>
+</tr>
+${caseRow}
+<tr>
+<td style="padding:12px 15px;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0">
+<tr>
+<td style="text-align:right;color:#6b7280;">تاريخ الاستحقاق</td>
+<td style="text-align:left;font-weight:600;color:#111827;">${formattedDueDate}</td>
+</tr>
+</table>
+</td>
+</tr>
+</table>
+<div style="font-size:32px;font-weight:bold;color:#10b981;text-align:center;margin:25px 0;direction:ltr;">
+${formattedAmount} ر.س
+</div>
+<p style="text-align:center;color:#4b5563;margin:20px 0;">يرجى سداد المبلغ قبل تاريخ الاستحقاق.</p>
+</td>
+</tr>
+<tr>
+<td style="background:#f9fafb;text-align:center;padding:20px;border-top:1px solid #e5e7eb;">
+<div style="font-size:18px;font-weight:700;color:#10b981;margin-bottom:8px;">${firmName}</div>
+<p style="margin:0;color:#6b7280;font-size:12px;">نظام وثيق لإدارة مكاتب المحاماة</p>
+</td>
+</tr>
+</table>
+</body>
+</html>`;
+
             const mailOptions = {
-                from: this.configService.get('SMTP_FROM', 'noreply@watheeq.sa'),
+                from,
                 to: data.to,
                 subject: `فاتورة جديدة - ${data.invoiceNumber} - ${firmName}`,
-                html: `
-          <!DOCTYPE html>
-          <html dir="rtl" lang="ar">
-          <head>
-            <meta charset="utf-8">
-            <style>
-              body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; line-height: 1.6; color: #333; background: #f3f4f6; margin: 0; padding: 20px; }
-              .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
-              .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px; text-align: center; }
-              .header h2 { margin: 0; font-size: 24px; }
-              .content { padding: 30px; }
-              .info-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 20px 0; }
-              .amount { font-size: 32px; font-weight: bold; color: #10b981; text-align: center; margin: 20px 0; }
-              .info-row { display: flex; justify-content: space-between; margin: 10px 0; padding: 10px 0; border-bottom: 1px solid #e5e7eb; }
-              .info-row:last-child { border-bottom: none; }
-              .label { color: #6b7280; }
-              .value { font-weight: 600; color: #111827; }
-              .footer { background: #f9fafb; text-align: center; padding: 20px; border-top: 1px solid #e5e7eb; }
-              .footer p { margin: 0; color: #6b7280; font-size: 13px; }
-              .logo { font-size: 18px; font-weight: 700; color: #10b981; margin-bottom: 8px; }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <div class="header">
-                <h2>💰 فاتورة جديدة</h2>
-              </div>
-              <div class="content">
-                <p style="font-size: 16px;">عزيزي/عزيزتي <strong>${data.clientName}</strong>،</p>
-                <p>تم إصدار فاتورة جديدة باسمكم من <strong>${firmName}</strong>:</p>
-                
-                <div class="info-card">
-                  <div class="info-row">
-                    <span class="label">رقم الفاتورة</span>
-                    <span class="value">${data.invoiceNumber}</span>
-                  </div>
-                  ${data.caseTitle ? `
-                  <div class="info-row">
-                    <span class="label">القضية</span>
-                    <span class="value">${data.caseTitle}</span>
-                  </div>
-                  ` : ''}
-                  <div class="info-row">
-                    <span class="label">تاريخ الاستحقاق</span>
-                    <span class="value">${formattedDueDate}</span>
-                  </div>
-                </div>
-                
-                <div class="amount">${data.amount.toLocaleString('ar-SA')} ر.س</div>
-                
-                <p style="margin-top: 20px; text-align: center; color: #4b5563;">يرجى سداد المبلغ قبل تاريخ الاستحقاق.</p>
-              </div>
-              <div class="footer">
-                <div class="logo">⚖️ ${firmName}</div>
-                <p>هذا إشعار تلقائي من نظام وثيق لإدارة مكاتب المحاماة</p>
-              </div>
-            </div>
-          </body>
-          </html>
-        `,
+                html: htmlContent,
             };
 
-            await this.transporter.sendMail(mailOptions);
+            await transporter.sendMail(mailOptions);
             this.logger.log(`Invoice email sent to ${data.to}`);
             return { success: true };
         } catch (error) {
