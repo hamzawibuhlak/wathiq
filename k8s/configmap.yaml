@@ -1,0 +1,17 @@
+# ═══════════════════════════════════════════════════════════════════
+# WATHEEQ KUBERNETES CONFIGMAP
+# ═══════════════════════════════════════════════════════════════════
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: watheeq-config
+  namespace: watheeq
+data:
+  NODE_ENV: "production"
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
+  DATABASE_HOST: "postgres-service"
+  DATABASE_PORT: "5432"
+  DATABASE_NAME: "watheeq"
+  JWT_EXPIRATION: "7d"
+  PORT: "3000"

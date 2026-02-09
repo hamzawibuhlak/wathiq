@@ -1,0 +1,139 @@
+# ═══════════════════════════════════════════════════════════════════
+# WATHEEQ ALERT RULES
+# Production monitoring alerts
+# ═══════════════════════════════════════════════════════════════════
+groups:
+  - name: watheeq_critical
+    interval: 30s
+    rules:
+      # =============================================================
+      # AVAILABILITY ALERTS
+      # =============================================================
+      - alert: BackendDown
+        expr: up{job="backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "🚨 Backend is DOWN"
+          description: "Backend service has been down for more than 1 minute"
+
+      - alert: DatabaseDown
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "🚨 PostgreSQL is DOWN"
+          description: "Database has been down for more than 1 minute"
+
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "🚨 Redis is DOWN"
+          description: "Redis cache has been down for more than 1 minute"
+
+      # =============================================================
+      # PERFORMANCE ALERTS
+      # =============================================================
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "⚠️ High Error Rate"
+          description: "Error rate is {{ $value | humanizePercentage }} over the last 5 minutes"
+
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "🐢 High Response Time"
+          description: "95th percentile response time is {{ $value }}s"
+
+      - alert: SlowDatabaseQueries
+        expr: rate(pg_stat_activity_max_tx_duration[5m]) > 30
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "🐌 Slow Database Queries"
+          description: "Database queries taking longer than 30 seconds"
+
+      # =============================================================
+      # RESOURCE ALERTS
+      # =============================================================
+      - alert: HighCPUUsage
+        expr: rate(container_cpu_usage_seconds_total{pod=~"backend.*"}[5m]) > 0.8
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "🔥 High CPU Usage"
+          description: "Pod {{ $labels.pod }} CPU usage is {{ $value | humanizePercentage }}"
+
+      - alert: HighMemoryUsage
+        expr: container_memory_usage_bytes{pod=~"backend.*"} / container_spec_memory_limit_bytes{pod=~"backend.*"} > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "💾 High Memory Usage"
+          description: "Pod {{ $labels.pod }} is using {{ $value | humanizePercentage }} of memory"
+
+      - alert: LowDiskSpace
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "💿 Low Disk Space"
+          description: "Less than 10% disk space remaining"
+
+      # =============================================================
+      # DATABASE ALERTS
+      # =============================================================
+      - alert: HighDatabaseConnections
+        expr: pg_stat_activity_count > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "🔌 High Database Connections"
+          description: "{{ $value }} active database connections"
+
+      - alert: DatabaseBackupFailed
+        expr: time() - pg_stat_bgwriter_last_checkpoint_time > 86400
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "📦 No Recent Backup"
+          description: "No database checkpoint in last 24 hours"
+
+      # =============================================================
+      # SECURITY ALERTS
+      # =============================================================
+      - alert: HighFailedLogins
+        expr: rate(auth_login_failed_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "🔐 High Failed Logins"
+          description: "More than 10 failed login attempts per minute"
+
+      - alert: SuspiciousActivity
+        expr: rate(security_threat_detected_total[5m]) > 1
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "🚨 Suspicious Activity Detected"
+          description: "Security threats detected: {{ $value }} per minute"

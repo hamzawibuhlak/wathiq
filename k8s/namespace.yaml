@@ -1,0 +1,10 @@
+# ═══════════════════════════════════════════════════════════════════
+# WATHEEQ KUBERNETES NAMESPACE
+# ═══════════════════════════════════════════════════════════════════
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: watheeq
+  labels:
+    name: watheeq
+    environment: production

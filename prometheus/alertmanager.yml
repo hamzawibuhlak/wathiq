@@ -1,0 +1,80 @@
+# ═══════════════════════════════════════════════════════════════════
+# WATHEEQ ALERTMANAGER CONFIGURATION
+# Alert routing and notifications
+# ═══════════════════════════════════════════════════════════════════
+global:
+  resolve_timeout: 5m
+  smtp_smarthost: 'smtp.sendgrid.net:587'
+  smtp_from: 'alerts@bewathiq.com'
+  smtp_auth_username: 'apikey'
+  smtp_auth_password: '<SENDGRID_API_KEY>'
+
+route:
+  group_by: ['alertname', 'severity']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 12h
+  receiver: 'slack-critical'
+  
+  routes:
+    # Critical alerts - immediate notification
+    - receiver: 'slack-critical'
+      match:
+        severity: critical
+      continue: true
+    
+    # Critical alerts also go to email
+    - receiver: 'email-critical'
+      match:
+        severity: critical
+    
+    # Warning alerts
+    - receiver: 'slack-warnings'
+      match:
+        severity: warning
+
+receivers:
+  # Slack - Critical Alerts
+  - name: 'slack-critical'
+    slack_configs:
+      - api_url: '<SLACK_WEBHOOK_URL>'
+        channel: '#watheeq-alerts'
+        title: '🚨 {{ .GroupLabels.alertname }}'
+        text: |
+          *Alert:* {{ .CommonAnnotations.summary }}
+          *Description:* {{ .CommonAnnotations.description }}
+          *Severity:* {{ .CommonLabels.severity }}
+        color: 'danger'
+        send_resolved: true
+
+  # Slack - Warning Alerts
+  - name: 'slack-warnings'
+    slack_configs:
+      - api_url: '<SLACK_WEBHOOK_URL>'
+        channel: '#watheeq-alerts'
+        title: '⚠️ {{ .GroupLabels.alertname }}'
+        text: |
+          *Alert:* {{ .CommonAnnotations.summary }}
+          *Description:* {{ .CommonAnnotations.description }}
+        color: 'warning'
+        send_resolved: true
+
+  # Email - Critical Alerts
+  - name: 'email-critical'
+    email_configs:
+      - to: 'admin@bewathiq.com'
+        send_resolved: true
+        html: |
+          <h2>🚨 Watheeq Alert: {{ .GroupLabels.alertname }}</h2>
+          <p><strong>Summary:</strong> {{ .CommonAnnotations.summary }}</p>
+          <p><strong>Description:</strong> {{ .CommonAnnotations.description }}</p>
+          <p><strong>Severity:</strong> {{ .CommonLabels.severity }}</p>
+          <p><strong>Time:</strong> {{ .StartsAt }}</p>
+
+inhibit_rules:
+  # If critical is firing, suppress warning for same alertname
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname']
