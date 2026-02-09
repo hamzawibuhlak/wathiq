@@ -20,7 +20,6 @@ export class AnalyticsService {
       topInvoices,
       documentsStats,
       tasksStats,
-      upcomingHearings,
     ] = await Promise.all([
       this.getCasesStats(tenantId, startDate, endDate),
       this.getHearingsStats(tenantId, startDate, endDate),
@@ -31,7 +30,6 @@ export class AnalyticsService {
       this.getTopInvoices(tenantId, 5),
       this.getDocumentsStats(tenantId),
       this.getTasksStats(tenantId, startDate, endDate),
-      this.getUpcomingHearings(tenantId, 10),
     ]);
 
     return {
@@ -47,7 +45,6 @@ export class AnalyticsService {
       topInvoices,
       documents: documentsStats,
       tasks: tasksStats,
-      upcomingHearings,
     };
   }
 
@@ -739,55 +736,5 @@ export class AnalyticsService {
   private getEndOfWeek(date: Date): Date {
     const start = this.getStartOfWeek(date);
     return new Date(start.getTime() + 6 * 24 * 60 * 60 * 1000);
-  }
-
-  // Upcoming Hearings for Timeline
-  private async getUpcomingHearings(tenantId: string, limit: number = 10) {
-    const now = new Date();
-    
-    const hearings = await this.prisma.hearing.findMany({
-      where: {
-        tenantId,
-        hearingDate: { gte: now },
-        status: { in: [HearingStatus.SCHEDULED, HearingStatus.POSTPONED] },
-      },
-      select: {
-        id: true,
-        hearingDate: true,
-        courtName: true,
-        courtroom: true,
-        status: true,
-        notes: true,
-        case: {
-          select: { 
-            id: true,
-            title: true, 
-            caseNumber: true,
-          },
-        },
-        client: {
-          select: { name: true },
-        },
-        assignedTo: {
-          select: { name: true },
-        },
-      },
-      orderBy: { hearingDate: 'asc' },
-      take: limit,
-    });
-
-    return hearings.map(h => ({
-      id: h.id,
-      hearingDate: h.hearingDate,
-      courtName: h.courtName,
-      courtroom: h.courtroom,
-      status: h.status,
-      notes: h.notes,
-      caseId: h.case?.id,
-      caseTitle: h.case?.title,
-      caseNumber: h.case?.caseNumber,
-      clientName: h.client?.name,
-      lawyerName: h.assignedTo?.name,
-    }));
   }
 }

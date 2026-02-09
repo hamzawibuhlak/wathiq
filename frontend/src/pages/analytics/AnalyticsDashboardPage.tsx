@@ -17,7 +17,9 @@ import {
     FileText,
     CheckSquare,
     AlertTriangle,
-    Printer
+    Printer,
+    Flag,
+    UserCheck
 } from 'lucide-react';
 import { 
     AreaChart, 
@@ -65,6 +67,22 @@ const caseStatusLabels: Record<string, string> = {
     ARCHIVED: 'مؤرشفة',
 };
 
+// Case priority translations
+const casePriorityLabels: Record<string, string> = {
+    HIGH: 'عالية',
+    MEDIUM: 'متوسطة',
+    LOW: 'منخفضة',
+    URGENT: 'عاجلة',
+};
+
+// Priority colors
+const priorityColors: Record<string, string> = {
+    URGENT: '#dc2626',
+    HIGH: '#f59e0b',
+    MEDIUM: '#3b82f6',
+    LOW: '#22c55e',
+};
+
 // Invoice status translations
 const invoiceStatusLabels: Record<string, string> = {
     DRAFT: 'مسودة',
@@ -99,6 +117,13 @@ export function AnalyticsDashboardPage() {
     const casesByTypeData = analytics?.cases?.byType?.map(item => ({
         name: caseTypeLabels[item.type] || item.type,
         value: item.count,
+    })) || [];
+
+    // Cases by priority data for charts
+    const casesByPriorityData = analytics?.cases?.byPriority?.map(item => ({
+        name: casePriorityLabels[item.priority] || item.priority,
+        value: item.count,
+        fill: priorityColors[item.priority] || '#6b7280',
     })) || [];
 
     // Trends data for charts
@@ -414,6 +439,122 @@ export function AnalyticsDashboardPage() {
                         ) : (
                             <div className="h-full flex items-center justify-center text-muted-foreground">
                                 لا توجد قضايا حتى الآن
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* Cases by Priority */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Cases by Priority - Bar Chart */}
+                <div className="p-6 rounded-2xl border bg-card print:border-gray-300">
+                    <div className="flex items-center justify-between mb-6">
+                        <h3 className="font-semibold flex items-center gap-2">
+                            <Flag className="w-5 h-5 text-orange-500" />
+                            القضايا حسب الأولوية
+                        </h3>
+                    </div>
+                    <div className="h-[250px]">
+                        {casesByPriorityData.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={casesByPriorityData} layout="vertical" margin={{ left: 60 }}>
+                                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" horizontal={false} />
+                                    <XAxis type="number" tick={{ fontSize: 12 }} />
+                                    <YAxis 
+                                        type="category" 
+                                        dataKey="name" 
+                                        tick={{ fontSize: 12 }}
+                                        width={60}
+                                    />
+                                    <Tooltip
+                                        formatter={(value: number) => [value, 'عدد القضايا']}
+                                        contentStyle={{ 
+                                            backgroundColor: 'hsl(var(--card))',
+                                            border: '1px solid hsl(var(--border))',
+                                            borderRadius: '8px',
+                                            direction: 'rtl'
+                                        }}
+                                    />
+                                    <Bar 
+                                        dataKey="value" 
+                                        radius={[0, 4, 4, 0]}
+                                    >
+                                        {casesByPriorityData.map((entry, index) => (
+                                            <Cell key={`cell-priority-${index}`} fill={entry.fill} />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="h-full flex items-center justify-center text-muted-foreground">
+                                لا توجد قضايا حتى الآن
+                            </div>
+                        )}
+                    </div>
+                    {/* Priority Legend */}
+                    <div className="flex flex-wrap gap-4 mt-4 justify-center">
+                        {Object.entries(casePriorityLabels).map(([key, label]) => (
+                            <div key={key} className="flex items-center gap-2">
+                                <div 
+                                    className="w-3 h-3 rounded-full" 
+                                    style={{ backgroundColor: priorityColors[key] || '#6b7280' }}
+                                />
+                                <span className="text-xs text-muted-foreground">{label}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Tasks by User */}
+                <div className="p-6 rounded-2xl border bg-card print:border-gray-300">
+                    <div className="flex items-center justify-between mb-6">
+                        <h3 className="font-semibold flex items-center gap-2">
+                            <UserCheck className="w-5 h-5 text-teal-500" />
+                            المهام حسب المستخدم
+                        </h3>
+                    </div>
+                    <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                        {analytics?.tasks?.byUser && analytics.tasks.byUser.length > 0 ? (
+                            analytics.tasks.byUser.map((user: any, index: number) => {
+                                const totalTasks = analytics?.tasks?.total || 1;
+                                const percentage = Math.round((user.count / totalTasks) * 100);
+                                return (
+                                    <div 
+                                        key={user.userId || index}
+                                        className="p-3 rounded-xl bg-muted/50"
+                                    >
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div className="flex items-center gap-3">
+                                                <div className={cn(
+                                                    "w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm",
+                                                    index === 0 ? "bg-teal-500" : 
+                                                    index === 1 ? "bg-teal-400" :
+                                                    index === 2 ? "bg-teal-600" : "bg-gray-500"
+                                                )}>
+                                                    {user.userName?.charAt(0) || '?'}
+                                                </div>
+                                                <span className="font-medium">{user.userName || 'غير محدد'}</span>
+                                            </div>
+                                            <div className="text-left">
+                                                <span className="font-semibold">{user.count}</span>
+                                                <span className="text-xs text-muted-foreground mr-1">مهمة</span>
+                                            </div>
+                                        </div>
+                                        {/* Progress bar */}
+                                        <div className="w-full bg-muted rounded-full h-2">
+                                            <div 
+                                                className="bg-teal-500 h-2 rounded-full transition-all duration-300"
+                                                style={{ width: `${percentage}%` }}
+                                            />
+                                        </div>
+                                        <p className="text-xs text-muted-foreground mt-1 text-left">{percentage}% من إجمالي المهام</p>
+                                    </div>
+                                );
+                            })
+                        ) : (
+                            <div className="h-full flex items-center justify-center text-muted-foreground py-12">
+                                لا توجد بيانات للمهام
                             </div>
                         )}
                     </div>
@@ -789,90 +930,6 @@ export function AnalyticsDashboardPage() {
                     </div>
                 </div>
             </div>
-
-            {/* Hearings Timeline */}
-            {analytics?.upcomingHearings && analytics.upcomingHearings.length > 0 && (
-                <div className="p-6 rounded-2xl border bg-card print:border-gray-300">
-                    <div className="flex items-center justify-between mb-6">
-                        <h3 className="font-semibold flex items-center gap-2">
-                            <Calendar className="w-5 h-5 text-amber-500" />
-                            جدول الجلسات القادمة
-                        </h3>
-                        <span className="text-sm text-muted-foreground">
-                            {analytics.upcomingHearings.length} جلسة
-                        </span>
-                    </div>
-                    <div className="relative">
-                        {/* Timeline line */}
-                        <div className="absolute right-4 top-0 bottom-0 w-0.5 bg-gradient-to-b from-amber-500 via-amber-300 to-transparent" />
-                        
-                        <div className="space-y-4">
-                            {analytics.upcomingHearings.slice(0, 5).map((hearing: any, index: number) => {
-                                const hearingDate = new Date(hearing.hearingDate);
-                                const isToday = new Date().toDateString() === hearingDate.toDateString();
-                                const isTomorrow = new Date(Date.now() + 86400000).toDateString() === hearingDate.toDateString();
-                                
-                                return (
-                                    <div key={hearing.id} className="relative flex gap-4 pr-8">
-                                        {/* Timeline dot */}
-                                        <div className={cn(
-                                            "absolute right-2 w-4 h-4 rounded-full border-2 border-white dark:border-gray-800",
-                                            isToday ? "bg-red-500" : 
-                                            isTomorrow ? "bg-amber-500" : 
-                                            "bg-blue-500"
-                                        )} />
-                                        
-                                        <div className={cn(
-                                            "flex-1 p-4 rounded-xl transition-colors",
-                                            isToday ? "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800" :
-                                            isTomorrow ? "bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800" :
-                                            "bg-muted/50 border border-transparent"
-                                        )}>
-                                            <div className="flex items-start justify-between gap-4">
-                                                <div className="flex-1">
-                                                    <p className="font-medium">{hearing.caseTitle || 'جلسة'}</p>
-                                                    <p className="text-sm text-muted-foreground mt-1">
-                                                        {hearing.courtName || 'المحكمة'}
-                                                        {hearing.courtroom && ` - القاعة ${hearing.courtroom}`}
-                                                    </p>
-                                                    {hearing.clientName && (
-                                                        <p className="text-xs text-muted-foreground mt-1">
-                                                            العميل: {hearing.clientName}
-                                                        </p>
-                                                    )}
-                                                </div>
-                                                <div className="text-left">
-                                                    <p className={cn(
-                                                        "text-sm font-medium",
-                                                        isToday ? "text-red-600" :
-                                                        isTomorrow ? "text-amber-600" :
-                                                        "text-blue-600"
-                                                    )}>
-                                                        {isToday ? 'اليوم' : 
-                                                         isTomorrow ? 'غداً' : 
-                                                         hearingDate.toLocaleDateString('ar-SA', { weekday: 'short', month: 'short', day: 'numeric' })}
-                                                    </p>
-                                                    <p className="text-xs text-muted-foreground">
-                                                        {hearingDate.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                        
-                        {analytics.upcomingHearings.length > 5 && (
-                            <div className="mt-4 text-center">
-                                <span className="text-sm text-muted-foreground">
-                                    و {analytics.upcomingHearings.length - 5} جلسات أخرى...
-                                </span>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
 
             {/* Financial Summary */}
             {canSeeFinancials && analytics?.financial && (

@@ -7,6 +7,8 @@ if (!globalThis.crypto) {
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import * as compression from 'compression';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
@@ -17,6 +19,15 @@ async function bootstrap() {
     const app = await NestFactory.create(AppModule, {
         logger: ['error', 'warn', 'log', 'debug'],
     });
+
+    // Security headers (helmet)
+    app.use(helmet({
+        contentSecurityPolicy: false, // Disabled for Swagger UI
+        crossOriginEmbedderPolicy: false,
+    }));
+
+    // Response compression (gzip)
+    app.use(compression());
 
     // Global prefix
     app.setGlobalPrefix('api');

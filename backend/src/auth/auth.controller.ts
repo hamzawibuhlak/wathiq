@@ -14,6 +14,7 @@ import {
     ApiBearerAuth,
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
+import { TwoFactorService } from './two-factor.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -22,7 +23,10 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
-    constructor(private readonly authService: AuthService) { }
+    constructor(
+        private readonly authService: AuthService,
+        private readonly twoFactorService: TwoFactorService,
+    ) { }
 
     @Post('register')
     @ApiOperation({ summary: 'تسجيل مكتب جديد مع المالك' })
@@ -60,5 +64,67 @@ export class AuthController {
     @ApiResponse({ status: 200, description: 'تم تسجيل الخروج بنجاح' })
     async logout(@CurrentUser('id') userId: string) {
         return this.authService.logout(userId);
+    }
+
+    // ============ TWO-FACTOR AUTHENTICATION ============
+
+    @Post('2fa/generate')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth('JWT-auth')
+    @ApiOperation({ summary: 'إنشاء سر المصادقة الثنائية' })
+    @ApiResponse({ status: 200, description: 'تم إنشاء السر و QR code' })
+    async generate2FASecret(@CurrentUser('id') userId: string) {
+        return this.twoFactorService.generateSecret(userId);
+    }
+
+    @Post('2fa/enable')
+    @HttpCode(HttpStatus.OK)
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth('JWT-auth')
+    @ApiOperation({ summary: 'تفعيل المصادقة الثنائية' })
+    @ApiResponse({ status: 200, description: 'تم تفعيل المصادقة الثنائية' })
+    @ApiResponse({ status: 401, description: 'رمز غير صحيح' })
+    async enable2FA(
+        @CurrentUser('id') userId: string,
+        @Body('token') token: string,
+    ) {
+        return this.twoFactorService.enable(userId, token);
+    }
+
+    @Post('2fa/disable')
+    @HttpCode(HttpStatus.OK)
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth('JWT-auth')
+    @ApiOperation({ summary: 'إلغاء المصادقة الثنائية' })
+    @ApiResponse({ status: 200, description: 'تم إلغاء المصادقة الثنائية' })
+    @ApiResponse({ status: 401, description: 'رمز غير صحيح' })
+    async disable2FA(
+        @CurrentUser('id') userId: string,
+        @Body('token') token: string,
+    ) {
+        return this.twoFactorService.disable(userId, token);
+    }
+
+    @Post('2fa/regenerate-backup')
+    @HttpCode(HttpStatus.OK)
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth('JWT-auth')
+    @ApiOperation({ summary: 'تجديد رموز النسخ الاحتياطي' })
+    @ApiResponse({ status: 200, description: 'تم تجديد الرموز' })
+    async regenerateBackupCodes(
+        @CurrentUser('id') userId: string,
+        @Body('token') token: string,
+    ) {
+        return this.twoFactorService.regenerateBackupCodes(userId, token);
+    }
+
+    @Get('2fa/status')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth('JWT-auth')
+    @ApiOperation({ summary: 'حالة المصادقة الثنائية' })
+    @ApiResponse({ status: 200, description: 'حالة 2FA' })
+    async get2FAStatus(@CurrentUser('id') userId: string) {
+        const enabled = await this.twoFactorService.has2FAEnabled(userId);
+        return { enabled };
     }
 }

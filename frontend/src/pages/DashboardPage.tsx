@@ -1,19 +1,21 @@
 import { Link } from 'react-router-dom';
-import { 
-    Briefcase, 
-    Users, 
-    Calendar, 
+import {
+    Briefcase,
+    Users,
+    Calendar,
     Clock,
     TrendingUp,
     AlertCircle,
     ArrowLeft,
     Plus,
-    Receipt
+    Receipt,
+    BarChart3
 } from 'lucide-react';
-import { StatCard, UpcomingHearings, RecentActivity } from '@/components/dashboard';
+import { StatCard, UpcomingHearings, RecentActivity, DashboardAnalytics } from '@/components/dashboard';
 import { useDashboardStats, useUpcomingHearings, useRecentActivity } from '@/hooks/use-dashboard';
 import { useAuthStore } from '@/stores/auth.store';
 import { cn } from '@/lib/utils';
+
 
 export function DashboardPage() {
     const { user } = useAuthStore();
@@ -67,7 +69,7 @@ export function DashboardPage() {
                         })}
                     </p>
                 </div>
-                
+
                 {/* Quick Actions */}
                 <div className="flex items-center gap-2">
                     <Link
@@ -95,12 +97,12 @@ export function DashboardPage() {
                         اليوم
                     </h2>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {/* Today's Hearings Card */}
                     <div className={cn(
                         "col-span-1 md:col-span-2 p-5 rounded-2xl border",
-                        todayHearings.length > 0 
+                        todayHearings.length > 0
                             ? "bg-gradient-to-br from-red-50 to-orange-50 border-red-100 dark:from-red-950/20 dark:to-orange-950/20 dark:border-red-900/30"
                             : "bg-card"
                     )}>
@@ -108,7 +110,7 @@ export function DashboardPage() {
                             <div className="flex items-center gap-3">
                                 <div className={cn(
                                     "w-10 h-10 rounded-xl flex items-center justify-center",
-                                    todayHearings.length > 0 
+                                    todayHearings.length > 0
                                         ? "bg-red-500/10 text-red-600"
                                         : "bg-muted text-muted-foreground"
                                 )}>
@@ -117,7 +119,7 @@ export function DashboardPage() {
                                 <div>
                                     <h3 className="font-semibold">جلسات اليوم</h3>
                                     <p className="text-sm text-muted-foreground">
-                                        {todayHearings.length > 0 
+                                        {todayHearings.length > 0
                                             ? `${todayHearings.length} جلسة تحتاج انتباهك`
                                             : 'لا توجد جلسات اليوم'
                                         }
@@ -128,7 +130,7 @@ export function DashboardPage() {
                                 {stats?.hearings.today || 0}
                             </span>
                         </div>
-                        
+
                         {todayHearings.length > 0 && (
                             <div className="space-y-2">
                                 {todayHearings.slice(0, 2).map((hearing: any) => (
@@ -180,7 +182,7 @@ export function DashboardPage() {
                                 <p className="text-2xl font-bold">{stats?.cases.active || 0}</p>
                             </div>
                         </div>
-                        <Link 
+                        <Link
                             to="/cases?status=active"
                             className="text-xs text-primary hover:underline flex items-center gap-1"
                         >
@@ -200,7 +202,7 @@ export function DashboardPage() {
                                 <p className="text-2xl font-bold">{stats?.clients.total || 0}</p>
                             </div>
                         </div>
-                        <Link 
+                        <Link
                             to="/clients"
                             className="text-xs text-primary hover:underline flex items-center gap-1"
                         >
@@ -286,7 +288,7 @@ export function DashboardPage() {
                                 </p>
                             </div>
                         </div>
-                        
+
                         <div className="p-5 rounded-2xl border bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-950/20 dark:to-green-950/20 border-emerald-100 dark:border-emerald-900/30">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
@@ -305,6 +307,9 @@ export function DashboardPage() {
                     </div>
                 </section>
             )}
+
+            {/* Analytics Charts Section */}
+            <DashboardAnalytics canSeeFinancials={canSeeFinancials} />
 
             {/* Two Column Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

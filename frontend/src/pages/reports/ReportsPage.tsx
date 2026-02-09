@@ -13,33 +13,14 @@ import {
     Loader2,
     Plus,
     Play,
-    Trash2,
-    FileDown,
-    BarChart3,
-    PieChart
+    Trash2
 } from 'lucide-react';
-import {
-    BarChart,
-    Bar,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    ResponsiveContainer,
-    PieChart as RechartsPie,
-    Pie,
-    Cell
-} from 'recharts';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth.store';
 import api from '@/api/client';
 import { useReportTemplates, useDeleteReportTemplate } from '@/hooks/use-reports';
 import { CreateReportDialog, ExecuteReportDialog } from '@/components/reports';
 import { toast } from 'react-hot-toast';
-import { useAnalyticsDashboard } from '@/hooks/use-analytics';
-
-// Colors for charts
-const COLORS = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
 // Quick export report types (legacy)
 const quickReportTypes = [
@@ -119,27 +100,6 @@ const reportTypeLabels: Record<string, string> = {
     INVOICES_AGING: 'أعمار الفواتير',
 };
 
-// Case status labels for charts
-const caseStatusLabels: Record<string, string> = {
-    OPEN: 'مفتوحة',
-    IN_PROGRESS: 'جارية',
-    SUSPENDED: 'معلقة',
-    CLOSED: 'مغلقة',
-    ARCHIVED: 'مؤرشفة',
-};
-
-// Case type labels for charts
-const caseTypeLabels: Record<string, string> = {
-    CRIMINAL: 'جنائي',
-    CIVIL: 'مدني',
-    COMMERCIAL: 'تجاري',
-    LABOR: 'عمالي',
-    FAMILY: 'أحوال شخصية',
-    ADMINISTRATIVE: 'إداري',
-    REAL_ESTATE: 'عقاري',
-    OTHER: 'أخرى',
-};
-
 // Status options for cases
 const caseStatusOptions = [
     { value: '', label: 'جميع الحالات' },
@@ -215,10 +175,6 @@ export function ReportsPage() {
     const deleteTemplateMutation = useDeleteReportTemplate();
     const templates = templatesData?.data || [];
 
-    // Analytics data for charts
-    const { data: analyticsData } = useAnalyticsDashboard('month');
-    const analytics = analyticsData?.data;
-
     // Filter quick exports based on user role
     const availableReports = quickReportTypes.filter(report => 
         report.roles.includes(user?.role || '')
@@ -234,7 +190,7 @@ export function ReportsPage() {
         teal: 'bg-teal-500/10 text-teal-600 group-hover:bg-teal-500 group-hover:text-white',
     };
 
-    const handleQuickExport = async (reportId: string, format: 'excel' | 'pdf' = 'excel') => {
+    const handleQuickExport = async (reportId: string) => {
         setIsExporting(true);
         setExportSuccess(null);
         
@@ -244,7 +200,6 @@ export function ReportsPage() {
             if (filters.status) params.append('status', filters.status);
             if (filters.startDate) params.append('startDate', filters.startDate);
             if (filters.endDate) params.append('endDate', filters.endDate);
-            if (format === 'pdf') params.append('format', 'pdf');
 
             const response = await api.get(`/exports/${reportId}${params.toString() ? `?${params.toString()}` : ''}`, {
                 responseType: 'blob',
@@ -254,8 +209,7 @@ export function ReportsPage() {
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
-            const extension = format === 'pdf' ? 'html' : 'xlsx';
-            link.setAttribute('download', `${reportId}-report-${Date.now()}.${extension}`);
+            link.setAttribute('download', `${reportId}-report-${Date.now()}.xlsx`);
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -511,39 +465,26 @@ export function ReportsPage() {
                                         )}
                                         
                                         {/* Export Button */}
-                                        <div className="flex gap-2 mt-2">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleQuickExport(report.id, 'excel');
-                                                }}
-                                                disabled={isExporting}
-                                                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50"
-                                            >
-                                                {isExporting ? (
-                                                    <>
-                                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                                        جاري...
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Download className="w-4 h-4" />
-                                                        Excel
-                                                    </>
-                                                )}
-                                            </button>
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleQuickExport(report.id, 'pdf');
-                                                }}
-                                                disabled={isExporting}
-                                                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border border-primary text-primary rounded-xl hover:bg-primary/10 transition-colors disabled:opacity-50"
-                                            >
-                                                <FileDown className="w-4 h-4" />
-                                                PDF
-                                            </button>
-                                        </div>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleQuickExport(report.id);
+                                            }}
+                                            disabled={isExporting}
+                                            className="w-full mt-2 flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50"
+                                        >
+                                            {isExporting ? (
+                                                <>
+                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                    جاري التصدير...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Download className="w-4 h-4" />
+                                                    تصدير Excel
+                                                </>
+                                            )}
+                                        </button>
                                     </div>
                                 )}
                                 
@@ -559,189 +500,6 @@ export function ReportsPage() {
                     })}
                 </div>
             </div>
-
-            {/* Interactive Charts Section */}
-            {analytics && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Cases by Status Chart */}
-                    <div className="p-6 rounded-2xl border bg-card">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-semibold flex items-center gap-2">
-                                <BarChart3 className="w-5 h-5 text-blue-500" />
-                                القضايا حسب الحالة
-                            </h3>
-                            <button
-                                onClick={() => handleQuickExport('cases', 'excel')}
-                                className="text-xs text-primary hover:underline flex items-center gap-1"
-                            >
-                                <Download className="w-3 h-3" />
-                                تصدير
-                            </button>
-                        </div>
-                        <div className="h-[250px]">
-                            {analytics.cases?.byStatus?.length > 0 ? (
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={analytics.cases.byStatus.map((item: any) => ({
-                                        name: caseStatusLabels[item.status] || item.status,
-                                        value: item.count
-                                    }))} layout="vertical" margin={{ left: 80 }}>
-                                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" horizontal={false} />
-                                        <XAxis type="number" tick={{ fontSize: 11 }} />
-                                        <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={75} />
-                                        <Tooltip
-                                            formatter={(value: number) => [value, 'قضايا']}
-                                            contentStyle={{ 
-                                                backgroundColor: 'hsl(var(--card))',
-                                                border: '1px solid hsl(var(--border))',
-                                                borderRadius: '8px',
-                                                direction: 'rtl'
-                                            }}
-                                        />
-                                        <Bar dataKey="value" fill="#2563eb" radius={[0, 4, 4, 0]} />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            ) : (
-                                <div className="h-full flex items-center justify-center text-muted-foreground">
-                                    لا توجد بيانات
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Cases by Type Pie Chart */}
-                    <div className="p-6 rounded-2xl border bg-card">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-semibold flex items-center gap-2">
-                                <PieChart className="w-5 h-5 text-purple-500" />
-                                القضايا حسب النوع
-                            </h3>
-                        </div>
-                        <div className="h-[250px]">
-                            {analytics.cases?.byType?.length > 0 ? (
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <RechartsPie>
-                                        <Pie
-                                            data={analytics.cases.byType.map((item: any) => ({
-                                                name: caseTypeLabels[item.type] || item.type,
-                                                value: item.count
-                                            }))}
-                                            cx="50%"
-                                            cy="50%"
-                                            innerRadius={50}
-                                            outerRadius={90}
-                                            paddingAngle={2}
-                                            dataKey="value"
-                                            label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                                            labelLine={false}
-                                        >
-                                            {analytics.cases.byType.map((_: any, index: number) => (
-                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip 
-                                            formatter={(value: number) => [value, 'قضايا']}
-                                            contentStyle={{ 
-                                                backgroundColor: 'hsl(var(--card))',
-                                                border: '1px solid hsl(var(--border))',
-                                                borderRadius: '8px',
-                                                direction: 'rtl'
-                                            }}
-                                        />
-                                    </RechartsPie>
-                                </ResponsiveContainer>
-                            ) : (
-                                <div className="h-full flex items-center justify-center text-muted-foreground">
-                                    لا توجد بيانات
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Invoices Summary */}
-                    {(user?.role === 'OWNER' || user?.role === 'ADMIN') && analytics.financial && (
-                        <div className="p-6 rounded-2xl border bg-card">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="font-semibold flex items-center gap-2">
-                                    <DollarSign className="w-5 h-5 text-green-500" />
-                                    ملخص الفواتير
-                                </h3>
-                                <button
-                                    onClick={() => handleQuickExport('invoices', 'excel')}
-                                    className="text-xs text-primary hover:underline flex items-center gap-1"
-                                >
-                                    <Download className="w-3 h-3" />
-                                    تصدير
-                                </button>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="p-4 rounded-xl bg-green-50 dark:bg-green-950/30">
-                                    <p className="text-sm text-muted-foreground">الإيرادات</p>
-                                    <p className="text-xl font-bold text-green-600">
-                                        {(analytics.financial.totalRevenue || 0).toLocaleString()} ر.س
-                                    </p>
-                                </div>
-                                <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/30">
-                                    <p className="text-sm text-muted-foreground">المعلقة</p>
-                                    <p className="text-xl font-bold text-amber-600">
-                                        {(analytics.financial.pending || 0).toLocaleString()} ر.س
-                                    </p>
-                                </div>
-                                <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/30">
-                                    <p className="text-sm text-muted-foreground">المتأخرة</p>
-                                    <p className="text-xl font-bold text-red-600">
-                                        {(analytics.financial.overdue || 0).toLocaleString()} ر.س
-                                    </p>
-                                </div>
-                                <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-950/30">
-                                    <p className="text-sm text-muted-foreground">إجمالي الفواتير</p>
-                                    <p className="text-xl font-bold text-blue-600">
-                                        {analytics.financial.totalInvoices || 0}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Tasks Summary */}
-                    {analytics.tasks && (
-                        <div className="p-6 rounded-2xl border bg-card">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="font-semibold flex items-center gap-2">
-                                    <CheckCircle2 className="w-5 h-5 text-teal-500" />
-                                    ملخص المهام
-                                </h3>
-                                <button
-                                    onClick={() => handleQuickExport('tasks', 'excel')}
-                                    className="text-xs text-primary hover:underline flex items-center gap-1"
-                                >
-                                    <Download className="w-3 h-3" />
-                                    تصدير
-                                </button>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="p-4 rounded-xl bg-teal-50 dark:bg-teal-950/30">
-                                    <p className="text-sm text-muted-foreground">إجمالي المهام</p>
-                                    <p className="text-xl font-bold text-teal-600">{analytics.tasks.total || 0}</p>
-                                </div>
-                                <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/30">
-                                    <p className="text-sm text-muted-foreground">معدل الإنجاز</p>
-                                    <p className="text-xl font-bold text-emerald-600">{analytics.tasks.completionRate || 0}%</p>
-                                </div>
-                                <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/30">
-                                    <p className="text-sm text-muted-foreground">قيد التنفيذ</p>
-                                    <p className="text-xl font-bold text-amber-600">
-                                        {analytics.tasks.byStatus?.find((s: any) => s.status === 'IN_PROGRESS')?.count || 0}
-                                    </p>
-                                </div>
-                                <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/30">
-                                    <p className="text-sm text-muted-foreground">المتأخرة</p>
-                                    <p className="text-xl font-bold text-red-600">{analytics.tasks.overdueTasks || 0}</p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
 
             {/* Info Section */}
             <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900">

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إشعار فاتورة - وثيق</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+            direction: rtl;
+            background-color: #f5f7fa;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #059669, #047857);
+            color: #ffffff;
+            text-align: center;
+            padding: 30px 20px;
+        }
+
+        .logo {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .content {
+            padding: 30px;
+            line-height: 1.8;
+            color: #374151;
+        }
+
+        .invoice-box {
+            background-color: #f0fdf4;
+            border: 2px solid #86efac;
+            border-radius: 12px;
+            padding: 25px;
+            margin: 20px 0;
+        }
+
+        .invoice-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px dashed #86efac;
+        }
+
+        .invoice-number {
+            font-size: 20px;
+            font-weight: bold;
+            color: #059669;
+        }
+
+        .invoice-status {
+            background-color: #fef3c7;
+            color: #92400e;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .amount-box {
+            text-align: center;
+            background-color: #ffffff;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .amount-label {
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .amount-value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #059669;
+            margin: 10px 0;
+        }
+
+        .due-date {
+            color: #dc2626;
+            font-weight: bold;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .button {
+            display: inline-block;
+            background-color: #059669;
+            color: #ffffff !important;
+            padding: 14px 30px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+
+        .footer {
+            background-color: #f9fafb;
+            text-align: center;
+            padding: 20px;
+            color: #6b7280;
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">⚖️ وثيق</div>
+            <h1>إشعار فاتورة جديدة</h1>
+        </div>
+        <div class="content">
+            <h2>مرحباً {{clientName}}،</h2>
+            <p>نود إعلامك بصدور فاتورة جديدة من مكتب <strong>{{tenantName}}</strong>:</p>
+
+            <div class="invoice-box">
+                <div class="invoice-header">
+                    <span class="invoice-number">فاتورة #{{invoiceNumber}}</span>
+                    <span class="invoice-status">{{status}}</span>
+                </div>
+
+                <div class="amount-box">
+                    <div class="amount-label">المبلغ المطلوب</div>
+                    <div class="amount-value">{{amount}} ر.س</div>
+                    <div class="due-date">تاريخ الاستحقاق: {{dueDate}}</div>
+                </div>
+
+                <div class="detail-row">
+                    <span>القضية:</span>
+                    <span><strong>{{caseTitle}}</strong></span>
+                </div>
+                <div class="detail-row">
+                    <span>تاريخ الإصدار:</span>
+                    <span>{{issueDate}}</span>
+                </div>
+                <div class="detail-row" style="border-bottom: none;">
+                    <span>الوصف:</span>
+                    <span>{{description}}</span>
+                </div>
+            </div>
+
+            <div style="text-align: center;">
+                <a href="{{invoiceUrl}}" class="button">عرض الفاتورة ➜</a>
+            </div>
+
+            <p style="color: #6b7280; font-size: 14px;">
+                للاستفسارات حول هذه الفاتورة، يرجى التواصل معنا على {{tenantEmail}} أو {{tenantPhone}}.
+            </p>
+        </div>
+        <div class="footer">
+            <p>© {{year}} وثيق - جميع الحقوق محفوظة</p>
+            <p>{{tenantName}} - {{tenantAddress}}</p>
+        </div>
+    </div>
+</body>
+
+</html>

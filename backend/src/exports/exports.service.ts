@@ -766,47 +766,286 @@ export class ExportsService {
     const fs = await import('fs/promises');
 
     const headerCells = data.columns.map((col: any) => `<th>${col.header}</th>`).join('');
-    const tableRows = data.data.map((item: any) => {
+    const tableRows = data.data.map((item: any, index: number) => {
       const cells = data.columns.map((col: any) => `<td>${item[col.key] ?? ''}</td>`).join('');
-      return `<tr>${cells}</tr>`;
+      return `<tr class="${index % 2 === 0 ? 'even' : 'odd'}">${cells}</tr>`;
     }).join('\n');
+
+    // Calculate summary stats if numeric columns exist
+    const numericStats = data.columns
+      .filter((col: any) => typeof data.data[0]?.[col.key] === 'number')
+      .map((col: any) => {
+        const values = data.data.map((item: any) => Number(item[col.key]) || 0);
+        const sum = values.reduce((a: number, b: number) => a + b, 0);
+        const avg = values.length > 0 ? sum / values.length : 0;
+        return { header: col.header, sum, avg: Math.round(avg * 100) / 100 };
+      });
+
+    const summarySection = numericStats.length > 0 ? `
+    <div class="summary">
+      <h3>ملخص إحصائي</h3>
+      <div class="summary-grid">
+        ${numericStats.map((stat: any) => `
+          <div class="stat-card">
+            <div class="stat-label">${stat.header}</div>
+            <div class="stat-value">${stat.sum.toLocaleString('ar-SA')}</div>
+            <div class="stat-avg">المتوسط: ${stat.avg.toLocaleString('ar-SA')}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+    ` : '';
 
     const html = `<!DOCTYPE html>
 <html dir="rtl" lang="ar">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${data.title}</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
-    * { box-sizing: border-box; }
-    body { font-family: 'Cairo', sans-serif; direction: rtl; padding: 20px; background: #f8fafc; }
-    .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 8px; padding: 30px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-    .header { text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #e5e7eb; }
-    .header h1 { color: #1e40af; margin: 0 0 10px 0; font-size: 24px; }
-    .header .date { color: #6b7280; font-size: 14px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th { background: #2563eb; color: white; padding: 12px 15px; text-align: right; font-weight: 600; }
-    td { padding: 12px 15px; border-bottom: 1px solid #e5e7eb; text-align: right; }
-    tr:nth-child(even) { background: #f9fafb; }
-    .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #9ca3af; font-size: 12px; }
-    @media print { body { background: white; padding: 0; } .container { box-shadow: none; } }
+    
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body { 
+      font-family: 'Cairo', 'Segoe UI', sans-serif; 
+      direction: rtl; 
+      padding: 20px; 
+      background: #f8fafc;
+      color: #1e293b;
+      line-height: 1.6;
+    }
+    
+    .container { 
+      max-width: 1200px; 
+      margin: 0 auto; 
+      background: white; 
+      border-radius: 16px; 
+      padding: 40px; 
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); 
+    }
+    
+    .header { 
+      text-align: center; 
+      margin-bottom: 40px; 
+      padding-bottom: 30px; 
+      border-bottom: 3px solid #2563eb; 
+    }
+    
+    .logo {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 20px;
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 32px;
+      font-weight: 700;
+    }
+    
+    .header h1 { 
+      color: #1e40af; 
+      margin: 0 0 10px 0; 
+      font-size: 28px;
+      font-weight: 700;
+    }
+    
+    .header .subtitle {
+      color: #64748b;
+      font-size: 16px;
+      margin-bottom: 15px;
+    }
+    
+    .header .date { 
+      color: #94a3b8; 
+      font-size: 14px;
+      display: inline-block;
+      padding: 8px 16px;
+      background: #f1f5f9;
+      border-radius: 8px;
+    }
+    
+    .summary {
+      margin-bottom: 30px;
+      padding: 24px;
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+    }
+    
+    .summary h3 {
+      color: #475569;
+      font-size: 16px;
+      margin-bottom: 16px;
+      font-weight: 600;
+    }
+    
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 16px;
+    }
+    
+    .stat-card {
+      background: white;
+      padding: 16px;
+      border-radius: 10px;
+      text-align: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .stat-label {
+      font-size: 12px;
+      color: #64748b;
+      margin-bottom: 4px;
+    }
+    
+    .stat-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: #2563eb;
+    }
+    
+    .stat-avg {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-top: 4px;
+    }
+    
+    .table-container {
+      overflow-x: auto;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+    }
+    
+    table { 
+      width: 100%; 
+      border-collapse: collapse;
+    }
+    
+    th { 
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      color: white; 
+      padding: 16px 20px; 
+      text-align: right; 
+      font-weight: 600;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+    
+    td { 
+      padding: 14px 20px; 
+      border-bottom: 1px solid #f1f5f9; 
+      text-align: right;
+      font-size: 14px;
+    }
+    
+    tr.even { background: #fafafa; }
+    tr.odd { background: white; }
+    tr:hover { background: #f0f9ff; }
+    
+    .footer { 
+      margin-top: 40px; 
+      padding-top: 30px; 
+      border-top: 2px solid #e2e8f0; 
+      text-align: center; 
+      color: #94a3b8; 
+      font-size: 12px;
+    }
+    
+    .footer .brand {
+      color: #2563eb;
+      font-weight: 600;
+    }
+    
+    .record-count {
+      display: inline-block;
+      padding: 8px 16px;
+      background: #dbeafe;
+      color: #1d4ed8;
+      border-radius: 8px;
+      font-weight: 600;
+      margin-bottom: 15px;
+    }
+    
+    /* Print Styles */
+    @media print { 
+      body { 
+        background: white; 
+        padding: 0;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .container { 
+        box-shadow: none;
+        padding: 20px;
+        border-radius: 0;
+      }
+      .summary {
+        break-inside: avoid;
+      }
+      table {
+        page-break-inside: auto;
+      }
+      tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+      }
+      th {
+        background: #2563eb !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .no-print {
+        display: none;
+      }
+    }
+    
+    @page {
+      size: A4 landscape;
+      margin: 1cm;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
+      <div class="logo">و</div>
       <h1>${data.title}</h1>
-      <div class="date">تاريخ التقرير: ${new Date(data.generatedAt).toLocaleDateString('ar-SA')}</div>
+      <p class="subtitle">نظام وثيق لإدارة مكاتب المحاماة</p>
+      <div class="date">تاريخ التقرير: ${new Date(data.generatedAt).toLocaleDateString('ar-SA', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })}</div>
     </div>
-    <table>
-      <thead><tr>${headerCells}</tr></thead>
-      <tbody>${tableRows}</tbody>
-    </table>
+    
+    ${summarySection}
+    
+    <div class="table-container">
+      <table>
+        <thead><tr>${headerCells}</tr></thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+    </div>
+    
     <div class="footer">
-      <p>إجمالي السجلات: ${data.data.length}</p>
-      <p>تم إنشاء هذا التقرير بواسطة نظام وثيق</p>
+      <div class="record-count">إجمالي السجلات: ${data.data.length}</div>
+      <p>تم إنشاء هذا التقرير بواسطة <span class="brand">نظام وثيق</span></p>
+      <p style="margin-top: 5px;">© ${new Date().getFullYear()} جميع الحقوق محفوظة</p>
     </div>
   </div>
+  
+  <script class="no-print">
+    // Auto-print option
+    // window.onload = function() { window.print(); }
+  </script>
 </body>
 </html>`;
 

@@ -1,5 +1,5 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength, MaxLength } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsEmail, IsNotEmpty, IsString, MinLength, MaxLength, IsOptional } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class LoginDto {
     @ApiProperty({
@@ -19,4 +19,13 @@ export class LoginDto {
     @MinLength(6, { message: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' })
     @MaxLength(50, { message: 'كلمة المرور طويلة جداً' })
     password: string;
+
+    @ApiPropertyOptional({
+        example: '123456',
+        description: 'رمز المصادقة الثنائية (إذا كانت مفعلة)',
+    })
+    @IsOptional()
+    @IsString()
+    twoFactorToken?: string;
 }
+

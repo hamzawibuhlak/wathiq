@@ -64,7 +64,7 @@ export class DashboardService {
         // Determine permissions
         const canSeeAll = userRole === UserRole.OWNER || userRole === UserRole.ADMIN;
         const canSeeFinancials = userRole === UserRole.OWNER || userRole === UserRole.ADMIN;
-        
+
         // Filters based on role
         const hearingFilter = canSeeAll ? { tenantId } : { tenantId, assignedToId: userId };
         const caseFilter = canSeeAll ? { tenantId } : { tenantId, assignedToId: userId };
@@ -216,14 +216,14 @@ export class DashboardService {
 
         // Determine if user can see all hearings or only their assigned ones
         const canSeeAllHearings = userRole === UserRole.OWNER || userRole === UserRole.ADMIN;
-        
+
         // Build where clause
         const whereClause: any = {
             tenantId,
             hearingDate: { gte: now, lte: endDate },
             status: { in: [HearingStatus.SCHEDULED, HearingStatus.POSTPONED] },
         };
-        
+
         // Filter by assignedToId for LAWYER role
         if (!canSeeAllHearings && userId) {
             whereClause.assignedToId = userId;
@@ -445,6 +445,241 @@ export class DashboardService {
             .slice(0, 10);
 
         return { data: activities };
+    }
+
+    // ============ ANALYTICS CHARTS ============
+
+    /**
+     * Get cases trend for last 12 months
+     */
+    async getCasesTrend(tenantId: string) {
+        const months = [];
+        const now = new Date();
+
+        for (let i = 11; i >= 0; i--) {
+            const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const nextMonth = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+
+            const [created, closed] = await Promise.all([
+                this.prisma.case.count({
+                    where: {
+                        tenantId,
+                        createdAt: { gte: date, lt: nextMonth },
+                    },
+                }),
+                this.prisma.case.count({
+                    where: {
+                        tenantId,
+                        status: { in: [CaseStatus.CLOSED, CaseStatus.ARCHIVED] },
+                        updatedAt: { gte: date, lt: nextMonth },
+                    },
+                }),
+            ]);
+
+            months.push({
+                month: date.toLocaleDateString('ar-SA', {
+                    year: 'numeric',
+                    month: 'short'
+                }),
+                monthKey: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`,
+                created,
+                closed,
+            });
+        }
+
+        return { data: months };
+    }
+
+    /**
+     * Get revenue trend for last 12 months
+     */
+    async getRevenueTrend(tenantId: string) {
+        const months = [];
+        const now = new Date();
+
+        for (let i = 11; i >= 0; i--) {
+            const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const nextMonth = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+
+            const revenue = await this.prisma.invoice.aggregate({
+                where: {
+                    tenantId,
+                    status: InvoiceStatus.PAID,
+                    paidAt: { gte: date, lt: nextMonth },
+                },
+                _sum: { totalAmount: true },
+            });
+
+            months.push({
+                month: date.toLocaleDateString('ar-SA', {
+                    year: 'numeric',
+                    month: 'short'
+                }),
+                monthKey: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`,
+                revenue: Number(revenue._sum.totalAmount) || 0,
+            });
+        }
+
+        return { data: months };
+    }
+
+    /**
+     * Get cases distribution by type for pie chart
+     */
+    async getCasesByTypeChart(tenantId: string) {
+        const casesByType = await this.prisma.case.groupBy({
+            by: ['caseType'],
+            where: { tenantId },
+            _count: true,
+        });
+
+        const typeLabels: Record<string, string> = {
+            CRIMINAL: 'جنائي',
+            CIVIL: 'مدني',
+            COMMERCIAL: 'تجاري',
+            LABOR: 'عمالي',
+            FAMILY: 'أسري',
+            ADMINISTRATIVE: 'إداري',
+            REAL_ESTATE: 'عقاري',
+            OTHER: 'أخرى',
+        };
+
+        const data = casesByType.map(item => ({
+            type: item.caseType,
+            label: typeLabels[item.caseType] || item.caseType,
+            count: item._count,
+        }));
+
+        return { data };
+    }
+
+    /**
+     * Get top clients by cases count
+     */
+    async getTopClients(tenantId: string, limit = 5) {
+        const clients = await this.prisma.client.findMany({
+            where: { tenantId },
+            select: {
+                id: true,
+                name: true,
+                _count: {
+                    select: { cases: true, invoices: true },
+                },
+            },
+            orderBy: {
+                cases: { _count: 'desc' },
+            },
+            take: limit,
+        });
+
+        const data = clients.map(client => ({
+            id: client.id,
+            name: client.name,
+            casesCount: client._count.cases,
+            invoicesCount: client._count.invoices,
+        }));
+
+        return { data };
+    }
+
+    /**
+     * Get lawyer performance metrics
+     */
+    async getLawyerPerformance(tenantId: string) {
+        const lawyers = await this.prisma.user.findMany({
+            where: {
+                tenantId,
+                role: { in: ['LAWYER', 'OWNER', 'ADMIN'] },
+                isActive: true,
+            },
+            select: {
+                id: true,
+                name: true,
+                avatar: true,
+            },
+        });
+
+        const performance = await Promise.all(
+            lawyers.map(async (lawyer) => {
+                const [openCases, closedCases, completedTasks, totalTasks] = await Promise.all([
+                    this.prisma.case.count({
+                        where: {
+                            tenantId,
+                            assignedToId: lawyer.id,
+                            status: { in: [CaseStatus.OPEN, CaseStatus.IN_PROGRESS] },
+                        },
+                    }),
+                    this.prisma.case.count({
+                        where: {
+                            tenantId,
+                            assignedToId: lawyer.id,
+                            status: { in: [CaseStatus.CLOSED, CaseStatus.ARCHIVED] },
+                        },
+                    }),
+                    this.prisma.task.count({
+                        where: {
+                            tenantId,
+                            assignedToId: lawyer.id,
+                            status: 'COMPLETED',
+                        },
+                    }),
+                    this.prisma.task.count({
+                        where: {
+                            tenantId,
+                            assignedToId: lawyer.id,
+                        },
+                    }),
+                ]);
+
+                return {
+                    lawyer: {
+                        id: lawyer.id,
+                        name: lawyer.name,
+                        avatar: lawyer.avatar,
+                    },
+                    openCases,
+                    closedCases,
+                    totalCases: openCases + closedCases,
+                    completedTasks,
+                    totalTasks,
+                    taskCompletionRate: totalTasks > 0
+                        ? Math.round((completedTasks / totalTasks) * 100)
+                        : 0,
+                };
+            })
+        );
+
+        // Sort by total cases (desc)
+        const sortedPerformance = performance.sort((a, b) => b.totalCases - a.totalCases);
+
+        return { data: sortedPerformance };
+    }
+
+    /**
+     * Get overdue tasks for dashboard
+     */
+    async getOverdueTasks(tenantId: string, limit = 5) {
+        const now = new Date();
+
+        const tasks = await this.prisma.task.findMany({
+            where: {
+                tenantId,
+                status: { not: 'COMPLETED' },
+                dueDate: { lt: now },
+            },
+            include: {
+                case: {
+                    select: { id: true, caseNumber: true, title: true },
+                },
+                assignedTo: {
+                    select: { id: true, name: true, avatar: true },
+                },
+            },
+            orderBy: { dueDate: 'asc' },
+            take: limit,
+        });
+
+        return { data: tasks };
     }
 }
 

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>دعوة للانضمام - وثيق</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+            direction: rtl;
+            background-color: #f5f7fa;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: #ffffff;
+            text-align: center;
+            padding: 30px 20px;
+        }
+        .logo {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .content {
+            padding: 30px;
+            line-height: 1.8;
+            color: #374151;
+        }
+        .highlight-box {
+            background-color: #eff6ff;
+            border-right: 4px solid #2563eb;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .button {
+            display: inline-block;
+            background-color: #2563eb;
+            color: #ffffff !important;
+            padding: 14px 30px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        .footer {
+            background-color: #f9fafb;
+            text-align: center;
+            padding: 20px;
+            color: #6b7280;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">⚖️ وثيق</div>
+            <p>نظام إدارة المكاتب القانونية</p>
+        </div>
+        <div class="content">
+            <h2>مرحباً {{recipientName}}،</h2>
+            <p>تمت دعوتك للانضمام إلى منصة <strong>وثيق</strong> من قبل <strong>{{inviterName}}</strong> للعمل في مكتب <strong>{{tenantName}}</strong>.</p>
+            
+            <div class="highlight-box">
+                <strong>تفاصيل الحساب:</strong><br>
+                البريد الإلكتروني: {{email}}<br>
+                الدور: {{role}}<br>
+                صلاحية الدعوة: {{expiryDate}}
+            </div>
+            
+            <p>لإكمال عملية التسجيل وتعيين كلمة المرور، يرجى الضغط على الزر التالي:</p>
+            
+            <div style="text-align: center;">
+                <a href="{{acceptUrl}}" class="button">قبول الدعوة ➜</a>
+            </div>
+            
+            <p style="color: #6b7280; font-size: 14px;">
+                إذا لم تتوقع هذه الرسالة، يمكنك تجاهلها. الرابط صالح لمدة 7 أيام.
+            </p>
+        </div>
+        <div class="footer">
+            <p>© {{year}} وثيق - جميع الحقوق محفوظة</p>
+            <p>هذه الرسالة مرسلة تلقائياً، يرجى عدم الرد عليها</p>
+        </div>
+    </div>
+</body>
+</html>

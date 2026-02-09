@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تذكير بالمهمة - وثيق</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+            direction: rtl;
+            background-color: #f5f7fa;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: #ffffff;
+            text-align: center;
+            padding: 30px 20px;
+        }
+
+        .task-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .content {
+            padding: 30px;
+            line-height: 1.8;
+            color: #374151;
+        }
+
+        .task-card {
+            background-color: #fffbeb;
+            border: 2px solid #fcd34d;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .task-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #92400e;
+            margin-bottom: 15px;
+        }
+
+        .priority-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .priority-high {
+            background-color: #fee2e2;
+            color: #dc2626;
+        }
+
+        .priority-medium {
+            background-color: #fef3c7;
+            color: #d97706;
+        }
+
+        .priority-low {
+            background-color: #dbeafe;
+            color: #2563eb;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px dashed #fcd34d;
+        }
+
+        .due-date-warning {
+            background-color: #fef2f2;
+            color: #dc2626;
+            padding: 10px 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+
+        .button {
+            display: inline-block;
+            background-color: #f59e0b;
+            color: #ffffff !important;
+            padding: 14px 30px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+
+        .footer {
+            background-color: #f9fafb;
+            text-align: center;
+            padding: 20px;
+            color: #6b7280;
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="task-icon">📋</div>
+            <h1>تذكير بمهمة</h1>
+        </div>
+        <div class="content">
+            <h2>مرحباً {{recipientName}}،</h2>
+            <p>لديك مهمة تحتاج إلى اهتمامك:</p>
+
+            <div class="task-card">
+                <div class="task-title">
+                    {{taskTitle}}
+                    <span class="priority-badge priority-{{priorityClass}}">{{priority}}</span>
+                </div>
+
+                <div class="due-date-warning">
+                    ⏰ الموعد النهائي: {{dueDate}}
+                </div>
+
+                <div class="detail-row">
+                    <span>القضية:</span>
+                    <span><strong>{{caseTitle}}</strong></span>
+                </div>
+                <div class="detail-row">
+                    <span>رقم القضية:</span>
+                    <span>{{caseNumber}}</span>
+                </div>
+                <div class="detail-row" style="border-bottom: none;">
+                    <span>الوصف:</span>
+                    <span>{{taskDescription}}</span>
+                </div>
+            </div>
+
+            <div style="text-align: center;">
+                <a href="{{taskUrl}}" class="button">عرض المهمة ➜</a>
+            </div>
+        </div>
+        <div class="footer">
+            <p>© {{year}} وثيق - جميع الحقوق محفوظة</p>
+        </div>
+    </div>
+</body>
+
+</html>

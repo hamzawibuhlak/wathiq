@@ -175,6 +175,11 @@ model User {
   isVerified  Boolean  @default(false)
   lastLoginAt DateTime?
   lastLoginIp String?
+  
+  // Two-Factor Authentication
+  twoFactorEnabled     Boolean  @default(false)
+  twoFactorSecret      String?
+  twoFactorBackupCodes String[] @default([])
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -215,6 +220,7 @@ model User {
   @@index([email])
   @@map("users")
 }
+
 
 // =====================================================
 // CLIENT

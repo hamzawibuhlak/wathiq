@@ -19,6 +19,7 @@ import {
     FileSpreadsheet,
     Mail,
     UserCog,
+    Target,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -66,6 +67,7 @@ const navGroups: NavGroup[] = [
         title: 'التحليلات',
         items: [
             { path: '/analytics', icon: BarChart3, label: 'التقارير والإحصائيات', roles: ['OWNER', 'ADMIN', 'LAWYER'] },
+            { path: '/analytics/performance', icon: Target, label: 'تقرير الأداء', roles: ['OWNER', 'ADMIN'] },
             { path: '/reports', icon: FileSpreadsheet, label: 'تصدير البيانات', roles: ['OWNER', 'ADMIN', 'LAWYER'] },
         ],
     },

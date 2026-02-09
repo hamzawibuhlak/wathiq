@@ -69,4 +69,56 @@ export class DashboardController {
     ) {
         return this.dashboardService.getRecentActivity(tenantId, userId, userRole);
     }
+
+    // ============ ANALYTICS CHARTS ENDPOINTS ============
+
+    @Get('cases-trend')
+    @ApiOperation({ summary: 'الحصول على اتجاه القضايا آخر 12 شهر' })
+    @ApiResponse({ status: 200, description: 'اتجاه القضايا' })
+    async getCasesTrend(@TenantId() tenantId: string) {
+        return this.dashboardService.getCasesTrend(tenantId);
+    }
+
+    @Get('revenue-trend')
+    @ApiOperation({ summary: 'الحصول على اتجاه الإيرادات آخر 12 شهر' })
+    @ApiResponse({ status: 200, description: 'اتجاه الإيرادات' })
+    async getRevenueTrend(@TenantId() tenantId: string) {
+        return this.dashboardService.getRevenueTrend(tenantId);
+    }
+
+    @Get('cases-by-type')
+    @ApiOperation({ summary: 'الحصول على توزيع القضايا حسب النوع' })
+    @ApiResponse({ status: 200, description: 'توزيع القضايا' })
+    async getCasesByType(@TenantId() tenantId: string) {
+        return this.dashboardService.getCasesByTypeChart(tenantId);
+    }
+
+    @Get('top-clients')
+    @ApiOperation({ summary: 'الحصول على أكثر العملاء نشاطاً' })
+    @ApiResponse({ status: 200, description: 'أكثر العملاء' })
+    @ApiQuery({ name: 'limit', required: false, description: 'عدد العملاء (افتراضي: 5)' })
+    async getTopClients(
+        @TenantId() tenantId: string,
+        @Query('limit') limit?: number,
+    ) {
+        return this.dashboardService.getTopClients(tenantId, limit || 5);
+    }
+
+    @Get('lawyer-performance')
+    @ApiOperation({ summary: 'الحصول على أداء المحامين' })
+    @ApiResponse({ status: 200, description: 'أداء المحامين' })
+    async getLawyerPerformance(@TenantId() tenantId: string) {
+        return this.dashboardService.getLawyerPerformance(tenantId);
+    }
+
+    @Get('overdue-tasks')
+    @ApiOperation({ summary: 'الحصول على المهام المتأخرة' })
+    @ApiResponse({ status: 200, description: 'المهام المتأخرة' })
+    @ApiQuery({ name: 'limit', required: false, description: 'عدد المهام (افتراضي: 5)' })
+    async getOverdueTasks(
+        @TenantId() tenantId: string,
+        @Query('limit') limit?: number,
+    ) {
+        return this.dashboardService.getOverdueTasks(tenantId, limit || 5);
+    }
 }

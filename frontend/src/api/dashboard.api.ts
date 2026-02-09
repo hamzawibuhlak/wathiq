@@ -14,6 +14,25 @@ export const dashboardApi = {
 
     getRecentActivity: () =>
         api.get('/dashboard/recent-activity').then((res) => res.data),
+
+    // Analytics Charts
+    getCasesTrend: () =>
+        api.get('/dashboard/cases-trend').then((res) => res.data),
+
+    getRevenueTrend: () =>
+        api.get('/dashboard/revenue-trend').then((res) => res.data),
+
+    getCasesByType: () =>
+        api.get('/dashboard/cases-by-type').then((res) => res.data),
+
+    getTopClients: (limit: number = 5) =>
+        api.get(`/dashboard/top-clients?limit=${limit}`).then((res) => res.data),
+
+    getLawyerPerformance: () =>
+        api.get('/dashboard/lawyer-performance').then((res) => res.data),
+
+    getOverdueTasks: (limit: number = 5) =>
+        api.get(`/dashboard/overdue-tasks?limit=${limit}`).then((res) => res.data),
 };
 
 export default dashboardApi;

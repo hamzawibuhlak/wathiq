@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تذكير بالجلسة - وثيق</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+            direction: rtl;
+            background-color: #f5f7fa;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            color: #ffffff;
+            text-align: center;
+            padding: 30px 20px;
+        }
+
+        .alert-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .content {
+            padding: 30px;
+            line-height: 1.8;
+            color: #374151;
+        }
+
+        .hearing-card {
+            background-color: #fef2f2;
+            border: 2px solid #fecaca;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .hearing-title {
+            color: #dc2626;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px dashed #fecaca;
+        }
+
+        .detail-label {
+            color: #6b7280;
+        }
+
+        .detail-value {
+            font-weight: bold;
+            color: #1f2937;
+        }
+
+        .button {
+            display: inline-block;
+            background-color: #2563eb;
+            color: #ffffff !important;
+            padding: 14px 30px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+
+        .footer {
+            background-color: #f9fafb;
+            text-align: center;
+            padding: 20px;
+            color: #6b7280;
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="alert-icon">🔔</div>
+            <h1>تذكير بموعد جلسة</h1>
+        </div>
+        <div class="content">
+            <h2>مرحباً {{recipientName}}،</h2>
+            <p>نود تذكيرك بموعد الجلسة القادمة:</p>
+
+            <div class="hearing-card">
+                <div class="hearing-title">📋 {{caseTitle}}</div>
+                <div class="detail-row">
+                    <span class="detail-label">رقم القضية:</span>
+                    <span class="detail-value">{{caseNumber}}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">التاريخ:</span>
+                    <span class="detail-value">{{hearingDate}}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">الوقت:</span>
+                    <span class="detail-value">{{hearingTime}}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">المحكمة:</span>
+                    <span class="detail-value">{{courtName}}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">رقم القاعة:</span>
+                    <span class="detail-value">{{courtRoom}}</span>
+                </div>
+                <div class="detail-row" style="border-bottom: none;">
+                    <span class="detail-label">العميل:</span>
+                    <span class="detail-value">{{clientName}}</span>
+                </div>
+            </div>
+
+            <p>{{notes}}</p>
+
+            <div style="text-align: center;">
+                <a href="{{caseUrl}}" class="button">عرض تفاصيل القضية ➜</a>
+            </div>
+        </div>
+        <div class="footer">
+            <p>© {{year}} وثيق - جميع الحقوق محفوظة</p>
+            <p>للتواصل: {{tenantEmail}} | {{tenantPhone}}</p>
+        </div>
+    </div>
+</body>
+
+</html>

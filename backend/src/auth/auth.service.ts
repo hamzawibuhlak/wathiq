@@ -100,7 +100,7 @@ export class AuthService {
      * Login user
      */
     async login(loginDto: LoginDto) {
-        const { email, password } = loginDto;
+        const { email, password, twoFactorToken } = loginDto;
 
         // Find user by email with tenant info
         const user = await this.prisma.user.findUnique({
@@ -128,6 +128,40 @@ export class AuthService {
             throw new UnauthorizedException('البريد الإلكتروني أو كلمة المرور غير صحيحة');
         }
 
+        // Check 2FA if enabled
+        if ((user as any).twoFactorEnabled) {
+            if (!twoFactorToken) {
+                return {
+                    requiresTwoFactor: true,
+                    message: 'يرجى إدخال رمز المصادقة الثنائية',
+                };
+            }
+
+            // Verify 2FA token using speakeasy
+            const speakeasy = await import('speakeasy');
+            const isValid = speakeasy.totp.verify({
+                secret: (user as any).twoFactorSecret,
+                encoding: 'base32',
+                token: twoFactorToken,
+                window: 1,
+            });
+
+            if (!isValid) {
+                // Check backup codes
+                const backupCodes = (user as any).twoFactorBackupCodes || [];
+                if (!backupCodes.includes(twoFactorToken)) {
+                    throw new UnauthorizedException('رمز المصادقة الثنائية غير صحيح');
+                }
+                // Remove used backup code
+                await this.prisma.user.update({
+                    where: { id: user.id },
+                    data: {
+                        twoFactorBackupCodes: backupCodes.filter((code: string) => code !== twoFactorToken),
+                    } as any,
+                });
+            }
+        }
+
         // Update last login
         await this.prisma.user.update({
             where: { id: user.id },
@@ -145,6 +179,7 @@ export class AuthService {
             user: userWithoutPassword,
         };
     }
+
 
     /**
      * Get current user data

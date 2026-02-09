@@ -53,6 +53,8 @@ const FirmPage = lazy(() => import('@/pages/settings/FirmPage'));
 const NotificationsPage = lazy(() => import('@/pages/settings/NotificationsPage'));
 const WhatsAppSettingsPage = lazy(() => import('@/pages/settings/WhatsAppSettingsPage'));
 const EmailSettingsPage = lazy(() => import('@/pages/settings/EmailSettingsPage'));
+const TwoFactorPage = lazy(() => import('@/pages/settings/TwoFactorPage'));
+const ImportPage = lazy(() => import('@/pages/settings/ImportPage'));
 
 // Activity Logs
 const ActivityLogsPage = lazy(() => import('@/pages/activity-logs/ActivityLogsPage'));
@@ -72,6 +74,7 @@ const NotificationsListPage = lazy(() => import('@/pages/notifications/Notificat
 
 // Analytics & Reports
 const AnalyticsDashboardPage = lazy(() => import('@/pages/analytics/AnalyticsDashboardPage'));
+const PerformanceReportPage = lazy(() => import('@/pages/analytics/PerformanceReportPage'));
 const ReportsPage = lazy(() => import('@/pages/reports/ReportsPage'));
 
 // Messages
@@ -187,6 +190,8 @@ function App() {
                             <Route path="email" element={<EmailSettingsPage />} />
                             <Route path="whatsapp" element={<WhatsAppSettingsPage />} />
                             <Route path="notifications" element={<NotificationsPage />} />
+                            <Route path="security" element={<TwoFactorPage />} />
+                            <Route path="import" element={<ImportPage />} />
                         </Route>
 
                         {/* Activity Logs */}
@@ -207,6 +212,7 @@ function App() {
 
                         {/* Analytics & Reports */}
                         <Route path="/analytics" element={<AnalyticsDashboardPage />} />
+                        <Route path="/analytics/performance" element={<PerformanceReportPage />} />
                         <Route path="/reports" element={<ReportsPage />} />
 
                         {/* Messages */}
