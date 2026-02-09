@@ -39,6 +39,8 @@ import { AnalyticsModule } from './analytics/analytics.module';
 import { AiModule } from './ai/ai.module';
 import { SecurityModule } from './security/security.module';
 import { ComplianceModule } from './compliance/compliance.module';
+import { CacheConfigModule } from './cache/cache.module';
+import { PerformanceModule } from './performance/performance.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -96,6 +98,8 @@ import { AppController } from './app.controller';
         AiModule,
         SecurityModule,
         ComplianceModule,
+        CacheConfigModule,
+        PerformanceModule,
     ],
     controllers: [AppController],
     providers: [
