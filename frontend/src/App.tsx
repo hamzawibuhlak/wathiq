@@ -77,6 +77,7 @@ const NotificationsListPage = lazy(() => import('@/pages/notifications/Notificat
 
 // Analytics & Reports
 const AnalyticsDashboardPage = lazy(() => import('@/pages/analytics/AnalyticsDashboardPage'));
+const AdvancedAnalyticsPage = lazy(() => import('@/pages/analytics/AdvancedAnalyticsPage'));
 const PerformanceReportPage = lazy(() => import('@/pages/analytics/PerformanceReportPage'));
 const ReportsPage = lazy(() => import('@/pages/reports/ReportsPage'));
 
@@ -220,6 +221,7 @@ function App() {
 
                         {/* Analytics & Reports */}
                         <Route path="/analytics" element={<AnalyticsDashboardPage />} />
+                        <Route path="/analytics/advanced" element={<AdvancedAnalyticsPage />} />
                         <Route path="/analytics/performance" element={<PerformanceReportPage />} />
                         <Route path="/reports" element={<ReportsPage />} />
 
