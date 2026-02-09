@@ -8,8 +8,7 @@ import {
     AlertCircle,
     ArrowLeft,
     Plus,
-    Receipt,
-    BarChart3
+    Receipt
 } from 'lucide-react';
 import { StatCard, UpcomingHearings, RecentActivity, DashboardAnalytics } from '@/components/dashboard';
 import { useDashboardStats, useUpcomingHearings, useRecentActivity } from '@/hooks/use-dashboard';

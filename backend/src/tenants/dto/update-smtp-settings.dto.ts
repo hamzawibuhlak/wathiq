@@ -26,7 +26,7 @@ export class UpdateSmtpSettingsDto {
 
     @ApiProperty({ example: 'noreply@example.com', description: 'From Email Address' })
     @IsOptional()
-    @IsEmail({}, { message: 'البريد الإلكتروني غير صالح' })
+    @IsString({ message: 'عنوان البريد يجب أن يكون نصاً' })
     smtpFrom?: string;
 
     @ApiProperty({ example: 'مكتب المحاماة', description: 'From Name' })
@@ -47,6 +47,6 @@ export class UpdateSmtpSettingsDto {
 
 export class TestEmailDto {
     @ApiProperty({ example: 'test@example.com', description: 'Email to send test to' })
-    @IsEmail({}, { message: 'البريد الإلكتروني غير صالح' })
+    @IsEmail({ allow_display_name: false, require_tld: true }, { message: 'البريد الإلكتروني غير صالح' })
     testEmail: string;
 }

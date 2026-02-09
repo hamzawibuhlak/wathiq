@@ -2,6 +2,9 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/auth.store';
 import { AuthLayout, AppLayout } from '@/components/layout';
+import { OfflineIndicator } from '@/components/layout/OfflineIndicator';
+import { InstallPrompt } from '@/components/InstallPrompt';
+import { UpdatePrompt } from '@/components/UpdatePrompt';
 
 // Loading Fallback
 const PageLoader = () => (
@@ -129,6 +132,11 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
 function App() {
     return (
         <BrowserRouter>
+            {/* PWA Components */}
+            <InstallPrompt />
+            <UpdatePrompt />
+            <OfflineIndicator />
+
             <Suspense fallback={<PageLoader />}>
                 <Routes>
                     {/* Auth Routes with AuthLayout */}

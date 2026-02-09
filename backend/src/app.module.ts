@@ -36,6 +36,7 @@ import { OcrModule } from './ocr/ocr.module';
 import { TasksModule } from './tasks/tasks.module';
 import { WorkflowsModule } from './workflows/workflows.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { AiModule } from './ai/ai.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -90,6 +91,7 @@ import { AppController } from './app.controller';
         TasksModule,
         WorkflowsModule,
         AnalyticsModule,
+        AiModule,
     ],
     controllers: [AppController],
     providers: [

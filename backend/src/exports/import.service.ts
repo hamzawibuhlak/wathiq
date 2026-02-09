@@ -23,7 +23,7 @@ export class ImportService {
         userId: string,
     ): Promise<ImportResult> {
         const workbook = new ExcelJS.Workbook();
-        await workbook.xlsx.load(buffer);
+        await workbook.xlsx.load(buffer as any);
 
         const worksheet = workbook.worksheets[0];
         if (!worksheet) {
@@ -111,7 +111,7 @@ export class ImportService {
         userId: string,
     ): Promise<ImportResult> {
         const workbook = new ExcelJS.Workbook();
-        await workbook.xlsx.load(buffer);
+        await workbook.xlsx.load(buffer as any);
 
         const worksheet = workbook.worksheets[0];
         if (!worksheet) {
@@ -266,7 +266,7 @@ export class ImportService {
             notes: 'عميل VIP',
         });
 
-        return await workbook.xlsx.writeBuffer() as Buffer;
+        return (await workbook.xlsx.writeBuffer()) as unknown as Buffer;
     }
 
     /**
@@ -317,6 +317,6 @@ export class ImportService {
         worksheet.getCell('J4').value = 'الأولويات المتاحة:';
         worksheet.getCell('J5').value = 'عالية، متوسطة، منخفضة';
 
-        return await workbook.xlsx.writeBuffer() as Buffer;
+        return (await workbook.xlsx.writeBuffer()) as unknown as Buffer;
     }
 }
