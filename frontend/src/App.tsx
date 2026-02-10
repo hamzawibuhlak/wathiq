@@ -93,6 +93,25 @@ const ChartOfAccountsPage = lazy(() => import('@/pages/accounting/ChartOfAccount
 const JournalEntriesPage = lazy(() => import('@/pages/accounting/JournalEntriesPage'));
 const ExpensesPage = lazy(() => import('@/pages/accounting/ExpensesPage'));
 
+// HR Management
+const EmployeesListPage = lazy(() => import('@/pages/hr/EmployeesListPage'));
+const EmployeeDetailsPage = lazy(() => import('@/pages/hr/EmployeeDetailsPage'));
+const AttendancePage = lazy(() => import('@/pages/hr/AttendancePage'));
+const LeaveManagementPage = lazy(() => import('@/pages/hr/LeaveManagementPage'));
+const PayrollPage = lazy(() => import('@/pages/hr/PayrollPage'));
+
+// Super Admin
+const SuperAdminPages = () => import('@/pages/super-admin/SuperAdminPages');
+const SuperAdminLayout = lazy(() => SuperAdminPages().then(m => ({ default: m.SuperAdminLayout })));
+const SuperAdminDashboard = lazy(() => SuperAdminPages().then(m => ({ default: m.SuperAdminDashboard })));
+const SATenantsPage = lazy(() => SuperAdminPages().then(m => ({ default: m.TenantsPage })));
+const SATenantDetailsPage = lazy(() => SuperAdminPages().then(m => ({ default: m.TenantDetailsPage })));
+const SAPlansPage = lazy(() => SuperAdminPages().then(m => ({ default: m.SubscriptionPlansPage })));
+const SAFeatureFlagsPage = lazy(() => SuperAdminPages().then(m => ({ default: m.FeatureFlagsPage })));
+const SAAnnouncementsPage = lazy(() => SuperAdminPages().then(m => ({ default: m.AnnouncementsPage })));
+const SAHealthPage = lazy(() => SuperAdminPages().then(m => ({ default: m.SystemHealthPage })));
+const SAAuditLogsPage = lazy(() => SuperAdminPages().then(m => ({ default: m.AuditLogsPage })));
+
 // Accept Invitation (Public)
 const AcceptInvitationPage = lazy(() => import('@/pages/invitations/AcceptInvitationPage'));
 
@@ -246,6 +265,13 @@ function App() {
                         <Route path="/accounting/accounts" element={<ChartOfAccountsPage />} />
                         <Route path="/accounting/journal-entries" element={<JournalEntriesPage />} />
                         <Route path="/accounting/expenses" element={<ExpensesPage />} />
+
+                        {/* HR Management */}
+                        <Route path="/hr/employees" element={<EmployeesListPage />} />
+                        <Route path="/hr/employees/:id" element={<EmployeeDetailsPage />} />
+                        <Route path="/hr/attendance" element={<AttendancePage />} />
+                        <Route path="/hr/leaves" element={<LeaveManagementPage />} />
+                        <Route path="/hr/payroll" element={<PayrollPage />} />
                     </Route>
 
                     {/* Default Routes */}
@@ -262,6 +288,18 @@ function App() {
                         <Route path="cases" element={<PortalCasesPage />} />
                         <Route path="invoices" element={<PortalInvoicesPage />} />
                         <Route path="hearings" element={<PortalHearingsPage />} />
+                    </Route>
+
+                    {/* Super Admin Routes */}
+                    <Route path="/super-admin" element={<SuperAdminLayout />}>
+                        <Route index element={<SuperAdminDashboard />} />
+                        <Route path="tenants" element={<SATenantsPage />} />
+                        <Route path="tenants/:id" element={<SATenantDetailsPage />} />
+                        <Route path="plans" element={<SAPlansPage />} />
+                        <Route path="feature-flags" element={<SAFeatureFlagsPage />} />
+                        <Route path="announcements" element={<SAAnnouncementsPage />} />
+                        <Route path="health" element={<SAHealthPage />} />
+                        <Route path="audit-logs" element={<SAAuditLogsPage />} />
                     </Route>
 
                     <Route path="*" element={<NotFoundPage />} />

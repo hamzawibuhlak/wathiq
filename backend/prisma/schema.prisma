@@ -17,6 +17,7 @@ datasource db {
 // =====================================================
 
 enum UserRole {
+  SUPER_ADMIN
   OWNER
   ADMIN
   LAWYER
@@ -129,6 +130,7 @@ model Tenant {
   whatsappWebhookToken    String?  // Webhook Verification Token
   whatsappEnabled         Boolean  @default(false)
   
+  deletedAt   DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -174,6 +176,22 @@ model Tenant {
   budgets               Budget[]
   fiscalYears           FiscalYear[]
 
+  // Phase 24: HR Management
+  employees             Employee[]
+  departments           Department[]
+  positions             Position[]
+  employeeDocuments     EmployeeDocument[]
+  attendanceRecords     Attendance[]
+  attendanceSettings    AttendanceSettings?
+  leaveTypes            LeaveType[]
+  leaveRequests         LeaveRequest[]
+  leaveBalances         LeaveBalance[]
+  payrolls              Payroll[]
+  payrollSettings       PayrollSettings?
+
+  // Phase 25: Super Admin
+  subscription          Subscription?
+
   @@map("tenants")
 }
 
@@ -203,9 +221,9 @@ model User {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  // Multi-tenancy
-  tenantId    String
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  // Multi-tenancy (optional for SUPER_ADMIN)
+  tenantId    String?
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   
   // Created by (self-relation for tracking who created this user)
   createdById String?
@@ -248,6 +266,11 @@ model User {
   submittedExpenses      Expense[]      @relation("ExpenseSubmitter")
   approvedExpenses       Expense[]      @relation("ExpenseApprover")
   bankReconciliations    BankReconciliation[]
+
+  // HR relations
+  employee               Employee?      @relation("UserEmployee")
+  reviewedLeaveRequests  LeaveRequest[] @relation("LeaveReviewer")
+  processedPayrolls      Payroll[]      @relation("PayrollProcessor")
 
   @@index([tenantId])
   @@index([email])
@@ -1728,3 +1751,578 @@ model FiscalYear {
   @@unique([tenantId, year])
   @@map("fiscal_years")
 }
+
+// =====================================================
+// PHASE 24: HR MANAGEMENT
+// =====================================================
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum MaritalStatus {
+  SINGLE
+  MARRIED
+  DIVORCED
+  WIDOWED
+}
+
+enum ContractType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  TEMPORARY
+  INTERNSHIP
+}
+
+enum EmploymentStatus {
+  ACTIVE
+  PROBATION
+  ON_LEAVE
+  SUSPENDED
+  TERMINATED
+  RESIGNED
+}
+
+enum EmployeeDocumentType {
+  EMP_CONTRACT
+  ID_COPY
+  PASSPORT_COPY
+  IQAMA_COPY
+  EDUCATIONAL_CERTIFICATE
+  EXPERIENCE_CERTIFICATE
+  MEDICAL_REPORT
+  BANK_LETTER
+  EMP_OTHER
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  HALF_DAY
+  ON_LEAVE_ATT
+  WEEKEND
+  HOLIDAY
+}
+
+enum LeaveStatus {
+  LEAVE_PENDING
+  LEAVE_APPROVED
+  LEAVE_REJECTED
+  LEAVE_CANCELED
+}
+
+enum PayrollStatus {
+  PAYROLL_DRAFT
+  PAYROLL_PROCESSED
+  PAYROLL_APPROVED
+  PAYROLL_PAID
+}
+
+// ---- HR MODELS ----
+
+model Employee {
+  id                 String            @id @default(uuid())
+  employeeNumber     String
+  userId             String?           @unique
+
+  // Personal Information
+  firstName          String
+  lastName           String
+  firstNameAr        String?
+  lastNameAr         String?
+  dateOfBirth        DateTime
+  gender             Gender
+  nationality        String
+  nationalIdNumber   String
+  passportNumber     String?
+  maritalStatus      MaritalStatus
+
+  // Contact Information
+  email              String?
+  phone              String
+  emergencyContact   Json?
+  currentAddress     String?           @db.Text
+  permanentAddress   String?           @db.Text
+
+  // Employment Information
+  jobTitle           String
+  jobTitleAr         String?
+  departmentId       String
+  hireDate           DateTime
+  probationEndDate   DateTime?
+  contractType       ContractType
+  employmentStatus   EmploymentStatus  @default(ACTIVE)
+  workLocation       String?
+  directManagerId    String?
+
+  // Iqama/Work Permit
+  iqamaNumber        String?
+  iqamaExpiry        DateTime?
+  workPermitNumber   String?
+  workPermitExpiry   DateTime?
+  borderNumber       String?
+
+  // Compensation
+  basicSalary        Decimal           @db.Decimal(10, 2)
+  housingAllowance   Decimal           @default(0) @db.Decimal(10, 2)
+  transportAllowance Decimal           @default(0) @db.Decimal(10, 2)
+  otherAllowances    Json?
+
+  // Bank Information
+  bankName           String?
+  accountNumber      String?
+  iban               String?
+
+  // Documents
+  photoUrl           String?
+  cvUrl              String?
+  contractUrl        String?
+
+  // Dates
+  terminationDate    DateTime?
+  terminationReason  String?           @db.Text
+  lastWorkingDay     DateTime?
+
+  // Metadata
+  isActive           Boolean           @default(true)
+  notes              String?           @db.Text
+  tenantId           String
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  // Relations
+  user               User?             @relation("UserEmployee", fields: [userId], references: [id])
+  department         Department        @relation(fields: [departmentId], references: [id])
+  directManager      Employee?         @relation("EmployeeHierarchy", fields: [directManagerId], references: [id])
+  subordinates       Employee[]        @relation("EmployeeHierarchy")
+  documents          EmployeeDocument[]
+  attendanceRecords  Attendance[]
+  leaveRequests      LeaveRequest[]
+  leaveBalances      LeaveBalance[]
+  payrolls           Payroll[]
+  managedDepartments Department[]      @relation("DepartmentManager")
+  tenant             Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, employeeNumber])
+  @@index([tenantId, employmentStatus])
+  @@index([tenantId, departmentId])
+  @@index([departmentId])
+  @@index([directManagerId])
+  @@map("employees")
+}
+
+model Department {
+  id          String     @id @default(uuid())
+  name        String
+  nameAr      String?
+  code        String
+  description String?    @db.Text
+  managerId   String?
+  isActive    Boolean    @default(true)
+  tenantId    String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  manager     Employee?  @relation("DepartmentManager", fields: [managerId], references: [id])
+  employees   Employee[]
+  positions   Position[]
+  tenant      Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, code])
+  @@map("departments")
+}
+
+model Position {
+  id             String     @id @default(uuid())
+  title          String
+  titleAr        String?
+  departmentId   String
+  description    String?    @db.Text
+  requirements   String?    @db.Text
+  minSalary      Decimal    @db.Decimal(10, 2)
+  maxSalary      Decimal    @db.Decimal(10, 2)
+  isActive       Boolean    @default(true)
+  tenantId       String
+  createdAt      DateTime   @default(now())
+
+  department     Department @relation(fields: [departmentId], references: [id])
+  tenant         Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, title])
+  @@map("positions")
+}
+
+model EmployeeDocument {
+  id           String               @id @default(uuid())
+  employeeId   String
+  documentType EmployeeDocumentType
+  title        String
+  fileUrl      String
+  uploadedAt   DateTime             @default(now())
+  expiryDate   DateTime?
+  notes        String?
+  tenantId     String
+
+  employee     Employee             @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  tenant       Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
+  @@map("employee_documents")
+}
+
+// ---- ATTENDANCE ----
+
+model Attendance {
+  id           String           @id @default(uuid())
+  employeeId   String
+  date         DateTime
+  checkIn      DateTime?
+  checkOut     DateTime?
+  workHours    Decimal?         @db.Decimal(5, 2)
+  status       AttendanceStatus @default(PRESENT)
+  notes        String?
+  location     String?
+  ipAddress    String?
+  isLate       Boolean          @default(false)
+  lateMinutes  Int              @default(0)
+  tenantId     String
+
+  employee     Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  tenant       Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, date])
+  @@index([tenantId, date])
+  @@index([employeeId])
+  @@map("attendance")
+}
+
+model AttendanceSettings {
+  id                 String   @id @default(uuid())
+  workStartTime      String   @default("09:00")
+  workEndTime        String   @default("17:00")
+  gracePeriodMinutes Int      @default(15)
+  autoCheckOut       Boolean  @default(false)
+  autoCheckOutTime   String?
+  weekendDays        String[] @default(["Friday", "Saturday"])
+  tenantId           String   @unique
+
+  tenant             Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("attendance_settings")
+}
+
+// ---- LEAVE MANAGEMENT ----
+
+model LeaveType {
+  id               String         @id @default(uuid())
+  name             String
+  nameAr           String?
+  code             String
+  daysPerYear      Int
+  requiresApproval Boolean        @default(true)
+  isPaid           Boolean        @default(true)
+  maxConsecutiveDays Int?
+  description      String?        @db.Text
+  isActive         Boolean        @default(true)
+  tenantId         String
+
+  leaveRequests    LeaveRequest[]
+  leaveBalances    LeaveBalance[]
+  tenant           Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, code])
+  @@map("leave_types")
+}
+
+model LeaveRequest {
+  id              String        @id @default(uuid())
+  employeeId      String
+  leaveTypeId     String
+  startDate       DateTime
+  endDate         DateTime
+  totalDays       Int
+  reason          String        @db.Text
+  status          LeaveStatus   @default(LEAVE_PENDING)
+  requestedAt     DateTime      @default(now())
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  reviewNotes     String?       @db.Text
+  attachmentUrl   String?
+  tenantId        String
+
+  employee        Employee      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  leaveType       LeaveType     @relation(fields: [leaveTypeId], references: [id])
+  reviewer        User?         @relation("LeaveReviewer", fields: [reviewedBy], references: [id])
+  tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId, status])
+  @@index([tenantId, status])
+  @@map("leave_requests")
+}
+
+model LeaveBalance {
+  id          String    @id @default(uuid())
+  employeeId  String
+  leaveTypeId String
+  year        Int
+  allocated   Int
+  used        Int       @default(0)
+  remaining   Int
+  tenantId    String
+
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  leaveType   LeaveType @relation(fields: [leaveTypeId], references: [id])
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, leaveTypeId, year])
+  @@index([employeeId, year])
+  @@map("leave_balances")
+}
+
+// ---- PAYROLL ----
+
+model Payroll {
+  id                 String        @id @default(uuid())
+  employeeId         String
+  payrollMonth       Int
+  payrollYear        Int
+  payPeriodStart     DateTime
+  payPeriodEnd       DateTime
+
+  // Earnings
+  basicSalary        Decimal       @db.Decimal(10, 2)
+  housingAllowance   Decimal       @default(0) @db.Decimal(10, 2)
+  transportAllowance Decimal       @default(0) @db.Decimal(10, 2)
+  otherAllowances    Decimal       @default(0) @db.Decimal(10, 2)
+  overtimeHours      Decimal       @default(0) @db.Decimal(5, 2)
+  overtimeAmount     Decimal       @default(0) @db.Decimal(10, 2)
+  bonus              Decimal       @default(0) @db.Decimal(10, 2)
+  grossSalary        Decimal       @db.Decimal(10, 2)
+
+  // Deductions
+  gosiEmployee       Decimal       @default(0) @db.Decimal(10, 2)
+  absenceDeduction   Decimal       @default(0) @db.Decimal(10, 2)
+  lateDeduction      Decimal       @default(0) @db.Decimal(10, 2)
+  loans              Decimal       @default(0) @db.Decimal(10, 2)
+  otherDeductions    Decimal       @default(0) @db.Decimal(10, 2)
+  totalDeductions    Decimal       @db.Decimal(10, 2)
+
+  // Net
+  netSalary          Decimal       @db.Decimal(10, 2)
+
+  // Employer Contributions
+  gosiEmployer       Decimal       @default(0) @db.Decimal(10, 2)
+
+  // Status
+  status             PayrollStatus @default(PAYROLL_DRAFT)
+  processedAt        DateTime?
+  processedBy        String?
+  paidAt             DateTime?
+
+  // Payment
+  paymentMethod      String?
+  paymentReference   String?
+
+  notes              String?       @db.Text
+  tenantId           String
+  createdAt          DateTime      @default(now())
+
+  employee           Employee      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  processor          User?         @relation("PayrollProcessor", fields: [processedBy], references: [id])
+  tenant             Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, payrollMonth, payrollYear])
+  @@index([tenantId, payrollYear, payrollMonth])
+  @@index([tenantId, status])
+  @@map("payroll")
+}
+
+model PayrollSettings {
+  id                    String   @id @default(uuid())
+  gosiEmployeeRate      Decimal  @default(10) @db.Decimal(5, 2)
+  gosiEmployerRate      Decimal  @default(12) @db.Decimal(5, 2)
+  gosiMaxSalary         Decimal  @default(45000) @db.Decimal(10, 2)
+  overtimeEnabled       Boolean  @default(true)
+  overtimeRate          Decimal  @default(1.5) @db.Decimal(3, 2)
+  absenceDeductionRate  Decimal  @default(1) @db.Decimal(3, 2)
+  lateDeductionMinutes  Int      @default(30)
+  lateDeductionRate     Decimal  @default(0.5) @db.Decimal(3, 2)
+  workingDaysPerMonth   Int      @default(26)
+  workingHoursPerDay    Decimal  @default(8) @db.Decimal(3, 1)
+  tenantId              String   @unique
+
+  tenant                Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("payroll_settings")
+}
+
+// =====================================================
+// PHASE 25: SUPER ADMIN MODELS
+// =====================================================
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  SUSPENDED
+  CANCELLED
+  EXPIRED
+}
+
+enum BillingCycle {
+  MONTHLY
+  ANNUAL
+}
+
+enum SubInvoiceStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum AnnouncementType {
+  INFO
+  WARNING
+  MAINTENANCE
+  NEW_FEATURE
+}
+
+model SubscriptionPlan {
+  id                String         @id @default(uuid())
+  name              String
+  nameAr            String
+  slug              String         @unique
+  description       String?        @db.Text
+  descriptionAr     String?        @db.Text
+  monthlyPrice      Decimal        @db.Decimal(10, 2)
+  annualPrice       Decimal        @db.Decimal(10, 2)
+  currency          String         @default("SAR")
+  maxUsers          Int
+  maxCases          Int
+  maxStorageGB      Int
+  maxClients        Int
+  features          Json
+  isActive          Boolean        @default(true)
+  isPopular         Boolean        @default(false)
+  subscriptions     Subscription[]
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@map("subscription_plans")
+}
+
+model Subscription {
+  id                String             @id @default(uuid())
+  tenantId          String             @unique
+  planId            String
+  status            SubscriptionStatus @default(TRIAL)
+  billingCycle      BillingCycle       @default(MONTHLY)
+  trialStartDate    DateTime?
+  trialEndDate      DateTime?
+  startDate         DateTime
+  endDate           DateTime?
+  renewalDate       DateTime?
+  amount            Decimal            @db.Decimal(10, 2)
+  currency          String             @default("SAR")
+  paymentMethod     String?
+  lastPaymentDate   DateTime?
+  lastPaymentAmount Decimal?           @db.Decimal(10, 2)
+  cancelledAt       DateTime?
+  cancellationReason String?           @db.Text
+  notes             String?            @db.Text
+  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan              SubscriptionPlan   @relation(fields: [planId], references: [id])
+  invoices          SubscriptionInvoice[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  @@index([status])
+  @@index([renewalDate])
+  @@map("subscriptions")
+}
+
+model SubscriptionInvoice {
+  id              String          @id @default(uuid())
+  subscriptionId  String
+  invoiceNumber   String          @unique
+  amount          Decimal         @db.Decimal(10, 2)
+  vatAmount       Decimal         @db.Decimal(10, 2)
+  totalAmount     Decimal         @db.Decimal(10, 2)
+  status          SubInvoiceStatus @default(PENDING)
+  dueDate         DateTime
+  paidAt          DateTime?
+  pdfUrl          String?
+  subscription    Subscription    @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  createdAt       DateTime        @default(now())
+
+  @@map("subscription_invoices")
+}
+
+model SystemSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String   @db.Text
+  type        String   @default("string")
+  description String?
+  isPublic    Boolean  @default(false)
+  updatedBy   String?
+  updatedAt   DateTime @updatedAt
+
+  @@map("system_settings")
+}
+
+model FeatureFlag {
+  id           String   @id @default(uuid())
+  key          String   @unique
+  name         String
+  description  String?
+  isEnabled    Boolean  @default(false)
+  enabledFor   String[]
+  updatedBy    String?
+  updatedAt    DateTime @updatedAt
+
+  @@map("feature_flags")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  actorId     String?
+  actorRole   String?
+  tenantId    String?
+  action      String
+  resource    String
+  resourceId  String?
+  oldValues   Json?
+  newValues   Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([actorId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model Announcement {
+  id          String             @id @default(uuid())
+  title       String
+  titleAr     String?
+  content     String             @db.Text
+  contentAr   String?            @db.Text
+  type        AnnouncementType   @default(INFO)
+  targetPlans String[]
+  isActive    Boolean            @default(true)
+  startDate   DateTime
+  endDate     DateTime?
+  createdBy   String
+  createdAt   DateTime           @default(now())
+
+  @@map("announcements")
+}
+

@@ -18,7 +18,7 @@ export class GroupChatController {
         @CurrentUser() user: User,
         @Body() body: { name: string; description?: string; memberIds: string[] },
     ) {
-        return this.groupChatService.createGroup(user.tenantId, user.id, body);
+        return this.groupChatService.createGroup(user.tenantId!, user.id, body);
     }
 
     @Get()

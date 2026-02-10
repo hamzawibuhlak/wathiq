@@ -45,6 +45,8 @@ import { CallsModule } from './calls/calls.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { MessagingModule } from './messaging/messaging.module';
 import { AccountingModule } from './accounting/accounting.module';
+import { HrModule } from './hr/hr.module';
+import { SuperAdminModule } from './super-admin/super-admin.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -112,6 +114,12 @@ import { AppController } from './app.controller';
 
         // Phase 23: Accounting & Finance
         AccountingModule,
+
+        // Phase 24: HR Management
+        HrModule,
+
+        // Phase 25: Super Admin Dashboard
+        SuperAdminModule,
     ],
     controllers: [AppController],
     providers: [

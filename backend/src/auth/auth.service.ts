@@ -15,7 +15,7 @@ import { UserRole } from '@prisma/client';
 export interface JwtPayload {
     sub: string;      // userId
     email: string;
-    tenantId: string;
+    tenantId: string | null;
     role: UserRole;
 }
 
@@ -117,8 +117,8 @@ export class AuthService {
             throw new UnauthorizedException('الحساب معطل');
         }
 
-        // Check if tenant is active
-        if (!user.tenant.isActive) {
+        // Check if tenant is active (skip for SUPER_ADMIN)
+        if (user.tenant && !user.tenant.isActive) {
             throw new UnauthorizedException('المكتب معطل');
         }
 
@@ -243,7 +243,7 @@ export class AuthService {
             include: { tenant: { select: { id: true, name: true, isActive: true } } },
         });
 
-        if (!user || !user.isActive || !user.tenant.isActive) {
+        if (!user || !user.isActive || (user.tenant && !user.tenant.isActive)) {
             return null;
         }
 
@@ -268,7 +268,7 @@ export class AuthService {
     /**
      * Generate JWT token
      */
-    private generateToken(user: { id: string; email: string; tenantId: string; role: UserRole }): string {
+    private generateToken(user: { id: string; email: string; tenantId: string | null; role: UserRole }): string {
         const payload: JwtPayload = {
             sub: user.id,
             email: user.email,

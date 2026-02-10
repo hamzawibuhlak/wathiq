@@ -40,7 +40,7 @@ export class AnalyticsController {
     if (caseType) filters.caseType = caseType;
     if (lawyer) filters.lawyer = lawyer;
 
-    return this.analyticsService.getOverview(user.tenantId, filters);
+    return this.analyticsService.getOverview(user.tenantId!, filters);
   }
 
   @Get('cases')
@@ -59,7 +59,7 @@ export class AnalyticsController {
       };
     }
 
-    const overview = await this.analyticsService.getOverview(user.tenantId, filters);
+    const overview = await this.analyticsService.getOverview(user.tenantId!, filters);
     return overview.cases;
   }
 
@@ -79,35 +79,35 @@ export class AnalyticsController {
       };
     }
 
-    const overview = await this.analyticsService.getOverview(user.tenantId, filters);
+    const overview = await this.analyticsService.getOverview(user.tenantId!, filters);
     return overview.financial;
   }
 
   @Get('clients')
   @ApiOperation({ summary: 'Get clients analytics only' })
   async getClientsAnalytics(@CurrentUser() user: User) {
-    const overview = await this.analyticsService.getOverview(user.tenantId);
+    const overview = await this.analyticsService.getOverview(user.tenantId!);
     return overview.clients;
   }
 
   @Get('performance')
   @ApiOperation({ summary: 'Get team performance analytics' })
   async getPerformanceAnalytics(@CurrentUser() user: User) {
-    const overview = await this.analyticsService.getOverview(user.tenantId);
+    const overview = await this.analyticsService.getOverview(user.tenantId!);
     return overview.performance;
   }
 
   @Get('trends')
   @ApiOperation({ summary: 'Get 12-month trends' })
   async getTrendsAnalytics(@CurrentUser() user: User) {
-    const overview = await this.analyticsService.getOverview(user.tenantId);
+    const overview = await this.analyticsService.getOverview(user.tenantId!);
     return overview.trends;
   }
 
   @Get('kpi')
   @ApiOperation({ summary: 'Get key performance indicators summary' })
   async getKPISummary(@CurrentUser() user: User) {
-    const overview = await this.analyticsService.getOverview(user.tenantId);
+    const overview = await this.analyticsService.getOverview(user.tenantId!);
 
     return {
       totalCases: overview.cases.total,

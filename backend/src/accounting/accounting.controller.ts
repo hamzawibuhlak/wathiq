@@ -9,7 +9,7 @@ import { ExpenseService } from './expense.service';
 import { BankService } from './bank.service';
 import { BudgetService } from './budget.service';
 
-@Controller('api/accounting')
+@Controller('accounting')
 @UseGuards(JwtAuthGuard)
 export class AccountingController {
     constructor(

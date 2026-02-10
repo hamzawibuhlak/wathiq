@@ -21,6 +21,8 @@ import {
     UserCog,
     Target,
     Phone,
+    Clock,
+    DollarSign,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -80,6 +82,15 @@ const navGroups: NavGroup[] = [
             { path: '/messages', icon: Mail, label: 'الرسائل الداخلية' },
             { path: '/calls', icon: Phone, label: 'مركز الاتصالات', roles: ['OWNER', 'ADMIN'] },
             { path: '/whatsapp', icon: MessageSquare, label: 'واتساب', roles: ['OWNER', 'ADMIN'] },
+        ],
+    },
+    {
+        title: 'الموارد البشرية',
+        items: [
+            { path: '/hr/employees', icon: Users, label: 'الموظفون', roles: ['OWNER', 'ADMIN'] },
+            { path: '/hr/attendance', icon: Clock, label: 'الحضور والانصراف', roles: ['OWNER', 'ADMIN'] },
+            { path: '/hr/leaves', icon: Calendar, label: 'الإجازات', roles: ['OWNER', 'ADMIN'] },
+            { path: '/hr/payroll', icon: DollarSign, label: 'الرواتب', roles: ['OWNER', 'ADMIN'] },
         ],
     },
     {
