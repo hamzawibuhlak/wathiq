@@ -23,6 +23,7 @@ import {
     Phone,
     Clock,
     DollarSign,
+    FileEdit,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -34,7 +35,7 @@ interface NavItem {
     path: string;
     icon: typeof LayoutDashboard;
     label: string;
-    roles?: ('OWNER' | 'ADMIN' | 'LAWYER' | 'SECRETARY')[];
+    roles?: ('SUPER_ADMIN' | 'OWNER' | 'ADMIN' | 'LAWYER' | 'SECRETARY' | 'ACCOUNTANT')[];
 }
 
 interface NavGroup {
@@ -58,6 +59,7 @@ const navGroups: NavGroup[] = [
             { path: '/clients', icon: Users, label: 'العملاء' },
             { path: '/tasks', icon: CheckSquare, label: 'المهام' },
             { path: '/documents', icon: FileText, label: 'المستندات' },
+            { path: '/legal-documents', icon: FileEdit, label: 'محرر الوثائق' },
         ],
     },
     {
@@ -80,6 +82,7 @@ const navGroups: NavGroup[] = [
         title: 'التواصل',
         items: [
             { path: '/messages', icon: Mail, label: 'الرسائل الداخلية' },
+            { path: '/chat', icon: MessageSquare, label: 'الدردشة' },
             { path: '/calls', icon: Phone, label: 'مركز الاتصالات', roles: ['OWNER', 'ADMIN'] },
             { path: '/whatsapp', icon: MessageSquare, label: 'واتساب', roles: ['OWNER', 'ADMIN'] },
         ],
@@ -128,6 +131,7 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
             case 'ADMIN': return { label: 'مدير', color: 'bg-blue-500/10 text-blue-600 border-blue-500/20' };
             case 'LAWYER': return { label: 'محامي', color: 'bg-amber-500/10 text-amber-600 border-amber-500/20' };
             case 'SECRETARY': return { label: 'سكرتير', color: 'bg-slate-500/10 text-slate-600 border-slate-500/20' };
+            case 'ACCOUNTANT': return { label: 'محاسب', color: 'bg-orange-500/10 text-orange-600 border-orange-500/20' };
             default: return { label: '', color: '' };
         }
     };

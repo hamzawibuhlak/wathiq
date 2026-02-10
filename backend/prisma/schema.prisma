@@ -22,6 +22,7 @@ enum UserRole {
   ADMIN
   LAWYER
   SECRETARY
+  ACCOUNTANT
 }
 
 enum InvitationStatus {
@@ -192,6 +193,18 @@ model Tenant {
   // Phase 25: Super Admin
   subscription          Subscription?
 
+  // Phase 26: Internal Chat
+  chatConversations     ChatConversation[]
+  chatMessages          ChatMessage[]
+
+  // Phase 27: Owner Panel
+  companyProfile        CompanyProfile?
+  tenantIntegrations    TenantIntegration[]
+
+  // Phase 28: Legal Document Editor
+  legalDocuments        LegalDocument[]
+  legalDocTemplates     LegalDocTemplate[]
+
   @@map("tenants")
 }
 
@@ -272,6 +285,17 @@ model User {
   reviewedLeaveRequests  LeaveRequest[] @relation("LeaveReviewer")
   processedPayrolls      Payroll[]      @relation("PayrollProcessor")
 
+  // Phase 26: Internal Chat
+  createdConversations   ChatConversation[]    @relation("ConversationCreator")
+  chatMemberships        ChatConversationMember[]
+  chatMessagesSent       ChatMessage[]         @relation("ChatMessageSender")
+  chatReactions          ChatMessageReaction[]
+  chatReceipts           ChatMessageReceipt[]
+
+  // Phase 28: Legal Document Editor
+  legalDocuments         LegalDocument[]        @relation("LegalDocCreator")
+  legalDocVersions       LegalDocumentVersion[] @relation("LegalDocVersionSaver")
+
   @@index([tenantId])
   @@index([email])
   @@map("users")
@@ -319,6 +343,10 @@ model Client {
   @@index([phone])
   @@index([nationalId])
   accountsReceivable AccountsReceivable[]
+
+  // Phase 28: Legal Document Editor
+  legalDocuments     LegalDocument[] @relation("ClientLegalDocs")
+
   @@map("clients")
 }
 
@@ -363,6 +391,9 @@ model Case {
   invoices        Invoice[]
   whatsappMessages WhatsAppMessage[]
   tasks           Task[]
+
+  // Phase 28: Legal Document Editor
+  legalDocuments  LegalDocument[] @relation("CaseLegalDocs")
 
   @@unique([tenantId, caseNumber])
   @@index([tenantId])
@@ -2326,3 +2357,312 @@ model Announcement {
   @@map("announcements")
 }
 
+// =====================================================
+// PHASE 26: INTERNAL CHAT SYSTEM
+// =====================================================
+
+enum ChatConversationType {
+  DIRECT
+  GROUP
+}
+
+enum ChatMemberRole {
+  ADMIN
+  MEMBER
+}
+
+enum ChatMessageType {
+  TEXT
+  FILE
+  IMAGE
+  VOICE
+  SYSTEM
+}
+
+model ChatConversation {
+  id           String               @id @default(uuid())
+  type         ChatConversationType @default(DIRECT)
+  name         String?
+  description  String?
+  avatarUrl    String?
+  createdBy    String
+  isActive     Boolean              @default(true)
+  tenantId     String
+
+  members      ChatConversationMember[]
+  messages     ChatMessage[]
+  creator      User                 @relation("ConversationCreator", fields: [createdBy], references: [id])
+  tenant       Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+
+  @@index([tenantId])
+  @@index([tenantId, type])
+  @@map("chat_conversations")
+}
+
+model ChatConversationMember {
+  id             String           @id @default(uuid())
+  conversationId String
+  userId         String
+  role           ChatMemberRole   @default(MEMBER)
+  joinedAt       DateTime         @default(now())
+  lastReadAt     DateTime?
+  isMuted        Boolean          @default(false)
+  isAdmin        Boolean          @default(false)
+  leftAt         DateTime?
+
+  conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User             @relation(fields: [userId], references: [id])
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+  @@map("chat_conversation_members")
+}
+
+model ChatMessage {
+  id             String          @id @default(uuid())
+  conversationId String
+  senderId       String
+  content        String?         @db.Text
+  type           ChatMessageType @default(TEXT)
+
+  replyToId      String?
+
+  fileUrl        String?
+  fileName       String?
+  fileSize       Int?
+  fileMimeType   String?
+
+  audioDuration  Int?
+
+  isEdited       Boolean         @default(false)
+  editedAt       DateTime?
+  isDeleted      Boolean         @default(false)
+  deletedAt      DateTime?
+
+  tenantId       String
+
+  conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User             @relation("ChatMessageSender", fields: [senderId], references: [id])
+  replyTo        ChatMessage?     @relation("ChatMessageReplies", fields: [replyToId], references: [id])
+  replies        ChatMessage[]    @relation("ChatMessageReplies")
+  reactions      ChatMessageReaction[]
+  receipts       ChatMessageReceipt[]
+  tenant         Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@index([conversationId, createdAt])
+  @@index([senderId])
+  @@index([tenantId])
+  @@map("chat_messages")
+}
+
+model ChatMessageReceipt {
+  id        String   @id @default(uuid())
+  messageId String
+  userId    String
+  readAt    DateTime @default(now())
+
+  message   ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id])
+
+  @@unique([messageId, userId])
+  @@index([userId])
+  @@map("chat_message_receipts")
+}
+
+model ChatMessageReaction {
+  id        String   @id @default(uuid())
+  messageId String
+  userId    String
+  emoji     String
+
+  message   ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id])
+
+  @@unique([messageId, userId, emoji])
+  @@map("chat_message_reactions")
+}
+
+// =====================================================
+// PHASE 27: OWNER PANEL MODELS
+// =====================================================
+
+model CompanyProfile {
+  id              String   @id @default(uuid())
+  tenantId        String   @unique
+
+  // Company data
+  legalName       String
+  legalNameAr     String?
+  commercialRegNo String?
+  vatNumber       String?
+  licenseNumber   String?
+
+  // Contact
+  website         String?
+  phone           String?
+  email           String?
+  address         String?  @db.Text
+  city            String?
+  country         String   @default("SA")
+
+  // Branding
+  logoUrl         String?
+  primaryColor    String?  @default("#1a56db")
+
+  // System settings
+  timezone        String   @default("Asia/Riyadh")
+  language        String   @default("ar")
+  dateFormat      String   @default("DD/MM/YYYY")
+  fiscalYearStart Int      @default(1)
+
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  updatedAt       DateTime @updatedAt
+
+  @@map("company_profiles")
+}
+
+model TenantIntegration {
+  id           String          @id @default(uuid())
+  type         IntegrationType
+  name         String
+  isActive     Boolean         @default(false)
+  config       Json
+  lastTestedAt DateTime?
+  lastTestOk   Boolean?
+  tenantId     String
+
+  tenant       Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@unique([tenantId, type])
+  @@map("tenant_integrations")
+}
+
+enum IntegrationType {
+  EMAIL_SMTP
+  EMAIL_SENDGRID
+  WHATSAPP
+  CALL_CENTER
+  NAFATH
+  ZATCA
+  ABSHER
+  GOOGLE_CALENDAR
+  ZAPIER
+}
+
+// =====================================================
+// Phase 28: LEGAL DOCUMENT EDITOR
+// =====================================================
+
+model LegalDocument {
+  id              String               @id @default(uuid())
+  title           String
+  type            LegalDocumentType
+  status          LegalDocumentStatus  @default(DRAFT)
+
+  content         String               @db.Text
+  contentText     String?              @db.Text
+
+  caseId          String?
+  clientId        String?
+
+  version         Int                  @default(1)
+
+  pdfUrl          String?
+  wordUrl         String?
+  lastExportedAt  DateTime?
+
+  settings        Json?
+
+  aiPromptUsed    String?              @db.Text
+  aiGenerated     Boolean              @default(false)
+
+  createdBy       String
+  tenantId        String
+
+  creator         User                 @relation("LegalDocCreator", fields: [createdBy], references: [id])
+  case            Case?                @relation("CaseLegalDocs", fields: [caseId], references: [id])
+  client          Client?              @relation("ClientLegalDocs", fields: [clientId], references: [id])
+  tenant          Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  versions        LegalDocumentVersion[]
+
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  @@index([tenantId])
+  @@index([tenantId, type])
+  @@index([tenantId, caseId])
+  @@index([tenantId, status])
+  @@map("legal_documents")
+}
+
+model LegalDocumentVersion {
+  id          String   @id @default(uuid())
+  documentId  String
+  version     Int
+  content     String   @db.Text
+  savedBy     String
+  changeNote  String?
+
+  document    LegalDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user        User          @relation("LegalDocVersionSaver", fields: [savedBy], references: [id])
+
+  createdAt   DateTime @default(now())
+
+  @@index([documentId])
+  @@map("legal_document_versions")
+}
+
+model LegalDocTemplate {
+  id          String            @id @default(uuid())
+  name        String
+  nameAr      String
+  type        LegalDocumentType
+  description String?
+  content     String            @db.Text
+  variables   Json
+  isSystem    Boolean           @default(false)
+  isActive    Boolean           @default(true)
+  usageCount  Int               @default(0)
+
+  tenantId    String?
+
+  tenant      Tenant?           @relation(fields: [tenantId], references: [id])
+
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([type])
+  @@index([tenantId])
+  @@map("legal_doc_templates")
+}
+
+enum LegalDocumentType {
+  DEFENSE_MEMO
+  REPLY
+  CONTRACT
+  POWER_OF_ATTORNEY
+  APPEAL
+  COMPLAINT
+  LEGAL_OPINION
+  SETTLEMENT
+  LETTER
+  OTHER
+}
+
+enum LegalDocumentStatus {
+  DRAFT
+  REVIEW
+  FINAL
+  SENT
+  ARCHIVED
+}

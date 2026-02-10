@@ -47,6 +47,9 @@ import { MessagingModule } from './messaging/messaging.module';
 import { AccountingModule } from './accounting/accounting.module';
 import { HrModule } from './hr/hr.module';
 import { SuperAdminModule } from './super-admin/super-admin.module';
+import { ChatModule } from './chat/chat.module';
+import { OwnerModule } from './owner/owner.module';
+import { LegalDocumentsModule } from './legal-documents/legal-documents.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -120,6 +123,15 @@ import { AppController } from './app.controller';
 
         // Phase 25: Super Admin Dashboard
         SuperAdminModule,
+
+        // Phase 26: Internal Chat
+        ChatModule,
+
+        // Phase 27: Owner Panel
+        OwnerModule,
+
+        // Phase 28: Legal Document Editor
+        LegalDocumentsModule,
     ],
     controllers: [AppController],
     providers: [

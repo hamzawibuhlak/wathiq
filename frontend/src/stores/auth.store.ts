@@ -7,7 +7,7 @@ interface User {
     email: string;
     name: string;
     phone: string | null;
-    role: 'OWNER' | 'ADMIN' | 'LAWYER' | 'SECRETARY';
+    role: 'SUPER_ADMIN' | 'OWNER' | 'ADMIN' | 'LAWYER' | 'SECRETARY' | 'ACCOUNTANT';
     avatar: string | null;
     isActive: boolean;
     tenantId: string;

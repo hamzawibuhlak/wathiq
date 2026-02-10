@@ -84,6 +84,23 @@ const ReportsPage = lazy(() => import('@/pages/reports/ReportsPage'));
 // Messages
 const MessagesPage = lazy(() => import('@/pages/messages/MessagesPage'));
 
+// Internal Chat (Phase 26)
+const ChatPage = lazy(() => import('@/pages/chat/ChatPage'));
+
+// Legal Document Editor (Phase 28)
+const LegalDocumentsPage = lazy(() => import('@/pages/legal-documents/LegalDocumentsPage'));
+const NewDocumentPage = lazy(() => import('@/pages/legal-documents/NewDocumentPage'));
+const LegalDocumentEditorPage = lazy(() => import('@/pages/legal-documents/LegalDocumentEditorPage'));
+
+// Owner Panel (Phase 27)
+const OwnerLayout = lazy(() => import('@/pages/owner/OwnerLayout'));
+const OwnerDashboard = lazy(() => import('@/pages/owner/OwnerDashboard'));
+const OwnerCompanyPage = lazy(() => import('@/pages/owner/CompanyProfilePage'));
+const OwnerUsersPage = lazy(() => import('@/pages/owner/UsersManagementPage'));
+const OwnerIntegrationsPage = lazy(() => import('@/pages/owner/IntegrationsPage'));
+const OwnerWorkflowsPage = lazy(() => import('@/pages/owner/WorkflowsPage'));
+const OwnerBillingPage = lazy(() => import('@/pages/owner/BillingPage'));
+
 // Call Center
 const CallCenterPage = lazy(() => import('@/pages/calls/CallCenterPage'));
 
@@ -149,9 +166,11 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 // Public Route wrapper (redirect if authenticated)
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
-    const { isAuthenticated } = useAuthStore();
+    const { isAuthenticated, user } = useAuthStore();
 
     if (isAuthenticated) {
+        if (user?.role === 'OWNER') return <Navigate to="/owner" replace />;
+        if (user?.role === 'SUPER_ADMIN') return <Navigate to="/super-admin" replace />;
         return <Navigate to="/dashboard" replace />;
     }
 
@@ -257,6 +276,14 @@ function App() {
                         <Route path="/messages" element={<MessagesPage />} />
                         <Route path="/messages/:id" element={<MessagesPage />} />
 
+                        {/* Internal Chat (Phase 26) */}
+                        <Route path="/chat" element={<ChatPage />} />
+
+                        {/* Legal Document Editor (Phase 28) */}
+                        <Route path="/legal-documents" element={<LegalDocumentsPage />} />
+                        <Route path="/legal-documents/new" element={<NewDocumentPage />} />
+                        <Route path="/legal-documents/:id/edit" element={<LegalDocumentEditorPage />} />
+
                         {/* Call Center */}
                         <Route path="/calls" element={<CallCenterPage />} />
 
@@ -300,6 +327,23 @@ function App() {
                         <Route path="announcements" element={<SAAnnouncementsPage />} />
                         <Route path="health" element={<SAHealthPage />} />
                         <Route path="audit-logs" element={<SAAuditLogsPage />} />
+                    </Route>
+
+                    {/* Owner Panel Routes (Phase 27) */}
+                    <Route
+                        path="/owner"
+                        element={
+                            <ProtectedRoute>
+                                <OwnerLayout />
+                            </ProtectedRoute>
+                        }
+                    >
+                        <Route index element={<OwnerDashboard />} />
+                        <Route path="company" element={<OwnerCompanyPage />} />
+                        <Route path="users" element={<OwnerUsersPage />} />
+                        <Route path="integrations" element={<OwnerIntegrationsPage />} />
+                        <Route path="workflows" element={<OwnerWorkflowsPage />} />
+                        <Route path="billing" element={<OwnerBillingPage />} />
                     </Route>
 
                     <Route path="*" element={<NotFoundPage />} />
