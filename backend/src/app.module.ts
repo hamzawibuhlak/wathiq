@@ -41,6 +41,10 @@ import { SecurityModule } from './security/security.module';
 import { ComplianceModule } from './compliance/compliance.module';
 import { CacheConfigModule } from './cache/cache.module';
 import { PerformanceModule } from './performance/performance.module';
+import { CallsModule } from './calls/calls.module';
+import { WebhooksModule } from './webhooks/webhooks.module';
+import { MessagingModule } from './messaging/messaging.module';
+import { AccountingModule } from './accounting/accounting.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -100,6 +104,14 @@ import { AppController } from './app.controller';
         ComplianceModule,
         CacheConfigModule,
         PerformanceModule,
+
+        // Phase 22: Communication Hub
+        CallsModule,
+        WebhooksModule,
+        MessagingModule,
+
+        // Phase 23: Accounting & Finance
+        AccountingModule,
     ],
     controllers: [AppController],
     providers: [

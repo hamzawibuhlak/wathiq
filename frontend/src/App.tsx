@@ -84,6 +84,15 @@ const ReportsPage = lazy(() => import('@/pages/reports/ReportsPage'));
 // Messages
 const MessagesPage = lazy(() => import('@/pages/messages/MessagesPage'));
 
+// Call Center
+const CallCenterPage = lazy(() => import('@/pages/calls/CallCenterPage'));
+
+// Accounting
+const AccountingDashboardPage = lazy(() => import('@/pages/accounting/AccountingDashboardPage'));
+const ChartOfAccountsPage = lazy(() => import('@/pages/accounting/ChartOfAccountsPage'));
+const JournalEntriesPage = lazy(() => import('@/pages/accounting/JournalEntriesPage'));
+const ExpensesPage = lazy(() => import('@/pages/accounting/ExpensesPage'));
+
 // Accept Invitation (Public)
 const AcceptInvitationPage = lazy(() => import('@/pages/invitations/AcceptInvitationPage'));
 
@@ -228,6 +237,15 @@ function App() {
                         {/* Messages */}
                         <Route path="/messages" element={<MessagesPage />} />
                         <Route path="/messages/:id" element={<MessagesPage />} />
+
+                        {/* Call Center */}
+                        <Route path="/calls" element={<CallCenterPage />} />
+
+                        {/* Accounting */}
+                        <Route path="/accounting" element={<AccountingDashboardPage />} />
+                        <Route path="/accounting/accounts" element={<ChartOfAccountsPage />} />
+                        <Route path="/accounting/journal-entries" element={<JournalEntriesPage />} />
+                        <Route path="/accounting/expenses" element={<ExpensesPage />} />
                     </Route>
 
                     {/* Default Routes */}

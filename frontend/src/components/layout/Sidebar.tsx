@@ -20,6 +20,7 @@ import {
     Mail,
     UserCog,
     Target,
+    Phone,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -61,6 +62,8 @@ const navGroups: NavGroup[] = [
         title: 'المالية',
         items: [
             { path: '/invoices', icon: CreditCard, label: 'الفواتير', roles: ['OWNER', 'ADMIN'] },
+            { path: '/accounting', icon: BarChart3, label: 'المحاسبة', roles: ['OWNER', 'ADMIN'] },
+            { path: '/accounting/expenses', icon: CreditCard, label: 'المصروفات', roles: ['OWNER', 'ADMIN'] },
         ],
     },
     {
@@ -75,6 +78,7 @@ const navGroups: NavGroup[] = [
         title: 'التواصل',
         items: [
             { path: '/messages', icon: Mail, label: 'الرسائل الداخلية' },
+            { path: '/calls', icon: Phone, label: 'مركز الاتصالات', roles: ['OWNER', 'ADMIN'] },
             { path: '/whatsapp', icon: MessageSquare, label: 'واتساب', roles: ['OWNER', 'ADMIN'] },
         ],
     },
@@ -176,7 +180,7 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                                     {group.title}
                                 </h3>
                             )}
-                            
+
                             {/* Group Items */}
                             <div className="space-y-1">
                                 {visibleItems.map((item) => {

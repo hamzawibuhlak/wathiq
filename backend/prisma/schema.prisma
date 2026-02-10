@@ -154,6 +154,25 @@ model Tenant {
   reports        Report[]
   reportExecutions ReportExecution[]
   userInvitations  UserInvitation[]
+  calls            Call[]
+  groupChats       GroupChat[]
+
+  // Phase 23: Accounting & Finance
+  accounts              Account[]
+  journalEntries        JournalEntry[]
+  accountsReceivable    AccountsReceivable[]
+  arPayments            ARPayment[]
+  accountsPayable       AccountsPayable[]
+  apPayments            APPayment[]
+  vendors               Vendor[]
+  expenses              Expense[]
+  expenseCategories     ExpenseCategory[]
+  bankAccounts          BankAccount[]
+  bankTransactions      BankTransaction[]
+  bankReconciliations   BankReconciliation[]
+  costCenters           CostCenter[]
+  budgets               Budget[]
+  fiscalYears           FiscalYear[]
 
   @@map("tenants")
 }
@@ -215,6 +234,20 @@ model User {
   sessions           UserSession[]
   sentInvitations    UserInvitation[] @relation("InviterUser")
   acceptedInvitation UserInvitation?  @relation("AcceptedUser")
+  
+  // Communication Hub relations
+  calls              Call[]
+  createdGroups      GroupChat[]      @relation("GroupCreator")
+  groupMemberships   GroupMember[]
+  groupMessages      GroupMessage[]   @relation("GroupMessageSender")
+
+  // Accounting relations
+  createdJournalEntries  JournalEntry[] @relation("JournalEntryCreator")
+  postedJournalEntries   JournalEntry[] @relation("JournalEntryPoster")
+  approvedJournalEntries JournalEntry[] @relation("JournalEntryApprover")
+  submittedExpenses      Expense[]      @relation("ExpenseSubmitter")
+  approvedExpenses       Expense[]      @relation("ExpenseApprover")
+  bankReconciliations    BankReconciliation[]
 
   @@index([tenantId])
   @@index([email])
@@ -262,6 +295,7 @@ model Client {
   @@index([tenantId])
   @@index([phone])
   @@index([nationalId])
+  accountsReceivable AccountsReceivable[]
   @@map("clients")
 }
 
@@ -473,6 +507,7 @@ model Invoice {
   createdBy       User          @relation(fields: [createdById], references: [id])
   
   items           InvoiceItem[] // بنود الفاتورة
+  accountsReceivable AccountsReceivable?
 
   @@unique([tenantId, invoiceNumber])
   @@index([tenantId])
@@ -1086,4 +1121,610 @@ model UserSession {
   @@index([token])
   @@index([isActive])
   @@map("user_sessions")
+}
+
+// =====================================================
+// CALL CENTER (مركز الاتصالات)
+// =====================================================
+
+enum CallDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum CallStatus {
+  QUEUED
+  RINGING
+  IN_PROGRESS
+  COMPLETED
+  BUSY
+  NO_ANSWER
+  CANCELED
+  FAILED
+}
+
+model Call {
+  id              String        @id @default(uuid())
+  twilioCallSid   String?       @unique
+  direction       CallDirection
+  from            String
+  to              String
+  status          CallStatus    @default(QUEUED)
+  duration        Int?          // in seconds
+  notes           String?       @db.Text
+  
+  userId          String?
+  user            User?         @relation(fields: [userId], references: [id])
+  tenantId        String
+  tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  recording       CallRecording?
+  
+  createdAt       DateTime      @default(now())
+  endedAt         DateTime?
+  
+  @@index([tenantId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("calls")
+}
+
+model CallRecording {
+  id                  String   @id @default(uuid())
+  callId              String   @unique
+  call                Call     @relation(fields: [callId], references: [id], onDelete: Cascade)
+  twilioRecordingSid  String?  @unique
+  recordingUrl        String
+  duration            Int      // in seconds
+  createdAt           DateTime @default(now())
+  
+  @@map("call_recordings")
+}
+
+// =====================================================
+// GROUP CHATS (الدردشات الجماعية)
+// =====================================================
+
+enum GroupRole {
+  ADMIN
+  MEMBER
+}
+
+model GroupChat {
+  id          String         @id @default(uuid())
+  name        String
+  description String?
+  avatar      String?
+  
+  tenantId    String
+  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  createdById String
+  createdBy   User           @relation("GroupCreator", fields: [createdById], references: [id])
+  
+  members     GroupMember[]
+  messages    GroupMessage[]
+  
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  
+  @@index([tenantId])
+  @@map("group_chats")
+}
+
+model GroupMember {
+  id        String    @id @default(uuid())
+  groupId   String
+  group     GroupChat @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      GroupRole @default(MEMBER)
+  joinedAt  DateTime  @default(now())
+  
+  @@unique([groupId, userId])
+  @@map("group_members")
+}
+
+model GroupMessage {
+  id          String    @id @default(uuid())
+  groupId     String
+  group       GroupChat @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  senderId    String
+  sender      User      @relation("GroupMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  content     String    @db.Text
+  attachments String[]  @default([])
+  metadata    Json?     // For voice messages, etc.
+  createdAt   DateTime  @default(now())
+  
+  @@index([groupId, createdAt])
+  @@map("group_messages")
+}
+
+// =====================================================
+// PHASE 23: ACCOUNTING & FINANCE
+// =====================================================
+
+// ---- ENUMS ----
+
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+
+enum AccountCategory {
+  CURRENT_ASSET
+  FIXED_ASSET
+  CURRENT_LIABILITY
+  LONG_TERM_LIABILITY
+  CAPITAL
+  RETAINED_EARNINGS
+  DRAWINGS
+  OPERATING_REVENUE
+  NON_OPERATING_REVENUE
+  OPERATING_EXPENSE
+  NON_OPERATING_EXPENSE
+}
+
+enum JournalEntryType {
+  MANUAL
+  INVOICE
+  PAYMENT
+  RECEIPT
+  ADJUSTMENT
+  OPENING_BALANCE
+  CLOSING
+  DEPRECIATION
+}
+
+enum JournalEntryStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  POSTED
+  REVERSED
+}
+
+enum ARStatus {
+  OUTSTANDING
+  PARTIAL
+  PAID
+  OVERDUE
+  WRITTEN_OFF
+}
+
+enum APStatus {
+  AP_OUTSTANDING
+  AP_PARTIAL
+  AP_PAID
+  AP_OVERDUE
+}
+
+enum ExpenseStatus {
+  EXP_PENDING
+  EXP_APPROVED
+  EXP_REJECTED
+  EXP_PAID
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  CHECK
+  CREDIT_CARD
+  DEBIT_CARD
+}
+
+enum ReconciliationStatus {
+  RECON_PENDING
+  RECONCILED
+  DISCREPANCY
+}
+
+enum BudgetPeriod {
+  MONTHLY
+  QUARTERLY
+  ANNUAL
+}
+
+enum BudgetStatus {
+  BUDGET_ACTIVE
+  BUDGET_CLOSED
+  BUDGET_EXCEEDED
+}
+
+// ---- CHART OF ACCOUNTS ----
+
+model Account {
+  id              String          @id @default(uuid())
+  accountNumber   String
+  nameEn          String
+  nameAr          String
+  accountType     AccountType
+  category        AccountCategory
+  parentAccountId String?
+  level           Int             @default(1)
+  isActive        Boolean         @default(true)
+  description     String?
+  tenantId        String
+
+  parentAccount   Account?        @relation("AccountHierarchy", fields: [parentAccountId], references: [id])
+  childAccounts   Account[]       @relation("AccountHierarchy")
+
+  journalEntryLines JournalEntryLine[]
+  budgets           Budget[]
+  costCenterAccounts CostCenterAccount[]
+  bankAccounts      BankAccount[]
+  expenseCategories ExpenseCategory[]
+
+  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, accountNumber])
+  @@index([tenantId, accountType])
+  @@index([tenantId, category])
+  @@index([tenantId, isActive])
+  @@map("accounts")
+}
+
+// ---- JOURNAL ENTRIES ----
+
+model JournalEntry {
+  id              String              @id @default(uuid())
+  entryNumber     String
+  date            DateTime
+  description     String
+  reference       String?
+  type            JournalEntryType
+  status          JournalEntryStatus  @default(DRAFT)
+  isPosted        Boolean             @default(false)
+  postedAt        DateTime?
+  postedBy        String?
+  createdBy       String
+  approvedBy      String?
+  approvedAt      DateTime?
+  notes           String?             @db.Text
+  tenantId        String
+  createdAt       DateTime            @default(now())
+
+  lines           JournalEntryLine[]
+  creator         User                @relation("JournalEntryCreator", fields: [createdBy], references: [id])
+  poster          User?               @relation("JournalEntryPoster", fields: [postedBy], references: [id])
+  approver        User?               @relation("JournalEntryApprover", fields: [approvedBy], references: [id])
+  tenant          Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, entryNumber])
+  @@index([tenantId, date])
+  @@index([tenantId, status])
+  @@index([tenantId, isPosted])
+  @@map("journal_entries")
+}
+
+model JournalEntryLine {
+  id              String        @id @default(uuid())
+  journalEntryId  String
+  accountId       String
+  description     String?
+  debit           Decimal       @default(0) @db.Decimal(15, 2)
+  credit          Decimal       @default(0) @db.Decimal(15, 2)
+  costCenterId    String?
+
+  journalEntry    JournalEntry  @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  account         Account       @relation(fields: [accountId], references: [id])
+  costCenter      CostCenter?   @relation(fields: [costCenterId], references: [id])
+
+  @@index([journalEntryId])
+  @@index([accountId])
+  @@map("journal_entry_lines")
+}
+
+// ---- ACCOUNTS RECEIVABLE ----
+
+model AccountsReceivable {
+  id              String        @id @default(uuid())
+  invoiceId       String        @unique
+  clientId        String
+  amount          Decimal       @db.Decimal(15, 2)
+  paidAmount      Decimal       @default(0) @db.Decimal(15, 2)
+  balance         Decimal       @db.Decimal(15, 2)
+  dueDate         DateTime
+  status          ARStatus      @default(OUTSTANDING)
+  agingDays       Int           @default(0)
+  tenantId        String
+  createdAt       DateTime      @default(now())
+
+  invoice         Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  client          Client        @relation(fields: [clientId], references: [id])
+  payments        ARPayment[]
+  tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@index([tenantId, dueDate])
+  @@index([clientId])
+  @@map("accounts_receivable")
+}
+
+model ARPayment {
+  id              String              @id @default(uuid())
+  arId            String
+  paymentNumber   String
+  amount          Decimal             @db.Decimal(15, 2)
+  paymentDate     DateTime
+  paymentMethod   PaymentMethod
+  reference       String?
+  notes           String?
+  tenantId        String
+  createdAt       DateTime            @default(now())
+
+  ar              AccountsReceivable  @relation(fields: [arId], references: [id], onDelete: Cascade)
+  tenant          Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, paymentNumber])
+  @@index([arId])
+  @@map("ar_payments")
+}
+
+// ---- ACCOUNTS PAYABLE ----
+
+model Vendor {
+  id              String            @id @default(uuid())
+  vendorNumber    String
+  name            String
+  email           String?
+  phone           String?
+  address         String?
+  vatNumber       String?
+  notes           String?           @db.Text
+  isActive        Boolean           @default(true)
+  tenantId        String
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  bills           AccountsPayable[]
+  expenses        Expense[]
+  tenant          Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, vendorNumber])
+  @@index([tenantId, isActive])
+  @@map("vendors")
+}
+
+model AccountsPayable {
+  id              String        @id @default(uuid())
+  billNumber      String
+  vendorId        String
+  amount          Decimal       @db.Decimal(15, 2)
+  paidAmount      Decimal       @default(0) @db.Decimal(15, 2)
+  balance         Decimal       @db.Decimal(15, 2)
+  billDate        DateTime
+  dueDate         DateTime
+  description     String
+  status          APStatus      @default(AP_OUTSTANDING)
+  reference       String?
+  tenantId        String
+  createdAt       DateTime      @default(now())
+
+  vendor          Vendor        @relation(fields: [vendorId], references: [id])
+  payments        APPayment[]
+  tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, billNumber])
+  @@index([tenantId, status])
+  @@index([tenantId, dueDate])
+  @@index([vendorId])
+  @@map("accounts_payable")
+}
+
+model APPayment {
+  id              String          @id @default(uuid())
+  apId            String
+  paymentNumber   String
+  amount          Decimal         @db.Decimal(15, 2)
+  paymentDate     DateTime
+  paymentMethod   PaymentMethod
+  reference       String?
+  notes           String?
+  tenantId        String
+  createdAt       DateTime        @default(now())
+
+  ap              AccountsPayable @relation(fields: [apId], references: [id], onDelete: Cascade)
+  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, paymentNumber])
+  @@index([apId])
+  @@map("ap_payments")
+}
+
+// ---- EXPENSES ----
+
+model ExpenseCategory {
+  id          String    @id @default(uuid())
+  name        String
+  accountId   String
+  description String?
+  tenantId    String
+
+  account     Account   @relation(fields: [accountId], references: [id])
+  expenses    Expense[]
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, name])
+  @@map("expense_categories")
+}
+
+model Expense {
+  id                String          @id @default(uuid())
+  expenseNumber     String
+  date              DateTime
+  amount            Decimal         @db.Decimal(15, 2)
+  expenseCategoryId String
+  description       String
+  reference         String?
+  paymentMethod     PaymentMethod
+  vendorId          String?
+  costCenterId      String?
+  attachments       String[]        @default([])
+  status            ExpenseStatus   @default(EXP_PENDING)
+  submittedBy       String
+  approvedBy        String?
+  approvedAt        DateTime?
+  notes             String?
+  tenantId          String
+  createdAt         DateTime        @default(now())
+
+  expenseCategory   ExpenseCategory @relation(fields: [expenseCategoryId], references: [id])
+  vendor            Vendor?         @relation(fields: [vendorId], references: [id])
+  costCenter        CostCenter?     @relation(fields: [costCenterId], references: [id])
+  submitter         User            @relation("ExpenseSubmitter", fields: [submittedBy], references: [id])
+  approver          User?           @relation("ExpenseApprover", fields: [approvedBy], references: [id])
+  tenant            Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, expenseNumber])
+  @@index([tenantId, status])
+  @@index([tenantId, date])
+  @@map("expenses")
+}
+
+// ---- BANK ----
+
+model BankAccount {
+  id              String              @id @default(uuid())
+  accountName     String
+  bankName        String
+  accountNumber   String
+  iban            String?
+  swiftCode       String?
+  currency        String              @default("SAR")
+  balance         Decimal             @db.Decimal(15, 2)
+  accountId       String
+  isActive        Boolean             @default(true)
+  tenantId        String
+  createdAt       DateTime            @default(now())
+
+  account         Account             @relation(fields: [accountId], references: [id])
+  transactions    BankTransaction[]
+  reconciliations BankReconciliation[]
+  tenant          Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, accountNumber])
+  @@index([tenantId, isActive])
+  @@map("bank_accounts")
+}
+
+model BankTransaction {
+  id              String        @id @default(uuid())
+  bankAccountId   String
+  date            DateTime
+  description     String
+  reference       String?
+  debit           Decimal       @default(0) @db.Decimal(15, 2)
+  credit          Decimal       @default(0) @db.Decimal(15, 2)
+  balance         Decimal       @db.Decimal(15, 2)
+  isReconciled    Boolean       @default(false)
+  reconciledAt    DateTime?
+  tenantId        String
+
+  bankAccount     BankAccount   @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+  tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([bankAccountId, date])
+  @@index([tenantId, isReconciled])
+  @@map("bank_transactions")
+}
+
+model BankReconciliation {
+  id                String               @id @default(uuid())
+  bankAccountId     String
+  statementDate     DateTime
+  statementBalance  Decimal              @db.Decimal(15, 2)
+  bookBalance       Decimal              @db.Decimal(15, 2)
+  difference        Decimal              @db.Decimal(15, 2)
+  status            ReconciliationStatus @default(RECON_PENDING)
+  reconciledBy      String?
+  reconciledAt      DateTime?
+  notes             String?              @db.Text
+  tenantId          String
+
+  bankAccount       BankAccount          @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+  reconciler        User?                @relation(fields: [reconciledBy], references: [id])
+  tenant            Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([bankAccountId, statementDate])
+  @@map("bank_reconciliations")
+}
+
+// ---- COST CENTERS ----
+
+model CostCenter {
+  id          String              @id @default(uuid())
+  code        String
+  name        String
+  description String?
+  isActive    Boolean             @default(true)
+  tenantId    String
+
+  journalEntryLines JournalEntryLine[]
+  accounts    CostCenterAccount[]
+  expenses    Expense[]
+  budgets     Budget[]
+  tenant      Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, code])
+  @@map("cost_centers")
+}
+
+model CostCenterAccount {
+  id           String     @id @default(uuid())
+  costCenterId String
+  accountId    String
+
+  costCenter   CostCenter @relation(fields: [costCenterId], references: [id], onDelete: Cascade)
+  account      Account    @relation(fields: [accountId], references: [id])
+
+  @@unique([costCenterId, accountId])
+  @@map("cost_center_accounts")
+}
+
+// ---- BUDGETS ----
+
+model Budget {
+  id           String       @id @default(uuid())
+  name         String
+  fiscalYear   Int
+  accountId    String
+  costCenterId String?
+  amount       Decimal      @db.Decimal(15, 2)
+  spent        Decimal      @default(0) @db.Decimal(15, 2)
+  remaining    Decimal      @db.Decimal(15, 2)
+  period       BudgetPeriod @default(ANNUAL)
+  startDate    DateTime
+  endDate      DateTime
+  status       BudgetStatus @default(BUDGET_ACTIVE)
+  tenantId     String
+
+  account      Account      @relation(fields: [accountId], references: [id])
+  costCenter   CostCenter?  @relation(fields: [costCenterId], references: [id])
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, fiscalYear])
+  @@index([tenantId, status])
+  @@map("budgets")
+}
+
+// ---- FISCAL YEAR ----
+
+model FiscalYear {
+  id        String   @id @default(uuid())
+  year      Int
+  startDate DateTime
+  endDate   DateTime
+  isClosed  Boolean  @default(false)
+  closedAt  DateTime?
+  tenantId  String
+
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, year])
+  @@map("fiscal_years")
 }
