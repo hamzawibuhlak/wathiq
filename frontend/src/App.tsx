@@ -104,6 +104,15 @@ const AdsAnalyticsPage = lazy(() => import('@/pages/marketing/ads-analytics/AdsA
 const MessageCampaignsPage = lazy(() => import('@/pages/marketing/message-campaigns/MessageCampaignsPage'));
 const ContentCalendarPage = lazy(() => import('@/pages/marketing/content-calendar/ContentCalendarPage'));
 
+// Legal Library (Phase 30)
+const LegalLibraryHome = lazy(() => import('@/pages/legal-library/LegalLibraryHome'));
+const RegulationsPage = lazy(() => import('@/pages/legal-library/RegulationsPage'));
+const RegulationDetailsPage = lazy(() => import('@/pages/legal-library/RegulationDetailsPage'));
+const PrecedentsPage = lazy(() => import('@/pages/legal-library/PrecedentsPage'));
+const PrecedentDetailsPage = lazy(() => import('@/pages/legal-library/PrecedentDetailsPage'));
+const GlossaryPage = lazy(() => import('@/pages/legal-library/GlossaryPage'));
+const BookmarksPage = lazy(() => import('@/pages/legal-library/BookmarksPage'));
+
 // Owner Panel (Phase 27)
 const OwnerLayout = lazy(() => import('@/pages/owner/OwnerLayout'));
 const OwnerDashboard = lazy(() => import('@/pages/owner/OwnerDashboard'));
@@ -324,6 +333,15 @@ function App() {
                         <Route path="/hr/attendance" element={<AttendancePage />} />
                         <Route path="/hr/leaves" element={<LeaveManagementPage />} />
                         <Route path="/hr/payroll" element={<PayrollPage />} />
+
+                        {/* Legal Library (Phase 30) */}
+                        <Route path="/legal-library" element={<LegalLibraryHome />} />
+                        <Route path="/legal-library/regulations" element={<RegulationsPage />} />
+                        <Route path="/legal-library/regulations/:id" element={<RegulationDetailsPage />} />
+                        <Route path="/legal-library/precedents" element={<PrecedentsPage />} />
+                        <Route path="/legal-library/precedents/:id" element={<PrecedentDetailsPage />} />
+                        <Route path="/legal-library/glossary" element={<GlossaryPage />} />
+                        <Route path="/legal-library/bookmarks" element={<BookmarksPage />} />
                     </Route>
 
                     {/* Default Routes */}

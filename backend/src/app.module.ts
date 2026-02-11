@@ -51,6 +51,7 @@ import { ChatModule } from './chat/chat.module';
 import { OwnerModule } from './owner/owner.module';
 import { LegalDocumentsModule } from './legal-documents/legal-documents.module';
 import { MarketingModule } from './marketing/marketing.module';
+import { LegalLibraryModule } from './legal-library/legal-library.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -136,6 +137,9 @@ import { AppController } from './app.controller';
 
         // Phase 29: Marketing Module
         MarketingModule,
+
+        // Phase 30: Legal Library
+        LegalLibraryModule,
     ],
     controllers: [AppController],
     providers: [

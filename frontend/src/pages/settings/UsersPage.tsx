@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { 
-    Plus, Search, X, User, MoreVertical, Pencil, Trash2, 
-    CheckCircle, XCircle, Mail, Shield, UserPlus, RefreshCw 
+import {
+    Plus, Search, X, User, MoreVertical, Pencil, Trash2,
+    CheckCircle, XCircle, Mail, Shield, UserPlus, RefreshCw
 } from 'lucide-react';
 import { Button, Input, Label, Card, CardHeader, CardContent, UserAvatar } from '@/components/ui';
 import {
@@ -102,7 +102,7 @@ export function UsersPage() {
         defaultValues: { role: 'LAWYER' },
     });
 
-    const users = usersData?.data || [];
+    const users = (usersData?.data || []).filter((u: any) => u.role !== 'OWNER');
     const meta = usersData?.meta;
     const stats = statsData?.data;
     const invitations = invitationsData?.data || [];

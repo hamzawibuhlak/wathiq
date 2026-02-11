@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth.store';
@@ -9,22 +10,38 @@ import {
     Settings,
     ChevronRight,
     ChevronLeft,
+    ChevronDown,
     Briefcase,
     CreditCard,
     Scale,
     MessageSquare,
     CheckSquare,
-    Zap,
     BarChart3,
-    FileSpreadsheet,
     Mail,
-    UserCog,
     Target,
     Phone,
     Clock,
-    DollarSign,
     FileEdit,
     Megaphone,
+    Building2,
+    Bell,
+    User,
+    Share2,
+    PhoneCall,
+    Handshake,
+    TrendingUp,
+    Send,
+    CalendarDays,
+    PieChart,
+    Download,
+    Wallet,
+    Receipt,
+    Calculator,
+    UsersRound,
+    Palmtree,
+    Banknote,
+    History,
+    BookOpen,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -40,80 +57,113 @@ interface NavItem {
 }
 
 interface NavGroup {
+    id: string;
     title: string;
+    icon: typeof LayoutDashboard;
     items: NavItem[];
+    collapsible: boolean;
+    roles?: ('SUPER_ADMIN' | 'OWNER' | 'ADMIN' | 'LAWYER' | 'SECRETARY' | 'ACCOUNTANT')[];
 }
 
-// Grouped navigation items
+// ═══════════════════════════════════════════════════════
+// Navigation structure matching user specification
+// ═══════════════════════════════════════════════════════
+
+const dashboardItem: NavItem = {
+    path: '/dashboard', icon: LayoutDashboard, label: 'لوحة التحكم',
+};
+
 const navGroups: NavGroup[] = [
     {
-        title: 'الرئيسية',
-        items: [
-            { path: '/dashboard', icon: LayoutDashboard, label: 'لوحة التحكم' },
-        ],
-    },
-    {
+        id: 'work',
         title: 'إدارة العمل',
+        icon: Briefcase,
+        collapsible: true,
         items: [
+            { path: '/clients', icon: Users, label: 'العملاء' },
             { path: '/cases', icon: Briefcase, label: 'القضايا' },
             { path: '/hearings', icon: Calendar, label: 'الجلسات' },
-            { path: '/clients', icon: Users, label: 'العملاء' },
-            { path: '/tasks', icon: CheckSquare, label: 'المهام' },
             { path: '/documents', icon: FileText, label: 'المستندات' },
+            { path: '/tasks', icon: CheckSquare, label: 'المهام' },
             { path: '/legal-documents', icon: FileEdit, label: 'محرر الوثائق' },
+            { path: '/activity-logs', icon: History, label: 'التايم لاين' },
+            { path: '/legal-library', icon: BookOpen, label: 'المكتبة القانونية' },
         ],
     },
     {
-        title: 'المالية',
-        items: [
-            { path: '/invoices', icon: CreditCard, label: 'الفواتير', roles: ['OWNER', 'ADMIN'] },
-            { path: '/accounting', icon: BarChart3, label: 'المحاسبة', roles: ['OWNER', 'ADMIN'] },
-            { path: '/accounting/expenses', icon: CreditCard, label: 'المصروفات', roles: ['OWNER', 'ADMIN'] },
-        ],
-    },
-    {
-        title: 'التحليلات',
-        items: [
-            { path: '/analytics', icon: BarChart3, label: 'التقارير والإحصائيات', roles: ['OWNER', 'ADMIN', 'LAWYER'] },
-            { path: '/analytics/performance', icon: Target, label: 'تقرير الأداء', roles: ['OWNER', 'ADMIN'] },
-            { path: '/reports', icon: FileSpreadsheet, label: 'تصدير البيانات', roles: ['OWNER', 'ADMIN', 'LAWYER'] },
-        ],
-    },
-    {
+        id: 'communication',
         title: 'التواصل',
+        icon: MessageSquare,
+        collapsible: true,
         items: [
             { path: '/messages', icon: Mail, label: 'الرسائل الداخلية' },
-            { path: '/chat', icon: MessageSquare, label: 'الدردشة' },
-            { path: '/calls', icon: Phone, label: 'مركز الاتصالات', roles: ['OWNER', 'ADMIN'] },
-            { path: '/whatsapp', icon: MessageSquare, label: 'واتساب', roles: ['OWNER', 'ADMIN'] },
+            { path: '/chat', icon: MessageSquare, label: 'الدردشة الداخلية' },
+            { path: '/whatsapp', icon: Share2, label: 'التواصل الاجتماعي', roles: ['OWNER', 'ADMIN'] },
+            { path: '/calls', icon: PhoneCall, label: 'مركز الاتصالات', roles: ['OWNER', 'ADMIN'] },
         ],
     },
     {
-        title: 'الموارد البشرية',
-        items: [
-            { path: '/hr/employees', icon: Users, label: 'الموظفون', roles: ['OWNER', 'ADMIN'] },
-            { path: '/hr/attendance', icon: Clock, label: 'الحضور والانصراف', roles: ['OWNER', 'ADMIN'] },
-            { path: '/hr/leaves', icon: Calendar, label: 'الإجازات', roles: ['OWNER', 'ADMIN'] },
-            { path: '/hr/payroll', icon: DollarSign, label: 'الرواتب', roles: ['OWNER', 'ADMIN'] },
-        ],
-    },
-    {
+        id: 'marketing',
         title: 'التسويق',
+        icon: Megaphone,
+        collapsible: true,
+        roles: ['OWNER', 'ADMIN'],
         items: [
-            { path: '/marketing', icon: Megaphone, label: 'التسويق', roles: ['OWNER', 'ADMIN'] },
+            { path: '/marketing', icon: PieChart, label: 'لوحة التحكم' },
+            { path: '/marketing/leads', icon: Target, label: 'العملاء المحتملون' },
+            { path: '/marketing/telemarketing', icon: Phone, label: 'التسويق عبر الهاتف' },
+            { path: '/marketing/affiliate', icon: Handshake, label: 'التسويق بالعمولة' },
+            { path: '/marketing/campaigns', icon: Megaphone, label: 'الحملات التسويقية' },
+            { path: '/marketing/ads-analytics', icon: TrendingUp, label: 'نتائج الإعلانات' },
+            { path: '/marketing/messages', icon: Send, label: 'الرسائل الجماعية' },
+            { path: '/marketing/calendar', icon: CalendarDays, label: 'تقويم المحتوى' },
         ],
     },
     {
-        title: 'الأتمتة',
+        id: 'analytics',
+        title: 'التحليلات',
+        icon: BarChart3,
+        collapsible: true,
+        roles: ['OWNER', 'ADMIN', 'LAWYER'],
         items: [
-            { path: '/workflows', icon: Zap, label: 'سير العمل', roles: ['OWNER', 'ADMIN'] },
+            { path: '/analytics', icon: BarChart3, label: 'التقارير والإحصائيات' },
+            { path: '/analytics/performance', icon: Target, label: 'تقرير الأداء', roles: ['OWNER', 'ADMIN'] },
+            { path: '/reports', icon: Download, label: 'تصدير البيانات', roles: ['OWNER', 'ADMIN', 'LAWYER'] },
         ],
     },
     {
-        title: 'الإدارة',
+        id: 'hr',
+        title: 'الموارد البشرية',
+        icon: UsersRound,
+        collapsible: true,
+        roles: ['OWNER', 'ADMIN'],
         items: [
-            { path: '/settings/users', icon: UserCog, label: 'إدارة المستخدمين', roles: ['OWNER', 'ADMIN'] },
-            { path: '/settings', icon: Settings, label: 'الإعدادات' },
+            { path: '/hr/employees', icon: Users, label: 'الموظفون' },
+            { path: '/hr/attendance', icon: Clock, label: 'الحضور والانصراف' },
+            { path: '/hr/leaves', icon: Palmtree, label: 'الإجازات' },
+            { path: '/hr/payroll', icon: Banknote, label: 'الرواتب' },
+        ],
+    },
+    {
+        id: 'finance',
+        title: 'المالية',
+        icon: Wallet,
+        collapsible: true,
+        roles: ['OWNER', 'ADMIN'],
+        items: [
+            { path: '/invoices', icon: Receipt, label: 'الفواتير' },
+            { path: '/accounting/expenses', icon: CreditCard, label: 'المصروفات' },
+            { path: '/accounting', icon: Calculator, label: 'المحاسبة' },
+        ],
+    },
+    {
+        id: 'settings',
+        title: 'الإعدادات',
+        icon: Settings,
+        collapsible: true,
+        items: [
+            { path: '/settings/profile', icon: User, label: 'الملف الشخصي' },
+            { path: '/settings/notifications', icon: Bell, label: 'الإشعارات' },
         ],
     },
 ];
@@ -123,6 +173,35 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
     const user = useAuthStore((state) => state.user);
     const userRole = user?.role;
 
+    // Track expanded groups — default expand the group that contains the active path
+    const getInitialExpanded = (): Set<string> => {
+        const expanded = new Set<string>();
+        for (const group of navGroups) {
+            for (const item of group.items) {
+                if (location.pathname === item.path ||
+                    (item.path !== '/dashboard' && location.pathname.startsWith(item.path))) {
+                    expanded.add(group.id);
+                    break;
+                }
+            }
+        }
+        return expanded;
+    };
+
+    const [expandedGroups, setExpandedGroups] = useState<Set<string>>(getInitialExpanded);
+
+    const toggleGroup = (groupId: string) => {
+        setExpandedGroups(prev => {
+            const next = new Set(prev);
+            if (next.has(groupId)) {
+                next.delete(groupId);
+            } else {
+                next.add(groupId);
+            }
+            return next;
+        });
+    };
+
     // Filter nav items based on user role
     const filterItems = (items: NavItem[]) => {
         return items.filter((item) => {
@@ -130,6 +209,24 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
             return userRole && item.roles.includes(userRole);
         });
     };
+
+    // Check if group is visible based on role
+    const isGroupVisible = (group: NavGroup) => {
+        if (group.roles && userRole && !group.roles.includes(userRole)) return false;
+        return filterItems(group.items).length > 0;
+    };
+
+    // Check if path is active
+    const isActive = (path: string) => {
+        if (path === '/dashboard') return location.pathname === '/dashboard';
+        if (path === '/marketing') return location.pathname === '/marketing';
+        if (path === '/accounting') return location.pathname === '/accounting';
+        if (path === '/analytics') return location.pathname === '/analytics';
+        return location.pathname === path || location.pathname.startsWith(path + '/');
+    };
+
+    // Can see Owner dashboard
+    const canSeeOwnerDashboard = userRole === 'OWNER' || userRole === 'ADMIN';
 
     // Get role display info
     const getRoleInfo = () => {
@@ -188,57 +285,148 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                 </div>
             )}
 
-            {/* Navigation Groups */}
-            <nav className="flex-1 py-4 px-3 space-y-6 overflow-y-auto">
+            {/* Navigation */}
+            <nav className="flex-1 py-3 px-3 space-y-1 overflow-y-auto scrollbar-thin">
+                {/* ═══ Dashboard (standalone) ═══ */}
+                <Link
+                    to={dashboardItem.path}
+                    className={cn(
+                        'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200',
+                        'hover:bg-primary/10',
+                        isActive(dashboardItem.path)
+                            ? 'bg-primary text-primary-foreground shadow-sm'
+                            : 'text-muted-foreground hover:text-foreground',
+                        isCollapsed && 'justify-center px-2'
+                    )}
+                    title={isCollapsed ? dashboardItem.label : undefined}
+                >
+                    <LayoutDashboard className={cn(
+                        'w-5 h-5 flex-shrink-0',
+                        isActive(dashboardItem.path) && 'text-primary-foreground'
+                    )} />
+                    {!isCollapsed && (
+                        <span className="text-sm font-medium">{dashboardItem.label}</span>
+                    )}
+                </Link>
+
+                {/* Separator */}
+                {!isCollapsed && <div className="my-2 border-b border-border/50" />}
+
+                {/* ═══ Collapsible Groups ═══ */}
                 {navGroups.map((group) => {
+                    if (!isGroupVisible(group)) return null;
                     const visibleItems = filterItems(group.items);
-                    if (visibleItems.length === 0) return null;
+                    const isExpanded = expandedGroups.has(group.id);
+                    const GroupIcon = group.icon;
+
+                    // Check if any item in the group is active
+                    const hasActiveItem = visibleItems.some(item => isActive(item.path));
+
+                    // Collapsed: show only the group icon
+                    if (isCollapsed) {
+                        return (
+                            <div key={group.id} className="space-y-1">
+                                <div
+                                    className={cn(
+                                        'flex items-center justify-center px-2 py-2.5 rounded-xl cursor-pointer transition-all duration-200',
+                                        'hover:bg-primary/10',
+                                        hasActiveItem
+                                            ? 'bg-primary/10 text-primary'
+                                            : 'text-muted-foreground hover:text-foreground'
+                                    )}
+                                    title={group.title}
+                                >
+                                    <GroupIcon className="w-5 h-5 flex-shrink-0" />
+                                </div>
+                            </div>
+                        );
+                    }
 
                     return (
-                        <div key={group.title}>
-                            {/* Group Title */}
-                            {!isCollapsed && (
-                                <h3 className="text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-2 px-3">
-                                    {group.title}
-                                </h3>
-                            )}
+                        <div key={group.id} className="space-y-0.5">
+                            {/* Group Header */}
+                            <button
+                                onClick={() => toggleGroup(group.id)}
+                                className={cn(
+                                    'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200',
+                                    'hover:bg-muted/50',
+                                    hasActiveItem
+                                        ? 'text-primary font-semibold'
+                                        : 'text-muted-foreground hover:text-foreground'
+                                )}
+                            >
+                                <GroupIcon className="w-5 h-5 flex-shrink-0" />
+                                <span className="text-sm font-medium flex-1 text-right">{group.title}</span>
+                                <ChevronDown
+                                    className={cn(
+                                        'w-4 h-4 transition-transform duration-200',
+                                        !isExpanded && '-rotate-90'
+                                    )}
+                                />
+                            </button>
 
                             {/* Group Items */}
-                            <div className="space-y-1">
-                                {visibleItems.map((item) => {
-                                    const isActive = location.pathname === item.path ||
-                                        (item.path !== '/dashboard' && location.pathname.startsWith(item.path));
-                                    const Icon = item.icon;
+                            <div
+                                className={cn(
+                                    'overflow-hidden transition-all duration-200',
+                                    isExpanded ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'
+                                )}
+                            >
+                                <div className="mr-4 pr-3 border-r-2 border-border/30 space-y-0.5 py-1">
+                                    {visibleItems.map((item) => {
+                                        const active = isActive(item.path);
+                                        const Icon = item.icon;
 
-                                    return (
-                                        <Link
-                                            key={item.path}
-                                            to={item.path}
-                                            className={cn(
-                                                'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200',
-                                                'hover:bg-primary/10',
-                                                isActive
-                                                    ? 'bg-primary text-primary-foreground shadow-sm'
-                                                    : 'text-muted-foreground hover:text-foreground',
-                                                isCollapsed && 'justify-center px-2'
-                                            )}
-                                            title={isCollapsed ? item.label : undefined}
-                                        >
-                                            <Icon className={cn(
-                                                'w-5 h-5 flex-shrink-0',
-                                                isActive && 'text-primary-foreground'
-                                            )} />
-                                            {!isCollapsed && (
-                                                <span className="text-sm font-medium">{item.label}</span>
-                                            )}
-                                        </Link>
-                                    );
-                                })}
+                                        return (
+                                            <Link
+                                                key={item.path}
+                                                to={item.path}
+                                                className={cn(
+                                                    'flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200',
+                                                    'hover:bg-primary/10',
+                                                    active
+                                                        ? 'bg-primary text-primary-foreground shadow-sm'
+                                                        : 'text-muted-foreground hover:text-foreground'
+                                                )}
+                                            >
+                                                <Icon className={cn(
+                                                    'w-4 h-4 flex-shrink-0',
+                                                    active && 'text-primary-foreground'
+                                                )} />
+                                                <span className="text-[13px]">{item.label}</span>
+                                            </Link>
+                                        );
+                                    })}
+                                </div>
                             </div>
                         </div>
                     );
                 })}
             </nav>
+
+            {/* Owner Dashboard Button (bottom) */}
+            {canSeeOwnerDashboard && (
+                <div className={cn('px-3 pb-2', isCollapsed && 'px-2')}>
+                    <Link
+                        to="/owner"
+                        className={cn(
+                            'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200',
+                            'bg-gradient-to-l from-emerald-500/10 to-teal-500/10 border border-emerald-500/20',
+                            'hover:from-emerald-500/20 hover:to-teal-500/20',
+                            isActive('/owner')
+                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm shadow-emerald-500/25'
+                                : 'text-emerald-700 dark:text-emerald-400',
+                            isCollapsed && 'justify-center px-2'
+                        )}
+                        title={isCollapsed ? 'صفحة الشركة' : undefined}
+                    >
+                        <Building2 className="w-5 h-5 flex-shrink-0" />
+                        {!isCollapsed && (
+                            <span className="text-sm font-semibold">صفحة الشركة</span>
+                        )}
+                    </Link>
+                </div>
+            )}
 
             {/* Toggle Button */}
             <button
@@ -256,7 +444,7 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
             {!isCollapsed && (
                 <div className="p-4 border-t">
                     <p className="text-[10px] text-muted-foreground/50 text-center">
-                        وثيق © 2024
+                        وثيق © 2026
                     </p>
                 </div>
             )}

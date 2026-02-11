@@ -1,6 +1,7 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { AnalyticsService } from './analytics.service';
+import { DashboardService } from '../dashboard/dashboard.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -13,7 +14,113 @@ import { User } from '@prisma/client';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('OWNER', 'ADMIN', 'LAWYER')
 export class AnalyticsController {
-  constructor(private analyticsService: AnalyticsService) { }
+  constructor(
+    private analyticsService: AnalyticsService,
+    private dashboardService: DashboardService,
+  ) { }
+
+  // ── Dashboard (comprehensive, used by frontend performance page) ──
+  @Get('dashboard')
+  @ApiOperation({ summary: 'Get comprehensive analytics dashboard' })
+  @ApiQuery({ name: 'period', required: false, description: 'Period: week, month, year' })
+  async getDashboard(
+    @CurrentUser() user: User,
+    @Query('period') period: string = 'month',
+  ) {
+    const now = new Date();
+    let startDate: Date;
+    if (period === 'week') {
+      startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    } else if (period === 'year') {
+      startDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+    } else {
+      startDate = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+    }
+
+    const overview = await this.analyticsService.getOverview(user.tenantId!, {
+      dateRange: { start: startDate, end: now },
+    });
+
+    const statsResult = await this.dashboardService.getStats(user.tenantId!, user.id, user.role);
+    const topClientsResult = await this.dashboardService.getTopClients(user.tenantId!);
+    const s = statsResult?.data;
+    const tc = topClientsResult?.data || [];
+
+    return {
+      period,
+      startDate: startDate.toISOString(),
+      endDate: now.toISOString(),
+      cases: {
+        total: overview.cases?.total || 0,
+        growth: 0,
+        byStatus: overview.cases?.byStatus || [],
+        byType: overview.cases?.byType || [],
+        byPriority: [],
+        recentlyClosed: 0,
+        avgCaseDuration: overview.cases?.averageDuration || 0,
+        closureRate: overview.cases?.closureRate || 0,
+        totalAllCases: s?.cases?.total || 0,
+        totalClosedCases: s?.cases?.closed || 0,
+      },
+      hearings: {
+        total: s?.hearings?.total || 0,
+        upcoming: s?.hearings?.upcoming || 0,
+        past: 0,
+        today: s?.hearings?.today || 0,
+        thisWeek: s?.hearings?.thisWeek || 0,
+        byStatus: [],
+        attendanceRate: 0,
+      },
+      financial: {
+        totalRevenue: s?.invoices?.totalRevenue || 0,
+        revenueGrowth: 0,
+        pending: s?.invoices?.pendingAmount || 0,
+        overdue: 0,
+        totalInvoices: s?.invoices?.total || 0,
+        byStatus: [],
+      },
+      clients: {
+        total: s?.clients?.total || 0,
+        newClients: 0,
+        activeClients: s?.clients?.active || 0,
+        byType: [],
+      },
+      trends: {
+        cases: overview.trends?.cases || [],
+        hearings: [],
+        revenue: overview.trends?.revenue || [],
+      },
+      topClients: tc,
+      topInvoices: [],
+      documents: {
+        total: 0,
+        totalSizeBytes: 0,
+        totalSizeMB: 0,
+        byType: [],
+        recentDocs: [],
+      },
+      tasks: {
+        total: 0,
+        tasksInPeriod: 0,
+        completionRate: 0,
+        overdueTasks: 0,
+        byStatus: [],
+        byUser: [],
+        recentTasks: [],
+      },
+    };
+  }
+
+  // ── Lawyers Performance ──
+  @Get('lawyers/performance')
+  @ApiOperation({ summary: 'Get lawyer performance metrics' })
+  async getLawyerPerformance(
+    @CurrentUser() user: User,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.dashboardService.getLawyerPerformance(user.tenantId!);
+  }
 
   @Get('overview')
   @ApiOperation({ summary: 'Get comprehensive analytics overview' })

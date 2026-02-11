@@ -4,9 +4,10 @@ import { AnalyticsController } from './analytics.controller';
 import { PredictiveAnalyticsService } from './predictive.service';
 import { ReportBuilderService } from './report-builder.service';
 import { PrismaModule } from '../common/prisma/prisma.module';
+import { DashboardModule } from '../dashboard/dashboard.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, DashboardModule],
   controllers: [AnalyticsController],
   providers: [AnalyticsService, PredictiveAnalyticsService, ReportBuilderService],
   exports: [AnalyticsService, PredictiveAnalyticsService, ReportBuilderService],

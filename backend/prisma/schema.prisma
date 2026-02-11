@@ -221,6 +221,12 @@ model Tenant {
   messageRecipients     MessageRecipient[]   @relation("TenantMsgRecipients")
   contentCalendar       ContentCalendarItem[]
 
+  // Phase 30: Legal Library
+  legalBookmarks        LegalBookmark[]
+  bookmarkFolders       BookmarkFolder[]
+  caseLegalReferences   CaseLegalReference[]
+  legalSearchLogs       LegalSearchLog[]
+
   @@map("tenants")
 }
 
@@ -317,6 +323,12 @@ model User {
   leadActivitiesCreated  LeadActivity[]         @relation("LeadActivityCreator")
   callLogsMade           CallLog[]              @relation("CallLogCaller")
   contentCalendarItems   ContentCalendarItem[]  @relation("ContentCalendarAssignee")
+
+  // Phase 30: Legal Library
+  legalBookmarks         LegalBookmark[]
+  bookmarkFolders        BookmarkFolder[]
+  caseLegalReferences    CaseLegalReference[]
+  legalSearchLogs        LegalSearchLog[]
 
   @@index([tenantId])
   @@index([email])
@@ -416,6 +428,9 @@ model Case {
 
   // Phase 28: Legal Document Editor
   legalDocuments  LegalDocument[] @relation("CaseLegalDocs")
+
+  // Phase 30: Legal Library
+  caseLegalReferences CaseLegalReference[]
 
   @@unique([tenantId, caseNumber])
   @@index([tenantId])
@@ -3147,4 +3162,232 @@ enum ContentStatus {
   SCHEDULED
   PUBLISHED
   CANCELLED
+}
+
+// =====================================================
+// PHASE 30: LEGAL LIBRARY — المكتبة القانونية السعودية
+// =====================================================
+
+model LegalRegulation {
+  id            String              @id @default(uuid())
+  title         String
+  titleEn       String?
+  number        String?
+  issuedBy      String?
+  issuedDate    DateTime?
+  effectiveDate DateTime?
+  category      RegulationCategory
+  status        RegulationStatus    @default(ACTIVE)
+  description   String?             @db.Text
+  content       String              @db.Text
+  contentText   String?             @db.Text
+  source        String?
+  version       String?
+  tags          String[]
+  viewCount     Int                 @default(0)
+
+  articles      RegulationArticle[]
+  bookmarks     LegalBookmark[]
+
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  @@index([category])
+  @@index([status])
+  @@map("legal_regulations")
+}
+
+model RegulationArticle {
+  id           String          @id @default(uuid())
+  regulationId String
+  number       String
+  title        String?
+  content      String          @db.Text
+  notes        String?         @db.Text
+
+  regulation   LegalRegulation @relation(fields: [regulationId], references: [id], onDelete: Cascade)
+  bookmarks    LegalBookmark[]
+
+  @@index([regulationId])
+  @@map("regulation_articles")
+}
+
+model LegalPrecedent {
+  id              String           @id @default(uuid())
+  caseNumber      String?
+  court           String
+  courtType       CourtType
+  circuit         String?
+  judgmentDate    DateTime?
+  summary         String           @db.Text
+  fullText        String?          @db.Text
+  legalPrinciple  String           @db.Text
+  caseType        String
+  outcome         PrecedentOutcome
+  keywords        String[]
+  viewCount       Int              @default(0)
+  isVerified      Boolean          @default(false)
+
+  bookmarks       LegalBookmark[]
+
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([court])
+  @@index([caseType])
+  @@index([judgmentDate])
+  @@map("legal_precedents")
+}
+
+model LegalTerm {
+  id          String   @id @default(uuid())
+  termAr      String   @unique
+  termEn      String?
+  definition  String   @db.Text
+  example     String?  @db.Text
+  category    String?
+  relatedTerms String[]
+  source      String?
+  viewCount   Int      @default(0)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([termAr])
+  @@index([category])
+  @@map("legal_terms")
+}
+
+model LegalBookmark {
+  id            String       @id @default(uuid())
+  type          BookmarkType
+  regulationId  String?
+  articleId     String?
+  precedentId   String?
+  termId        String?
+  notes         String?      @db.Text
+  folderId      String?
+  tenantId      String
+  createdBy     String
+
+  regulation    LegalRegulation?  @relation(fields: [regulationId], references: [id])
+  article       RegulationArticle? @relation(fields: [articleId], references: [id])
+  precedent     LegalPrecedent?   @relation(fields: [precedentId], references: [id])
+  user          User              @relation(fields: [createdBy], references: [id])
+  tenant        Tenant            @relation(fields: [tenantId], references: [id])
+  folder        BookmarkFolder?   @relation(fields: [folderId], references: [id])
+
+  createdAt     DateTime @default(now())
+
+  @@unique([type, regulationId, tenantId, createdBy])
+  @@index([tenantId, type])
+  @@map("legal_bookmarks")
+}
+
+model BookmarkFolder {
+  id        String          @id @default(uuid())
+  name      String
+  color     String?
+  tenantId  String
+  createdBy String
+
+  bookmarks LegalBookmark[]
+  tenant    Tenant          @relation(fields: [tenantId], references: [id])
+  user      User            @relation(fields: [createdBy], references: [id])
+
+  createdAt DateTime        @default(now())
+
+  @@map("bookmark_folders")
+}
+
+model CaseLegalReference {
+  id            String       @id @default(uuid())
+  caseId        String
+  type          BookmarkType
+  regulationId  String?
+  articleId     String?
+  precedentId   String?
+  termId        String?
+  notes         String?      @db.Text
+  addedBy       String
+  tenantId      String
+
+  case          Case         @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  tenant        Tenant       @relation(fields: [tenantId], references: [id])
+  user          User         @relation(fields: [addedBy], references: [id])
+
+  createdAt     DateTime     @default(now())
+
+  @@index([caseId])
+  @@index([tenantId])
+  @@map("case_legal_references")
+}
+
+model LegalSearchLog {
+  id          String   @id @default(uuid())
+  query       String
+  results     Json
+  helpful     Boolean?
+  tenantId    String
+  createdBy   String
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  user        User     @relation(fields: [createdBy], references: [id])
+
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId])
+  @@map("legal_search_logs")
+}
+
+enum RegulationCategory {
+  CIVIL
+  COMMERCIAL
+  LABOR
+  CRIMINAL
+  ADMINISTRATIVE_REG
+  FAMILY
+  REAL_ESTATE
+  INTELLECTUAL
+  CORPORATE
+  BANKING
+  TAX
+  CYBER
+  ARBITRATION
+  PROCEDURES
+  NOTARY
+  OTHER_REG
+}
+
+enum RegulationStatus {
+  ACTIVE_REG
+  AMENDED
+  REPEALED
+  DRAFT_REG
+}
+
+enum CourtType {
+  SUPREME_COURT
+  APPEAL_COURT
+  GENERAL_COURT
+  COMMERCIAL_COURT
+  LABOR_COURT
+  ADMINISTRATIVE_COURT
+  FAMILY_COURT
+  CRIMINAL_COURT
+}
+
+enum PrecedentOutcome {
+  FOR_PLAINTIFF
+  FOR_DEFENDANT
+  PARTIAL
+  DISMISSED
+  SETTLEMENT
+}
+
+enum BookmarkType {
+  REGULATION
+  ARTICLE
+  PRECEDENT
+  TERM
 }

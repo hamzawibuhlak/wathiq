@@ -28,6 +28,11 @@ export class RolesGuard implements CanActivate {
             return false;
         }
 
+        // OWNER and SUPER_ADMIN bypass all role checks — full permissions
+        if (user.role === 'OWNER' || user.role === 'SUPER_ADMIN') {
+            return true;
+        }
+
         return requiredRoles.includes(user.role);
     }
 }

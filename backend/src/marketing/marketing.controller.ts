@@ -5,7 +5,7 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { MarketingService } from './marketing.service';
 
-@Controller('api/marketing')
+@Controller('marketing')
 @UseGuards(JwtAuthGuard)
 export class MarketingController {
     constructor(private marketingService: MarketingService) { }
