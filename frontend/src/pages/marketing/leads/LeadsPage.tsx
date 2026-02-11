@@ -63,14 +63,6 @@ export default function LeadsPage() {
         },
     });
 
-    const _statusMutation = useMutation({
-        mutationFn: ({ id, status }: { id: string; status: string }) =>
-            marketingApi.updateLeadStatus(id, { status }),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['leads-kanban'] });
-            queryClient.invalidateQueries({ queryKey: ['leads-list'] });
-        },
-    });
 
     return (
         <div style={{ padding: 28, height: '100%', display: 'flex', flexDirection: 'column' }} dir="rtl">
