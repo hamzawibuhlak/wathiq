@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '../common/prisma/prisma.service';
 
 @Injectable()
 export class MarketingService {
@@ -342,7 +342,7 @@ export class MarketingService {
             orderBy: { date: 'asc' },
         });
 
-        const byPlatform = metrics.reduce((acc: any, m) => {
+        const byPlatform = metrics.reduce((acc: any, m: any) => {
             if (!acc[m.platform]) acc[m.platform] = { impressions: 0, clicks: 0, spend: 0, conversions: 0 };
             acc[m.platform].impressions += m.impressions;
             acc[m.platform].clicks += m.clicks;
@@ -351,7 +351,7 @@ export class MarketingService {
             return acc;
         }, {});
 
-        const dailyTrend = metrics.reduce((acc: any, m) => {
+        const dailyTrend = metrics.reduce((acc: any, m: any) => {
             const d = m.date.toISOString().split('T')[0];
             if (!acc[d]) acc[d] = { date: d, spend: 0, clicks: 0, conversions: 0 };
             acc[d].spend += m.spend;
@@ -361,7 +361,7 @@ export class MarketingService {
         }, {});
 
         const totals = metrics.reduce(
-            (acc, m) => ({
+            (acc: any, m: any) => ({
                 totalSpend: acc.totalSpend + m.spend,
                 totalClicks: acc.totalClicks + m.clicks,
                 totalImpressions: acc.totalImpressions + m.impressions,

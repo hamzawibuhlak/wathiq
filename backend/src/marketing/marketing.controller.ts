@@ -2,7 +2,7 @@ import {
     Controller, Get, Post, Put, Delete, Patch,
     Body, Param, Query, Req, UseGuards,
 } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { MarketingService } from './marketing.service';
 
 @Controller('api/marketing')
