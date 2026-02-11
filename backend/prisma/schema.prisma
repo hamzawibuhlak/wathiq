@@ -205,6 +205,22 @@ model Tenant {
   legalDocuments        LegalDocument[]
   legalDocTemplates     LegalDocTemplate[]
 
+  // Phase 29: Marketing Module
+  leads                 Lead[]
+  leadActivities        LeadActivity[]       @relation("TenantLeadActivities")
+  callScripts           CallScript[]
+  callLogs              CallLog[]            @relation("TenantCallLogs")
+  affiliates            Affiliate[]
+  affiliateCommissions  AffiliateCommission[] @relation("TenantAffCommissions")
+  campaigns             Campaign[]
+  campaignContents      CampaignContent[]    @relation("TenantCampaignContents")
+  campaignMetrics       CampaignMetric[]     @relation("TenantCampaignMetrics")
+  adsConnections        AdsConnection[]
+  adsMetrics            AdsMetric[]          @relation("TenantAdsMetrics")
+  messageCampaigns      MessageCampaign[]
+  messageRecipients     MessageRecipient[]   @relation("TenantMsgRecipients")
+  contentCalendar       ContentCalendarItem[]
+
   @@map("tenants")
 }
 
@@ -295,6 +311,12 @@ model User {
   // Phase 28: Legal Document Editor
   legalDocuments         LegalDocument[]        @relation("LegalDocCreator")
   legalDocVersions       LegalDocumentVersion[] @relation("LegalDocVersionSaver")
+
+  // Phase 29: Marketing Module
+  assignedLeads          Lead[]                 @relation("LeadAssignee")
+  leadActivitiesCreated  LeadActivity[]         @relation("LeadActivityCreator")
+  callLogsMade           CallLog[]              @relation("CallLogCaller")
+  contentCalendarItems   ContentCalendarItem[]  @relation("ContentCalendarAssignee")
 
   @@index([tenantId])
   @@index([email])
@@ -2665,4 +2687,475 @@ enum LegalDocumentStatus {
   FINAL
   SENT
   ARCHIVED
+}
+
+// =====================================================
+// Phase 29: MARKETING MODULE
+// =====================================================
+
+model Lead {
+  id            String      @id @default(uuid())
+  name          String
+  phone         String?
+  email         String?
+  source        LeadSource
+  status        LeadStatus  @default(NEW)
+  stage         LeadStage   @default(AWARENESS)
+  score         Int         @default(0)
+  notes         String?     @db.Text
+  lostReason    String?
+
+  assignedTo    String?
+  caseId        String?
+  campaignId    String?
+  affiliateId   String?
+
+  lastContactAt DateTime?
+  nextFollowUp  DateTime?
+  callAttempts  Int         @default(0)
+
+  tenantId      String
+  createdBy     String
+
+  assignee      User?       @relation("LeadAssignee", fields: [assignedTo], references: [id])
+  campaign      Campaign?   @relation(fields: [campaignId], references: [id])
+  affiliate     Affiliate?  @relation(fields: [affiliateId], references: [id])
+  tenant        Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  activities    LeadActivity[]
+  callLogs      CallLog[]
+  commissions   AffiliateCommission[]
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([tenantId, status])
+  @@index([tenantId, source])
+  @@index([assignedTo])
+  @@map("leads")
+}
+
+model LeadActivity {
+  id        String           @id @default(uuid())
+  leadId    String
+  type      LeadActivityType
+  notes     String?          @db.Text
+  duration  Int?
+  outcome   String?
+  createdBy String
+  tenantId  String
+
+  lead      Lead             @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user      User             @relation("LeadActivityCreator", fields: [createdBy], references: [id])
+  tenant    Tenant           @relation("TenantLeadActivities", fields: [tenantId], references: [id])
+
+  createdAt DateTime         @default(now())
+
+  @@index([leadId])
+  @@map("lead_activities")
+}
+
+model CallScript {
+  id          String   @id @default(uuid())
+  name        String
+  content     String   @db.Text
+  targetType  String
+  isActive    Boolean  @default(true)
+  tenantId    String
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  callLogs    CallLog[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("call_scripts")
+}
+
+model CallLog {
+  id           String        @id @default(uuid())
+  leadId       String?
+  clientId     String?
+  callerUserId String
+  phone        String
+  direction    CallDirection @default(OUTBOUND)
+  status       CallStatus
+  duration     Int?
+  notes        String?       @db.Text
+  recordingUrl String?
+  scriptId     String?
+  tenantId     String
+
+  lead         Lead?         @relation(fields: [leadId], references: [id])
+  callerUser   User          @relation("CallLogCaller", fields: [callerUserId], references: [id])
+  script       CallScript?   @relation(fields: [scriptId], references: [id])
+  tenant       Tenant        @relation("TenantCallLogs", fields: [tenantId], references: [id])
+
+  createdAt    DateTime      @default(now())
+
+  @@index([tenantId])
+  @@index([leadId])
+  @@index([callerUserId])
+  @@map("call_logs")
+}
+
+model Affiliate {
+  id              String          @id @default(uuid())
+  name            String
+  phone           String?
+  email           String?
+  referralCode    String          @unique
+  commissionType  CommissionType
+  commissionValue Float
+  status          AffiliateStatus @default(ACTIVE)
+  bankIban        String?
+  bankName        String?
+  totalEarned     Float           @default(0)
+  totalPaid       Float           @default(0)
+  tenantId        String
+
+  tenant          Tenant          @relation(fields: [tenantId], references: [id])
+  leads           Lead[]
+  commissions     AffiliateCommission[]
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([tenantId])
+  @@index([referralCode])
+  @@map("affiliates")
+}
+
+model AffiliateCommission {
+  id          String             @id @default(uuid())
+  affiliateId String
+  leadId      String
+  amount      Float
+  status      CommissionStatus   @default(PENDING)
+  paidAt      DateTime?
+  notes       String?
+  tenantId    String
+
+  affiliate   Affiliate          @relation(fields: [affiliateId], references: [id])
+  lead        Lead               @relation(fields: [leadId], references: [id])
+  tenant      Tenant             @relation("TenantAffCommissions", fields: [tenantId], references: [id])
+
+  createdAt   DateTime           @default(now())
+
+  @@index([affiliateId])
+  @@map("affiliate_commissions")
+}
+
+model Campaign {
+  id            String         @id @default(uuid())
+  name          String
+  type          CampaignType
+  status        CampaignStatus @default(DRAFT)
+  platform      String?
+  budget        Float?
+  spent         Float          @default(0)
+  startDate     DateTime?
+  endDate       DateTime?
+  targetAudience String?       @db.Text
+  goal          String?
+  description   String?        @db.Text
+
+  externalId    String?
+  externalUrl   String?
+
+  impressions   Int            @default(0)
+  clicks        Int            @default(0)
+  conversions   Int            @default(0)
+  costPerClick  Float?
+  costPerLead   Float?
+
+  tenantId      String
+  createdBy     String
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id])
+  leads         Lead[]
+  contents      CampaignContent[]
+  metrics       CampaignMetric[]
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([tenantId, type])
+  @@index([tenantId, status])
+  @@map("campaigns")
+}
+
+model CampaignContent {
+  id          String   @id @default(uuid())
+  campaignId  String
+  type        String
+  platform    String
+  title       String?
+  content     String   @db.Text
+  mediaUrl    String?
+  scheduledAt DateTime?
+  publishedAt DateTime?
+  status      String   @default("DRAFT")
+  tenantId    String
+
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  tenant      Tenant   @relation("TenantCampaignContents", fields: [tenantId], references: [id])
+
+  createdAt   DateTime @default(now())
+
+  @@map("campaign_contents")
+}
+
+model CampaignMetric {
+  id          String   @id @default(uuid())
+  campaignId  String
+  date        DateTime @db.Date
+  impressions Int      @default(0)
+  clicks      Int      @default(0)
+  spend       Float    @default(0)
+  conversions Int      @default(0)
+  tenantId    String
+
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  tenant      Tenant   @relation("TenantCampaignMetrics", fields: [tenantId], references: [id])
+
+  createdAt   DateTime @default(now())
+
+  @@unique([campaignId, date])
+  @@map("campaign_metrics")
+}
+
+model AdsConnection {
+  id           String      @id @default(uuid())
+  platform     AdsPlatform
+  accountId    String
+  accountName  String
+  accessToken  String      @db.Text
+  refreshToken String?     @db.Text
+  isActive     Boolean     @default(true)
+  lastSyncAt   DateTime?
+  tenantId     String
+
+  tenant       Tenant      @relation(fields: [tenantId], references: [id])
+  metrics      AdsMetric[]
+
+  createdAt    DateTime    @default(now())
+
+  @@unique([tenantId, platform])
+  @@map("ads_connections")
+}
+
+model AdsMetric {
+  id           String      @id @default(uuid())
+  connectionId String
+  campaignId   String?
+  campaignName String?
+  date         DateTime    @db.Date
+  platform     AdsPlatform
+  impressions  Int         @default(0)
+  clicks       Int         @default(0)
+  spend        Float       @default(0)
+  conversions  Int         @default(0)
+  ctr          Float?
+  cpc          Float?
+  cpl          Float?
+  roas         Float?
+  tenantId     String
+
+  connection   AdsConnection @relation(fields: [connectionId], references: [id])
+  tenant       Tenant        @relation("TenantAdsMetrics", fields: [tenantId], references: [id])
+
+  @@unique([connectionId, campaignId, date])
+  @@index([tenantId, date])
+  @@map("ads_metrics")
+}
+
+model MessageCampaign {
+  id            String              @id @default(uuid())
+  name          String
+  type          MessageCampaignType
+  status        CampaignStatus      @default(DRAFT)
+  subject       String?
+  content       String              @db.Text
+  scheduledAt   DateTime?
+  sentAt        DateTime?
+
+  totalSent     Int                 @default(0)
+  totalDelivered Int                @default(0)
+  totalOpened   Int                 @default(0)
+  totalClicked  Int                 @default(0)
+  totalReplied  Int                 @default(0)
+
+  targetType    String
+  targetIds     Json?
+
+  tenantId      String
+  createdBy     String
+
+  tenant        Tenant              @relation(fields: [tenantId], references: [id])
+  recipients    MessageRecipient[]
+
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  @@map("message_campaigns")
+}
+
+model MessageRecipient {
+  id          String          @id @default(uuid())
+  campaignId  String
+  recipientId String
+  type        String
+  name        String
+  contact     String
+  status      String          @default("PENDING")
+  sentAt      DateTime?
+  openedAt    DateTime?
+  tenantId    String
+
+  campaign    MessageCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  tenant      Tenant          @relation("TenantMsgRecipients", fields: [tenantId], references: [id])
+
+  @@index([campaignId])
+  @@map("message_recipients")
+}
+
+model ContentCalendarItem {
+  id          String        @id @default(uuid())
+  title       String
+  platform    String
+  type        String
+  status      ContentStatus @default(IDEA)
+  content     String?       @db.Text
+  mediaUrl    String?
+  scheduledAt DateTime
+  publishedAt DateTime?
+  hashtags    String[]
+  notes       String?
+  assignedTo  String?
+  campaignId  String?
+  tenantId    String
+
+  assignee    User?         @relation("ContentCalendarAssignee", fields: [assignedTo], references: [id])
+  tenant      Tenant        @relation(fields: [tenantId], references: [id])
+
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([tenantId, scheduledAt])
+  @@map("content_calendar")
+}
+
+// Phase 29 Enums
+
+enum LeadSource {
+  GOOGLE_ADS
+  META_ADS
+  TIKTOK_ADS
+  REFERRAL
+  AFFILIATE
+  ORGANIC_SEARCH
+  SOCIAL_MEDIA
+  PHONE_CALL
+  WALK_IN
+  WEBSITE
+  OTHER
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  PROPOSAL
+  WON
+  LOST
+  NURTURING
+}
+
+enum LeadStage {
+  AWARENESS
+  INTEREST
+  DECISION
+  ACTION
+}
+
+enum LeadActivityType {
+  CALL
+  EMAIL
+  WHATSAPP
+  MEETING
+  NOTE
+  STATUS_CHANGE
+}
+
+enum CommissionType {
+  FIXED
+  PERCENTAGE
+}
+
+enum CommissionStatus {
+  PENDING
+  APPROVED
+  PAID
+  REJECTED
+}
+
+enum AffiliateStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum CampaignType {
+  SOCIAL_MEDIA
+  GOOGLE_ADS
+  META_ADS
+  TIKTOK_ADS
+  EMAIL
+  WHATSAPP
+  TELEMARKETING
+  EVENT
+}
+
+enum CampaignStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  ENDED
+  ARCHIVED
+}
+
+enum AdsPlatform {
+  GOOGLE_ADS
+  META
+  TIKTOK
+  SNAPCHAT
+  TWITTER
+}
+
+enum MessageCampaignType {
+  EMAIL
+  WHATSAPP
+}
+
+enum ContentStatus {
+  IDEA
+  DRAFT
+  IN_REVIEW
+  APPROVED
+  SCHEDULED
+  PUBLISHED
+  CANCELLED
+}
+
+enum CallDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum CallStatus {
+  ANSWERED
+  NO_ANSWER
+  BUSY
+  FAILED
+  VOICEMAIL
 }

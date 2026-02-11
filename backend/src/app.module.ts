@@ -50,6 +50,7 @@ import { SuperAdminModule } from './super-admin/super-admin.module';
 import { ChatModule } from './chat/chat.module';
 import { OwnerModule } from './owner/owner.module';
 import { LegalDocumentsModule } from './legal-documents/legal-documents.module';
+import { MarketingModule } from './marketing/marketing.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -132,6 +133,9 @@ import { AppController } from './app.controller';
 
         // Phase 28: Legal Document Editor
         LegalDocumentsModule,
+
+        // Phase 29: Marketing Module
+        MarketingModule,
     ],
     controllers: [AppController],
     providers: [

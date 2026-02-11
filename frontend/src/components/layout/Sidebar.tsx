@@ -24,6 +24,7 @@ import {
     Clock,
     DollarSign,
     FileEdit,
+    Megaphone,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -94,6 +95,12 @@ const navGroups: NavGroup[] = [
             { path: '/hr/attendance', icon: Clock, label: 'الحضور والانصراف', roles: ['OWNER', 'ADMIN'] },
             { path: '/hr/leaves', icon: Calendar, label: 'الإجازات', roles: ['OWNER', 'ADMIN'] },
             { path: '/hr/payroll', icon: DollarSign, label: 'الرواتب', roles: ['OWNER', 'ADMIN'] },
+        ],
+    },
+    {
+        title: 'التسويق',
+        items: [
+            { path: '/marketing', icon: Megaphone, label: 'التسويق', roles: ['OWNER', 'ADMIN'] },
         ],
     },
     {

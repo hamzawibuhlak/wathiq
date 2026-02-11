@@ -92,6 +92,18 @@ const LegalDocumentsPage = lazy(() => import('@/pages/legal-documents/LegalDocum
 const NewDocumentPage = lazy(() => import('@/pages/legal-documents/NewDocumentPage'));
 const LegalDocumentEditorPage = lazy(() => import('@/pages/legal-documents/LegalDocumentEditorPage'));
 
+// Marketing Module (Phase 29)
+const MarketingLayout = lazy(() => import('@/pages/marketing/MarketingLayout'));
+const MarketingDashboard = lazy(() => import('@/pages/marketing/MarketingDashboard'));
+const LeadsPage = lazy(() => import('@/pages/marketing/leads/LeadsPage'));
+const LeadDetailsPage = lazy(() => import('@/pages/marketing/leads/LeadDetailsPage'));
+const TelemarketingPage = lazy(() => import('@/pages/marketing/telemarketing/TelemarketingPage'));
+const AffiliatesPage = lazy(() => import('@/pages/marketing/affiliate/AffiliatesPage'));
+const CampaignsPage = lazy(() => import('@/pages/marketing/campaigns/CampaignsPage'));
+const AdsAnalyticsPage = lazy(() => import('@/pages/marketing/ads-analytics/AdsAnalyticsPage'));
+const MessageCampaignsPage = lazy(() => import('@/pages/marketing/message-campaigns/MessageCampaignsPage'));
+const ContentCalendarPage = lazy(() => import('@/pages/marketing/content-calendar/ContentCalendarPage'));
+
 // Owner Panel (Phase 27)
 const OwnerLayout = lazy(() => import('@/pages/owner/OwnerLayout'));
 const OwnerDashboard = lazy(() => import('@/pages/owner/OwnerDashboard'));
@@ -283,6 +295,19 @@ function App() {
                         <Route path="/legal-documents" element={<LegalDocumentsPage />} />
                         <Route path="/legal-documents/new" element={<NewDocumentPage />} />
                         <Route path="/legal-documents/:id/edit" element={<LegalDocumentEditorPage />} />
+
+                        {/* Marketing Module (Phase 29) */}
+                        <Route path="/marketing" element={<MarketingLayout />}>
+                            <Route index element={<MarketingDashboard />} />
+                            <Route path="leads" element={<LeadsPage />} />
+                            <Route path="leads/:id" element={<LeadDetailsPage />} />
+                            <Route path="telemarketing" element={<TelemarketingPage />} />
+                            <Route path="affiliate" element={<AffiliatesPage />} />
+                            <Route path="campaigns" element={<CampaignsPage />} />
+                            <Route path="ads-analytics" element={<AdsAnalyticsPage />} />
+                            <Route path="messages" element={<MessageCampaignsPage />} />
+                            <Route path="calendar" element={<ContentCalendarPage />} />
+                        </Route>
 
                         {/* Call Center */}
                         <Route path="/calls" element={<CallCenterPage />} />
