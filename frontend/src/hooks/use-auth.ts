@@ -14,10 +14,23 @@ export function useLogin() {
 
     return useMutation({
         mutationFn: (data: LoginRequest) => authApi.login(data),
-        onSuccess: (response) => {
+        onSuccess: (response: any) => {
             login(response.user, response.accessToken);
             toast.success('تم تسجيل الدخول بنجاح');
-            navigate('/dashboard');
+
+            // Navigate using server-provided redirect or build from slug
+            if (response.redirectTo) {
+                navigate(response.redirectTo);
+            } else {
+                const slug = response.user?.tenant?.slug;
+                if (slug) {
+                    navigate(`/${slug}/dashboard`);
+                } else if (response.user?.role === 'SUPER_ADMIN') {
+                    navigate('/super-admin');
+                } else {
+                    navigate('/dashboard');
+                }
+            }
         },
     });
 }
@@ -31,10 +44,21 @@ export function useRegister() {
 
     return useMutation({
         mutationFn: (data: RegisterRequest) => authApi.register(data),
-        onSuccess: (response) => {
+        onSuccess: (response: any) => {
             login(response.user, response.accessToken);
             toast.success('تم إنشاء الحساب بنجاح');
-            navigate('/dashboard');
+
+            // Navigate using server-provided redirect or build from slug
+            if (response.redirectTo) {
+                navigate(response.redirectTo);
+            } else {
+                const slug = response.user?.tenant?.slug;
+                if (slug) {
+                    navigate(`/${slug}/dashboard`);
+                } else {
+                    navigate('/dashboard');
+                }
+            }
         },
     });
 }

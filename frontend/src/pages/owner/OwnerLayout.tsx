@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, Outlet, useLocation } from 'react-router-dom';
+import { Link, Outlet, useLocation, useParams } from 'react-router-dom';
 import {
     Building2, Users, Link2, GitBranch, CreditCard,
     LayoutDashboard, Headset, Ticket, Shield, ArrowLeft,
@@ -114,6 +114,7 @@ const navGroups: NavGroup[] = [
 
 export default function OwnerLayout() {
     const location = useLocation();
+    const { slug } = useParams<{ slug: string }>();
     const user = useAuthStore((s) => s.user);
 
     // Auto-expand the group containing the active path
@@ -240,7 +241,7 @@ export default function OwnerLayout() {
                 {/* Bottom: Go back to personal page */}
                 <div className="p-3 border-t border-gray-100">
                     <Link
-                        to="/dashboard"
+                        to={`/${slug || ''}/dashboard`}
                         className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all bg-gradient-to-l from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 text-emerald-700 hover:from-emerald-500/20 hover:to-teal-500/20"
                     >
                         <ArrowLeft className="w-[18px] h-[18px]" />

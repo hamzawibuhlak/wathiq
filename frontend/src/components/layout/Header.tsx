@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useParams } from 'react-router-dom';
 import { Search, User, Settings, LogOut, ChevronDown, Plus, Briefcase, Calendar, Users, FileText, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth.store';
@@ -38,6 +38,8 @@ export function Header({ isCollapsed }: HeaderProps) {
     const { user } = useAuthStore();
     const logoutMutation = useLogout();
     const navigate = useNavigate();
+    const { slug } = useParams<{ slug: string }>();
+    const slugPrefix = slug ? `/${slug}` : '';
     const { data: messagesUnread } = useMessagesUnreadCount();
     const messagesUnreadCount = messagesUnread?.count || 0;
 
@@ -73,7 +75,7 @@ export function Header({ isCollapsed }: HeaderProps) {
     };
 
     const handleQuickAction = (path: string) => {
-        navigate(path);
+        navigate(`${slugPrefix}${path}`);
         setShowQuickActions(false);
     };
 
@@ -149,7 +151,7 @@ export function Header({ isCollapsed }: HeaderProps) {
                         <div className="w-px h-8 bg-border mx-2" />
 
                         {/* Messages */}
-                        <Link to="/messages">
+                        <Link to={`${slugPrefix}/messages`}>
                             <Button variant="ghost" size="icon" className="relative">
                                 <Mail className="w-5 h-5" />
                                 {messagesUnreadCount > 0 && (
@@ -199,7 +201,7 @@ export function Header({ isCollapsed }: HeaderProps) {
                                     <div className="py-1">
                                         <button
                                             onClick={() => {
-                                                navigate('/settings/profile');
+                                                navigate(`${slugPrefix}/settings/profile`);
                                                 setShowUserMenu(false);
                                             }}
                                             className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-muted transition-colors"
@@ -209,7 +211,7 @@ export function Header({ isCollapsed }: HeaderProps) {
                                         </button>
                                         <button
                                             onClick={() => {
-                                                navigate('/settings');
+                                                navigate(`${slugPrefix}/settings`);
                                                 setShowUserMenu(false);
                                             }}
                                             className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-muted transition-colors"

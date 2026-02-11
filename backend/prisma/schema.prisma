@@ -95,6 +95,41 @@ enum OcrStatus {
   NOT_APPLICABLE
 }
 
+enum PlanType {
+  BASIC
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+// Phase 33: Super Admin Dashboard
+enum SuperAdminRole {
+  OWNER
+  MANAGER
+  SUPPORT
+  SALES
+  MODERATOR
+}
+
+enum NoteType {
+  GENERAL
+  BILLING
+  TECHNICAL
+  COMPLAINT
+  FOLLOWUP
+}
+
+enum ChatRoomStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum ChatSenderType {
+  ADMIN
+  TENANT
+}
+
 // =====================================================
 // TENANT (Law Office)
 // =====================================================
@@ -103,6 +138,7 @@ model Tenant {
   id          String   @id @default(uuid())
   name        String   // اسم المكتب
   nameEn      String?  // English name (optional)
+  slug        String   @unique // رابط الشركة الفريد
   email       String   @unique
   phone       String?
   address     String?
@@ -113,6 +149,16 @@ model Tenant {
   website     String?  // الموقع الإلكتروني
   logo        String?
   isActive    Boolean  @default(true)
+  
+  // Plan / Subscription
+  planType      PlanType  @default(BASIC)
+  planStartDate DateTime?
+  planEndDate   DateTime?
+  
+  // Phase 33: Freeze / Suspension
+  isFrozen      Boolean   @default(false)
+  frozenReason  String?
+  frozenAt      DateTime?
   
   // SMTP Email Settings
   smtpHost        String?  // SMTP Server Host
@@ -226,6 +272,10 @@ model Tenant {
   bookmarkFolders       BookmarkFolder[]
   caseLegalReferences   CaseLegalReference[]
   legalSearchLogs       LegalSearchLog[]
+
+  // Phase 33: Super Admin Dashboard
+  tenantNotes           TenantNote[]
+  superAdminChatRoom    SuperAdminChatRoom?
 
   @@map("tenants")
 }
@@ -3390,4 +3440,95 @@ enum BookmarkType {
   ARTICLE
   PRECEDENT
   TERM
+}
+
+// =====================================================
+// Phase 33: SUPER ADMIN DASHBOARD
+// =====================================================
+
+model SuperAdminUser {
+  id           String          @id @default(uuid())
+  name         String
+  email        String          @unique
+  password     String
+  role         SuperAdminRole  @default(SUPPORT)
+  isActive     Boolean         @default(true)
+  lastLoginAt  DateTime?
+  permissions  String[]
+
+  chatMessages SuperAdminChatMessage[]
+  auditLogs    SuperAdminAuditLog[]
+
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@map("super_admin_users")
+}
+
+model TenantNote {
+  id          String    @id @default(uuid())
+  tenantId    String
+  content     String    @db.Text
+  type        NoteType  @default(GENERAL)
+  addedBy     String
+  isInternal  Boolean   @default(true)
+
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+
+  @@index([tenantId])
+  @@map("tenant_notes")
+}
+
+model SuperAdminChatRoom {
+  id            String          @id @default(uuid())
+  tenantId      String          @unique
+  status        ChatRoomStatus  @default(OPEN)
+  lastMessage   String?         @db.Text
+  lastMessageAt DateTime?
+  unreadCount   Int             @default(0)
+  assignedTo    String?
+
+  tenant        Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  messages      SuperAdminChatMessage[]
+
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@map("super_admin_chat_rooms")
+}
+
+model SuperAdminChatMessage {
+  id            String             @id @default(uuid())
+  roomId        String
+  content       String             @db.Text
+  senderType    ChatSenderType
+  senderId      String
+  senderName    String
+  isRead        Boolean            @default(false)
+  attachmentUrl String?
+
+  room          SuperAdminChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  adminUser     SuperAdminUser?    @relation(fields: [senderId], references: [id])
+  createdAt     DateTime           @default(now())
+
+  @@index([roomId])
+  @@map("super_admin_chat_messages")
+}
+
+model SuperAdminAuditLog {
+  id          String         @id @default(uuid())
+  action      String
+  targetType  String
+  targetId    String
+  details     Json?
+  ipAddress   String?
+  performedBy String
+
+  user        SuperAdminUser @relation(fields: [performedBy], references: [id])
+  createdAt   DateTime       @default(now())
+
+  @@index([performedBy])
+  @@index([targetId])
+  @@map("super_admin_audit_logs")
 }

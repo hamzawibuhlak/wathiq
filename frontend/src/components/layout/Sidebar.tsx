@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth.store';
 import {
@@ -70,7 +70,7 @@ interface NavGroup {
 // ═══════════════════════════════════════════════════════
 
 const dashboardItem: NavItem = {
-    path: '/dashboard', icon: LayoutDashboard, label: 'لوحة التحكم',
+    path: 'dashboard', icon: LayoutDashboard, label: 'لوحة التحكم',
 };
 
 const navGroups: NavGroup[] = [
@@ -80,14 +80,14 @@ const navGroups: NavGroup[] = [
         icon: Briefcase,
         collapsible: true,
         items: [
-            { path: '/clients', icon: Users, label: 'العملاء' },
-            { path: '/cases', icon: Briefcase, label: 'القضايا' },
-            { path: '/hearings', icon: Calendar, label: 'الجلسات' },
-            { path: '/documents', icon: FileText, label: 'المستندات' },
-            { path: '/tasks', icon: CheckSquare, label: 'المهام' },
-            { path: '/legal-documents', icon: FileEdit, label: 'محرر الوثائق' },
-            { path: '/activity-logs', icon: History, label: 'التايم لاين' },
-            { path: '/legal-library', icon: BookOpen, label: 'المكتبة القانونية' },
+            { path: 'clients', icon: Users, label: 'العملاء' },
+            { path: 'cases', icon: Briefcase, label: 'القضايا' },
+            { path: 'hearings', icon: Calendar, label: 'الجلسات' },
+            { path: 'documents', icon: FileText, label: 'المستندات' },
+            { path: 'tasks', icon: CheckSquare, label: 'المهام' },
+            { path: 'legal-documents', icon: FileEdit, label: 'محرر الوثائق' },
+            { path: 'activity-logs', icon: History, label: 'التايم لاين' },
+            { path: 'legal-library', icon: BookOpen, label: 'المكتبة القانونية' },
         ],
     },
     {
@@ -96,10 +96,10 @@ const navGroups: NavGroup[] = [
         icon: MessageSquare,
         collapsible: true,
         items: [
-            { path: '/messages', icon: Mail, label: 'الرسائل الداخلية' },
-            { path: '/chat', icon: MessageSquare, label: 'الدردشة الداخلية' },
-            { path: '/whatsapp', icon: Share2, label: 'التواصل الاجتماعي', roles: ['OWNER', 'ADMIN'] },
-            { path: '/calls', icon: PhoneCall, label: 'مركز الاتصالات', roles: ['OWNER', 'ADMIN'] },
+            { path: 'messages', icon: Mail, label: 'الرسائل الداخلية' },
+            { path: 'chat', icon: MessageSquare, label: 'الدردشة الداخلية' },
+            { path: 'whatsapp', icon: Share2, label: 'التواصل الاجتماعي', roles: ['OWNER', 'ADMIN'] },
+            { path: 'calls', icon: PhoneCall, label: 'مركز الاتصالات', roles: ['OWNER', 'ADMIN'] },
         ],
     },
     {
@@ -109,14 +109,14 @@ const navGroups: NavGroup[] = [
         collapsible: true,
         roles: ['OWNER', 'ADMIN'],
         items: [
-            { path: '/marketing', icon: PieChart, label: 'لوحة التحكم' },
-            { path: '/marketing/leads', icon: Target, label: 'العملاء المحتملون' },
-            { path: '/marketing/telemarketing', icon: Phone, label: 'التسويق عبر الهاتف' },
-            { path: '/marketing/affiliate', icon: Handshake, label: 'التسويق بالعمولة' },
-            { path: '/marketing/campaigns', icon: Megaphone, label: 'الحملات التسويقية' },
-            { path: '/marketing/ads-analytics', icon: TrendingUp, label: 'نتائج الإعلانات' },
-            { path: '/marketing/messages', icon: Send, label: 'الرسائل الجماعية' },
-            { path: '/marketing/calendar', icon: CalendarDays, label: 'تقويم المحتوى' },
+            { path: 'marketing', icon: PieChart, label: 'لوحة التحكم' },
+            { path: 'marketing/leads', icon: Target, label: 'العملاء المحتملون' },
+            { path: 'marketing/telemarketing', icon: Phone, label: 'التسويق عبر الهاتف' },
+            { path: 'marketing/affiliate', icon: Handshake, label: 'التسويق بالعمولة' },
+            { path: 'marketing/campaigns', icon: Megaphone, label: 'الحملات التسويقية' },
+            { path: 'marketing/ads-analytics', icon: TrendingUp, label: 'نتائج الإعلانات' },
+            { path: 'marketing/messages', icon: Send, label: 'الرسائل الجماعية' },
+            { path: 'marketing/calendar', icon: CalendarDays, label: 'تقويم المحتوى' },
         ],
     },
     {
@@ -126,9 +126,9 @@ const navGroups: NavGroup[] = [
         collapsible: true,
         roles: ['OWNER', 'ADMIN', 'LAWYER'],
         items: [
-            { path: '/analytics', icon: BarChart3, label: 'التقارير والإحصائيات' },
-            { path: '/analytics/performance', icon: Target, label: 'تقرير الأداء', roles: ['OWNER', 'ADMIN'] },
-            { path: '/reports', icon: Download, label: 'تصدير البيانات', roles: ['OWNER', 'ADMIN', 'LAWYER'] },
+            { path: 'analytics', icon: BarChart3, label: 'التقارير والإحصائيات' },
+            { path: 'analytics/performance', icon: Target, label: 'تقرير الأداء', roles: ['OWNER', 'ADMIN'] },
+            { path: 'reports', icon: Download, label: 'تصدير البيانات', roles: ['OWNER', 'ADMIN', 'LAWYER'] },
         ],
     },
     {
@@ -138,10 +138,10 @@ const navGroups: NavGroup[] = [
         collapsible: true,
         roles: ['OWNER', 'ADMIN'],
         items: [
-            { path: '/hr/employees', icon: Users, label: 'الموظفون' },
-            { path: '/hr/attendance', icon: Clock, label: 'الحضور والانصراف' },
-            { path: '/hr/leaves', icon: Palmtree, label: 'الإجازات' },
-            { path: '/hr/payroll', icon: Banknote, label: 'الرواتب' },
+            { path: 'hr/employees', icon: Users, label: 'الموظفون' },
+            { path: 'hr/attendance', icon: Clock, label: 'الحضور والانصراف' },
+            { path: 'hr/leaves', icon: Palmtree, label: 'الإجازات' },
+            { path: 'hr/payroll', icon: Banknote, label: 'الرواتب' },
         ],
     },
     {
@@ -151,9 +151,9 @@ const navGroups: NavGroup[] = [
         collapsible: true,
         roles: ['OWNER', 'ADMIN'],
         items: [
-            { path: '/invoices', icon: Receipt, label: 'الفواتير' },
-            { path: '/accounting/expenses', icon: CreditCard, label: 'المصروفات' },
-            { path: '/accounting', icon: Calculator, label: 'المحاسبة' },
+            { path: 'invoices', icon: Receipt, label: 'الفواتير' },
+            { path: 'accounting/expenses', icon: CreditCard, label: 'المصروفات' },
+            { path: 'accounting', icon: Calculator, label: 'المحاسبة' },
         ],
     },
     {
@@ -162,24 +162,29 @@ const navGroups: NavGroup[] = [
         icon: Settings,
         collapsible: true,
         items: [
-            { path: '/settings/profile', icon: User, label: 'الملف الشخصي' },
-            { path: '/settings/notifications', icon: Bell, label: 'الإشعارات' },
+            { path: 'settings/profile', icon: User, label: 'الملف الشخصي' },
+            { path: 'settings/notifications', icon: Bell, label: 'الإشعارات' },
         ],
     },
 ];
 
 export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
     const location = useLocation();
+    const { slug } = useParams<{ slug: string }>();
     const user = useAuthStore((state) => state.user);
     const userRole = user?.role;
+
+    // Build slug prefix for all paths
+    const slugPrefix = slug ? `/${slug}` : '';
 
     // Track expanded groups — default expand the group that contains the active path
     const getInitialExpanded = (): Set<string> => {
         const expanded = new Set<string>();
         for (const group of navGroups) {
             for (const item of group.items) {
-                if (location.pathname === item.path ||
-                    (item.path !== '/dashboard' && location.pathname.startsWith(item.path))) {
+                const fullPath = `${slugPrefix}/${item.path}`;
+                if (location.pathname === fullPath ||
+                    (item.path !== 'dashboard' && location.pathname.startsWith(fullPath))) {
                     expanded.add(group.id);
                     break;
                 }
@@ -216,13 +221,14 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         return filterItems(group.items).length > 0;
     };
 
-    // Check if path is active
-    const isActive = (path: string) => {
-        if (path === '/dashboard') return location.pathname === '/dashboard';
-        if (path === '/marketing') return location.pathname === '/marketing';
-        if (path === '/accounting') return location.pathname === '/accounting';
-        if (path === '/analytics') return location.pathname === '/analytics';
-        return location.pathname === path || location.pathname.startsWith(path + '/');
+    // Check if path is active (paths are now relative, e.g. 'dashboard')
+    const isActive = (relativePath: string) => {
+        const fullPath = `${slugPrefix}/${relativePath}`;
+        if (relativePath === 'dashboard') return location.pathname === fullPath;
+        if (relativePath === 'marketing') return location.pathname === fullPath;
+        if (relativePath === 'accounting') return location.pathname === fullPath;
+        if (relativePath === 'analytics') return location.pathname === fullPath;
+        return location.pathname === fullPath || location.pathname.startsWith(fullPath + '/');
     };
 
     // Can see Owner dashboard
@@ -251,7 +257,7 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         >
             {/* Logo */}
             <div className="h-16 flex items-center justify-between px-4 border-b bg-gradient-to-l from-primary/5 to-transparent">
-                <Link to="/dashboard" className="flex items-center gap-3">
+                <Link to={`${slugPrefix}/dashboard`} className="flex items-center gap-3">
                     <div className="w-9 h-9 bg-gradient-to-br from-primary to-primary/80 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm">
                         <Scale className="w-5 h-5 text-primary-foreground" />
                     </div>
@@ -289,7 +295,7 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
             <nav className="flex-1 py-3 px-3 space-y-1 overflow-y-auto scrollbar-thin">
                 {/* ═══ Dashboard (standalone) ═══ */}
                 <Link
-                    to={dashboardItem.path}
+                    to={`${slugPrefix}/${dashboardItem.path}`}
                     className={cn(
                         'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200',
                         'hover:bg-primary/10',
@@ -380,7 +386,7 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                                         return (
                                             <Link
                                                 key={item.path}
-                                                to={item.path}
+                                                to={`${slugPrefix}/${item.path}`}
                                                 className={cn(
                                                     'flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200',
                                                     'hover:bg-primary/10',
@@ -408,12 +414,12 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
             {canSeeOwnerDashboard && (
                 <div className={cn('px-3 pb-2', isCollapsed && 'px-2')}>
                     <Link
-                        to="/owner"
+                        to={`${slugPrefix}/owner`}
                         className={cn(
                             'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200',
                             'bg-gradient-to-l from-emerald-500/10 to-teal-500/10 border border-emerald-500/20',
                             'hover:from-emerald-500/20 hover:to-teal-500/20',
-                            isActive('/owner')
+                            isActive('owner')
                                 ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm shadow-emerald-500/25'
                                 : 'text-emerald-700 dark:text-emerald-400',
                             isCollapsed && 'justify-center px-2'

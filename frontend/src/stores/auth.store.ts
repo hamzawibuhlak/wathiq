@@ -14,7 +14,9 @@ interface User {
     tenant?: {
         id: string;
         name: string;
+        slug: string;
         isActive: boolean;
+        planType?: string;
     };
 }
 
@@ -36,6 +38,9 @@ interface AuthState {
     login: (user: User, token: string) => void;
     logout: () => void;
     setLoading: (loading: boolean) => void;
+
+    // Slug helpers
+    getTenantSlug: () => string | null;
 
     // Role helpers
     isOwner: () => boolean;
@@ -85,6 +90,9 @@ export const useAuthStore = create<AuthState>()(
                 }),
 
             setLoading: (isLoading) => set({ isLoading }),
+
+            // Slug helpers
+            getTenantSlug: () => get().user?.tenant?.slug || null,
 
             // Role helpers
             isOwner: () => get().user?.role === 'OWNER',

@@ -3,6 +3,7 @@ import {
     Post,
     Get,
     Body,
+    Param,
     HttpCode,
     HttpStatus,
     UseGuards,
@@ -27,6 +28,13 @@ export class AuthController {
         private readonly authService: AuthService,
         private readonly twoFactorService: TwoFactorService,
     ) { }
+
+    @Get('check-slug/:slug')
+    @ApiOperation({ summary: 'التحقق من توفر اسم الرابط' })
+    @ApiResponse({ status: 200, description: 'حالة توفر الرابط' })
+    async checkSlug(@Param('slug') slug: string) {
+        return this.authService.checkSlugAvailability(slug);
+    }
 
     @Post('register')
     @ApiOperation({ summary: 'تسجيل مكتب جديد مع المالك' })

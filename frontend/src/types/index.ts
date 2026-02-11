@@ -42,10 +42,12 @@ export interface Tenant {
     id: string;
     name: string;
     nameEn: string | null;
+    slug: string;
     email: string | null;
     phone: string | null;
     logo: string | null;
     isActive: boolean;
+    planType?: string;
 }
 
 export interface LoginRequest {
@@ -54,16 +56,21 @@ export interface LoginRequest {
 }
 
 export interface RegisterRequest {
+    officeName: string;
+    slug: string;
     name: string;
     email: string;
     password: string;
-    officeName: string;
     phone?: string;
+    city?: string;
+    licenseNumber?: string;
+    planType?: string;
 }
 
 export interface AuthResponse {
     accessToken: string;
     user: User;
+    redirectTo?: string;
     message: string;
 }
 

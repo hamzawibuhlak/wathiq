@@ -2,6 +2,7 @@ import {
     Injectable,
     UnauthorizedException,
     ConflictException,
+    BadRequestException,
     NotFoundException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -16,8 +17,17 @@ export interface JwtPayload {
     sub: string;      // userId
     email: string;
     tenantId: string | null;
+    tenantSlug: string | null;
     role: UserRole;
 }
+
+// Reserved slugs that cannot be used
+const RESERVED_SLUGS = [
+    'admin', 'api', 'www', 'app', 'login', 'register',
+    'dashboard', 'owner', 'settings', 'support', 'help',
+    'billing', 'pricing', 'about', 'contact', 'blog',
+    'portal', 'super-admin', 'invitation', 'auth',
+];
 
 @Injectable()
 export class AuthService {
@@ -29,12 +39,42 @@ export class AuthService {
     ) { }
 
     /**
+     * Check if a slug is available
+     */
+    async checkSlugAvailability(slug: string): Promise<{ available: boolean; message?: string }> {
+        const normalizedSlug = slug.toLowerCase().trim();
+
+        if (RESERVED_SLUGS.includes(normalizedSlug)) {
+            return { available: false, message: 'اسم الرابط محجوز' };
+        }
+
+        if (normalizedSlug.length < 3) {
+            return { available: false, message: 'اسم الرابط قصير جداً' };
+        }
+
+        const existing = await this.prisma.tenant.findUnique({
+            where: { slug: normalizedSlug },
+        });
+
+        return {
+            available: !existing,
+            message: existing ? 'اسم الرابط مستخدم بالفعل' : undefined,
+        };
+    }
+
+    /**
      * Register new tenant with owner user
      */
     async register(registerDto: RegisterDto) {
-        const { email, password, name, officeName, phone } = registerDto;
+        const { email, password, name, officeName, slug, city, licenseNumber, phone, planType } = registerDto;
 
-        // Check if email already exists (user or tenant)
+        // 1. Check slug availability
+        const { available } = await this.checkSlugAvailability(slug);
+        if (!available) {
+            throw new BadRequestException('اسم الرابط محجوز، يرجى اختيار اسم آخر');
+        }
+
+        // 2. Check if email already exists
         const existingUser = await this.prisma.user.findUnique({
             where: { email },
         });
@@ -51,17 +91,23 @@ export class AuthService {
             throw new ConflictException('البريد الإلكتروني مستخدم بالفعل');
         }
 
-        // Hash password
+        // 3. Hash password
         const hashedPassword = await this.hashPassword(password);
 
-        // Create tenant and owner user in a transaction
+        // 4. Create tenant and owner user in a transaction
         const result = await this.prisma.$transaction(async (tx) => {
             // Create tenant (law office)
             const tenant = await tx.tenant.create({
                 data: {
                     name: officeName,
+                    slug: slug.toLowerCase(),
                     email,
                     phone,
+                    city,
+                    licenseNumber,
+                    planType: (planType as any) || 'BASIC',
+                    planStartDate: new Date(),
+                    planEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days trial
                 },
             });
 
@@ -76,14 +122,22 @@ export class AuthService {
                     tenantId: tenant.id,
                 },
                 include: {
-                    tenant: { select: { id: true, name: true, isActive: true } },
+                    tenant: {
+                        select: {
+                            id: true,
+                            name: true,
+                            slug: true,
+                            isActive: true,
+                            planType: true,
+                        },
+                    },
                 },
             });
 
             return { tenant, user };
         });
 
-        // Generate JWT token
+        // 5. Generate JWT token
         const accessToken = this.generateToken(result.user);
 
         // Return user data without password
@@ -92,6 +146,7 @@ export class AuthService {
         return {
             accessToken,
             user: userWithoutPassword,
+            redirectTo: `/${result.tenant.slug}/dashboard`,
             message: 'تم إنشاء الحساب بنجاح',
         };
     }
@@ -105,7 +160,17 @@ export class AuthService {
         // Find user by email with tenant info
         const user = await this.prisma.user.findUnique({
             where: { email },
-            include: { tenant: { select: { id: true, name: true, isActive: true } } },
+            include: {
+                tenant: {
+                    select: {
+                        id: true,
+                        name: true,
+                        slug: true,
+                        isActive: true,
+                        planType: true,
+                    },
+                },
+            },
         });
 
         if (!user) {
@@ -174,9 +239,21 @@ export class AuthService {
         // Return user data without password
         const { password: _, ...userWithoutPassword } = user;
 
+        // Build redirect URL based on role and tenant slug
+        const tenantSlug = user.tenant?.slug;
+        let redirectTo = '/dashboard';
+        if (tenantSlug) {
+            redirectTo = user.role === 'OWNER'
+                ? `/${tenantSlug}/owner`
+                : `/${tenantSlug}/dashboard`;
+        } else if (user.role === 'SUPER_ADMIN') {
+            redirectTo = '/super-admin';
+        }
+
         return {
             accessToken,
             user: userWithoutPassword,
+            redirectTo,
         };
     }
 
@@ -202,10 +279,12 @@ export class AuthService {
                         id: true,
                         name: true,
                         nameEn: true,
+                        slug: true,
                         email: true,
                         phone: true,
                         logo: true,
                         isActive: true,
+                        planType: true,
                     },
                 },
             },
@@ -240,7 +319,17 @@ export class AuthService {
     async validateUser(userId: string) {
         const user = await this.prisma.user.findUnique({
             where: { id: userId },
-            include: { tenant: { select: { id: true, name: true, isActive: true } } },
+            include: {
+                tenant: {
+                    select: {
+                        id: true,
+                        name: true,
+                        slug: true,
+                        isActive: true,
+                        planType: true,
+                    },
+                },
+            },
         });
 
         if (!user || !user.isActive || (user.tenant && !user.tenant.isActive)) {
@@ -268,11 +357,18 @@ export class AuthService {
     /**
      * Generate JWT token
      */
-    private generateToken(user: { id: string; email: string; tenantId: string | null; role: UserRole }): string {
+    private generateToken(user: {
+        id: string;
+        email: string;
+        tenantId: string | null;
+        role: UserRole;
+        tenant?: { slug: string } | null;
+    }): string {
         const payload: JwtPayload = {
             sub: user.id,
             email: user.email,
             tenantId: user.tenantId,
+            tenantSlug: user.tenant?.slug || null,
             role: user.role,
         };
 

@@ -1,5 +1,5 @@
 import { ChevronLeft, Home } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 
 interface BreadcrumbItem {
   label: string;
@@ -31,13 +31,15 @@ const defaultLabels: Record<string, string> = {
 
 export function Breadcrumbs({ items }: BreadcrumbsProps) {
   const location = useLocation();
+  const { slug } = useParams<{ slug: string }>();
+  const dashboardPath = slug ? `/${slug}/dashboard` : '/dashboard';
 
   // If custom items provided, use them
   if (items) {
     return (
       <nav className="flex items-center gap-1 text-sm text-muted-foreground mb-4">
         <Link
-          to="/dashboard"
+          to={dashboardPath}
           className="flex items-center gap-1 hover:text-foreground transition-colors"
         >
           <Home className="w-4 h-4" />
@@ -61,25 +63,28 @@ export function Breadcrumbs({ items }: BreadcrumbsProps) {
     );
   }
 
-  // Auto-generate from path
+  // Auto-generate from path — skip the slug segment
   const pathnames = location.pathname.split('/').filter(x => x);
+  const displayPaths = slug ? pathnames.filter(p => p !== slug) : pathnames;
 
   return (
     <nav className="flex items-center gap-1 text-sm text-muted-foreground mb-4">
       <Link
-        to="/dashboard"
+        to={dashboardPath}
         className="flex items-center gap-1 hover:text-foreground transition-colors"
       >
         <Home className="w-4 h-4" />
       </Link>
 
-      {pathnames.map((name, index) => {
-        const routeTo = `/${pathnames.slice(0, index + 1).join('/')}`;
-        const isLast = index === pathnames.length - 1;
+      {displayPaths.map((name, index) => {
+        // Build the full route including slug
+        const routeParts = slug ? [slug, ...displayPaths.slice(0, index + 1)] : displayPaths.slice(0, index + 1);
+        const routeTo = `/${routeParts.join('/')}`;
+        const isLast = index === displayPaths.length - 1;
         const label = defaultLabels[name] || name;
 
-        // Skip UUIDs
-        if (name.match(/^[0-9a-f-]{36}$/i)) {
+        // Skip UUIDs and 'dashboard' (already shown as home)
+        if (name.match(/^[0-9a-f-]{36}$/i) || name === 'dashboard') {
           return null;
         }
 
