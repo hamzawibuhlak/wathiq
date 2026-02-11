@@ -3177,7 +3177,7 @@ model LegalRegulation {
   issuedDate    DateTime?
   effectiveDate DateTime?
   category      RegulationCategory
-  status        RegulationStatus    @default(ACTIVE)
+  status        RegulationStatus    @default(ACTIVE_REG)
   description   String?             @db.Text
   content       String              @db.Text
   contentText   String?             @db.Text
