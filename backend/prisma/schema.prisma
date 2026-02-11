@@ -1217,6 +1217,8 @@ enum CallStatus {
   NO_ANSWER
   CANCELED
   FAILED
+  ANSWERED
+  VOICEMAIL
 }
 
 model Call {
@@ -3145,17 +3147,4 @@ enum ContentStatus {
   SCHEDULED
   PUBLISHED
   CANCELLED
-}
-
-enum CallDirection {
-  INBOUND
-  OUTBOUND
-}
-
-enum CallStatus {
-  ANSWERED
-  NO_ANSWER
-  BUSY
-  FAILED
-  VOICEMAIL
 }
