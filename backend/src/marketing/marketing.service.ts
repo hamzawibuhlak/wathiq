@@ -27,7 +27,7 @@ export class MarketingService {
             this.prisma.lead.findMany({
                 where,
                 include: {
-                    assignee: { select: { id: true, name: true, avatarUrl: true } },
+                    assignee: { select: { id: true, name: true, avatar: true } },
                     campaign: { select: { id: true, name: true, type: true } },
                     affiliate: { select: { id: true, name: true, referralCode: true } },
                     activities: { orderBy: { createdAt: 'desc' }, take: 1 },
@@ -81,7 +81,7 @@ export class MarketingService {
         const lead = await this.prisma.lead.findUnique({
             where: { id },
             include: {
-                assignee: { select: { id: true, name: true, avatarUrl: true } },
+                assignee: { select: { id: true, name: true, avatar: true } },
                 campaign: { select: { id: true, name: true } },
                 affiliate: { select: { id: true, name: true, referralCode: true } },
                 activities: {
@@ -158,7 +158,7 @@ export class MarketingService {
         const lead = await this.prisma.lead.findUnique({ where: { id: leadId } });
         if (!lead) return;
         await this.prisma.client.create({
-            data: { name: lead.name, phone: lead.phone, email: lead.email, tenantId, createdBy: userId },
+            data: { name: lead.name, phone: lead.phone || '', email: lead.email, tenantId, createdBy: userId },
         });
         if (lead.affiliateId) {
             const affiliate = await this.prisma.affiliate.findUnique({ where: { id: lead.affiliateId } });
