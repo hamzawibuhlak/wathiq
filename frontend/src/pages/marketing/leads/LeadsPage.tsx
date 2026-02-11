@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Plus, LayoutGrid, List, Search, Phone, Mail, Star, Trash2, Eye } from 'lucide-react';
+import { Plus, LayoutGrid, List, Search, Phone, Trash2, Eye } from 'lucide-react';
 import { marketingApi } from '@/api/marketing';
 import toast from 'react-hot-toast';
 
@@ -63,7 +63,7 @@ export default function LeadsPage() {
         },
     });
 
-    const statusMutation = useMutation({
+    const _statusMutation = useMutation({
         mutationFn: ({ id, status }: { id: string; status: string }) =>
             marketingApi.updateLeadStatus(id, { status }),
         onSuccess: () => {

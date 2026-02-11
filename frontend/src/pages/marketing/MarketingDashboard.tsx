@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { marketingApi } from '@/api/marketing';
-import { Users, Target, DollarSign, Zap, TrendingUp, Phone, Star, Megaphone } from 'lucide-react';
+import { Users, Target, Zap, TrendingUp, Phone, Star, Megaphone } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const SOURCE_LABELS: Record<string, string> = {

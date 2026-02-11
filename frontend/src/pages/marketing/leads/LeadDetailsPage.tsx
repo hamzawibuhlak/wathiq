@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowRight, Phone, Mail, MessageSquare, FileText, Clock, User, Star, ChevronDown } from 'lucide-react';
+import { ArrowRight, Phone, Mail, MessageSquare, FileText, User, ChevronDown } from 'lucide-react';
 import { marketingApi } from '@/api/marketing';
 import toast from 'react-hot-toast';
 

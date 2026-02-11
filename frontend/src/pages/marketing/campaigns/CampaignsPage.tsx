@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Megaphone, Eye, DollarSign, MousePointerClick, Users } from 'lucide-react';
+import { Plus, Megaphone, Eye, MousePointerClick, Users } from 'lucide-react';
 import { marketingApi } from '@/api/marketing';
 import toast from 'react-hot-toast';
 
@@ -72,7 +72,7 @@ export default function CampaignsPage() {
                 {campaigns?.map((campaign: any) => {
                     const typeInfo = TYPE_LABELS[campaign.type] || { label: campaign.type, color: '#94a3b8' };
                     const statusInfo = STATUS_LABELS[campaign.status] || STATUS_LABELS.DRAFT;
-                    const roi = campaign.spent > 0 && campaign.conversions > 0
+                    const _roi = campaign.spent > 0 && campaign.conversions > 0
                         ? Math.round((campaign.conversions * 1000) / campaign.spent * 100) / 100 : 0;
                     return (
                         <div key={campaign.id} style={{
