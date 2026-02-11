@@ -158,7 +158,7 @@ export class MarketingService {
         const lead = await this.prisma.lead.findUnique({ where: { id: leadId } });
         if (!lead) return;
         await this.prisma.client.create({
-            data: { name: lead.name, phone: lead.phone || '', email: lead.email, tenantId, createdBy: userId },
+            data: { name: lead.name, phone: lead.phone || '', email: lead.email, tenantId },
         });
         if (lead.affiliateId) {
             const affiliate = await this.prisma.affiliate.findUnique({ where: { id: lead.affiliateId } });
