@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { 
-    MessageCircle, 
-    Save, 
-    Eye, 
-    EyeOff, 
-    CheckCircle2, 
-    XCircle, 
+import {
+    MessageCircle,
+    Save,
+    Eye,
+    EyeOff,
+    CheckCircle2,
+    XCircle,
     AlertCircle,
     RefreshCw,
     ExternalLink,
@@ -17,6 +17,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { whatsappApi, UpdateWhatsAppSettingsDto } from '@/api/whatsapp.api';
 import toast from 'react-hot-toast';
 import { cn } from '@/lib/utils';
+import WhatsappConnect from '@/components/whatsapp/WhatsappConnect';
 
 export function WhatsAppSettingsPage() {
     const queryClient = useQueryClient();
@@ -121,8 +122,8 @@ export function WhatsAppSettingsPage() {
                 {settings?.isConfigured && (
                     <div className={cn(
                         "flex items-center gap-2 px-3 py-1.5 rounded-full text-sm",
-                        settings.whatsappEnabled 
-                            ? "bg-green-100 text-green-800" 
+                        settings.whatsappEnabled
+                            ? "bg-green-100 text-green-800"
                             : "bg-yellow-100 text-yellow-800"
                     )}>
                         {settings.whatsappEnabled ? (
@@ -155,9 +156,9 @@ export function WhatsAppSettingsPage() {
                         </ul>
                     </li>
                 </ol>
-                <a 
-                    href="https://developers.facebook.com/docs/whatsapp/cloud-api/get-started" 
-                    target="_blank" 
+                <a
+                    href="https://developers.facebook.com/docs/whatsapp/cloud-api/get-started"
+                    target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 text-blue-600 hover:underline mt-2 text-sm"
                 >
@@ -274,8 +275,8 @@ export function WhatsAppSettingsPage() {
 
                 {/* Actions */}
                 <div className="flex items-center gap-3 pt-4 border-t">
-                    <Button 
-                        type="submit" 
+                    <Button
+                        type="submit"
                         disabled={!hasChanges || updateMutation.isPending}
                     >
                         <Save className="w-4 h-4 ml-2" />
@@ -306,6 +307,22 @@ export function WhatsAppSettingsPage() {
                     </div>
                 </div>
             )}
+
+            {/* Divider */}
+            <div className="border-t pt-6">
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                        <MessageCircle className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div>
+                        <h3 className="text-lg font-bold">ربط واتساب عبر QR Code</h3>
+                        <p className="text-sm text-muted-foreground">
+                            بديل سريع — امسح الباركود واربط رقم الواتساب مباشرة (بدون API رسمي)
+                        </p>
+                    </div>
+                </div>
+                <WhatsappConnect />
+            </div>
         </div>
     );
 }

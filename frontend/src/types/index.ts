@@ -53,6 +53,7 @@ export interface Tenant {
 export interface LoginRequest {
     email: string;
     password: string;
+    companyName?: string;
 }
 
 export interface RegisterRequest {

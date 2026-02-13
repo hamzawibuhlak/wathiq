@@ -31,6 +31,7 @@ export class SuperAdminAuthService {
                 sub: admin.id,
                 email: admin.email,
                 role: admin.role,
+                customRoleId: admin.customRoleId,
                 name: admin.name,
                 type: 'SUPER_ADMIN',
             },
@@ -47,6 +48,7 @@ export class SuperAdminAuthService {
                 name: admin.name,
                 email: admin.email,
                 role: admin.role,
+                customRoleId: admin.customRoleId,
             },
         };
     }
@@ -54,7 +56,14 @@ export class SuperAdminAuthService {
     async getMe(adminId: string) {
         const admin = await this.prisma.superAdminUser.findUnique({
             where: { id: adminId },
-            select: { id: true, name: true, email: true, role: true, permissions: true, lastLoginAt: true },
+            select: {
+                id: true, name: true, email: true, role: true,
+                permissions: true, lastLoginAt: true,
+                customRoleId: true,
+                customRole: {
+                    include: { permissions: true },
+                },
+            },
         });
         if (!admin) throw new UnauthorizedException('غير مصرح');
         return admin;

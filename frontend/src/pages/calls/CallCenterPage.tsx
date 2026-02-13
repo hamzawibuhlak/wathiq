@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import {
     Phone, PhoneCall, PhoneIncoming, PhoneOutgoing,
     Clock, Play, BarChart3, PhoneOff
@@ -19,6 +19,7 @@ import {
 import api from '@/api/client';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import toast from 'react-hot-toast';
 
 interface Call {
     id: string;
@@ -53,7 +54,6 @@ export default function CallCenterPage() {
     const [phoneNumber, setPhoneNumber] = useState('');
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [selectedPeriod, setSelectedPeriod] = useState<'day' | 'week' | 'month'>('week');
-    const queryClient = useQueryClient();
 
     // Fetch call history
     const { data: calls = [], isLoading: callsLoading } = useQuery<Call[]>({
@@ -73,29 +73,23 @@ export default function CallCenterPage() {
         },
     });
 
-    // Initiate call mutation
-    const initiateCallMutation = useMutation({
-        mutationFn: async (to: string) => {
-            const res = await api.post('/calls/initiate', { to });
-            return res.data;
-        },
-        onSuccess: () => {
-            alert('جاري إجراء المكالمة...');
-            setIsDialogOpen(false);
-            setPhoneNumber('');
-            queryClient.invalidateQueries({ queryKey: ['calls'] });
-        },
-        onError: (error: any) => {
-            alert(error.response?.data?.message || 'فشل في إجراء المكالمة');
-        },
-    });
+    // Initiate call via Softphone WebRTC (dispatch custom event)
+    const [isDialing, setIsDialing] = useState(false);
 
     const handleCall = () => {
         if (!phoneNumber.trim()) {
-            alert('أدخل رقم الهاتف');
+            toast.error('أدخل رقم الهاتف');
             return;
         }
-        initiateCallMutation.mutate(phoneNumber);
+        // Dispatch event to floating Softphone component
+        window.dispatchEvent(new CustomEvent('softphone:dial', {
+            detail: { number: phoneNumber.trim() },
+        }));
+        setIsDialing(true);
+        setIsDialogOpen(false);
+        setPhoneNumber('');
+        toast.success('جاري الاتصال عبر الهاتف...');
+        setTimeout(() => setIsDialing(false), 2000);
     };
 
     const formatDuration = (seconds: number | null) => {
@@ -159,10 +153,10 @@ export default function CallCenterPage() {
                             <Button
                                 onClick={handleCall}
                                 className="w-full gap-2"
-                                disabled={initiateCallMutation.isPending}
+                                disabled={isDialing}
                             >
                                 <Phone className="h-4 w-4" />
-                                {initiateCallMutation.isPending ? 'جاري الاتصال...' : 'اتصال'}
+                                {isDialing ? 'جاري الاتصال...' : 'اتصال'}
                             </Button>
                         </div>
                     </DialogContent>

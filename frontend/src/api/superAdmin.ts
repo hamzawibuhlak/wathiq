@@ -78,4 +78,16 @@ export const superAdminApi = {
 
     // Audit
     getAuditLogs: (params?: { page?: number; action?: string }) => get<any>('/super-admin/audit-logs', params),
+
+    // Roles — Phase 34
+    getRoles: () => get<any>('/super-admin/roles'),
+    getRoleDetails: (id: string) => get<any>(`/super-admin/roles/${id}`),
+    getRoleTemplates: () => get<any>('/super-admin/roles/templates'),
+    createRole: (data: any) => post<any>('/super-admin/roles', data),
+    updateRole: (id: string, data: any) => patch<any>(`/super-admin/roles/${id}`, data),
+    deleteRole: (id: string) => del<any>(`/super-admin/roles/${id}`),
+    cloneRole: (id: string, name: string) => post<any>(`/super-admin/roles/${id}/clone`, { name }),
+    assignCustomRole: (staffId: string, customRoleId: string) =>
+        patch<any>(`/super-admin/staff/${staffId}/assign-custom-role`, { customRoleId }),
+    getMyPermissions: () => get<any>('/super-admin/my-permissions'),
 };

@@ -10,7 +10,7 @@ export interface WebSocketMessage {
 
 export const connectWebSocket = () => {
     const token = useAuthStore.getState().token;
-    
+
     if (!token) {
         console.warn('No token available for WebSocket connection');
         return null;
@@ -61,6 +61,8 @@ export type WebSocketEventType =
     | 'hearing:update'
     | 'invoice:update'
     | 'whatsapp:message'
+    | 'whatsapp:qr'
+    | 'whatsapp:status'
     | 'document:upload'
     | 'client:update';
 
@@ -70,11 +72,11 @@ export const subscribeToEvent = (
 ) => {
     if (!socket) {
         console.warn('WebSocket not connected');
-        return () => {};
+        return () => { };
     }
 
     socket.on(event, callback);
-    
+
     return () => {
         socket?.off(event, callback);
     };

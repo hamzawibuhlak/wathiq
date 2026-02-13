@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Outlet } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
@@ -6,6 +6,8 @@ import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { useWebSocket } from '@/hooks/use-websocket';
 import toast from 'react-hot-toast';
+
+const Softphone = lazy(() => import('@/components/call-center/Softphone'));
 
 export function AppLayout() {
     const [isCollapsed, setIsCollapsed] = useState(false);
@@ -18,11 +20,11 @@ export function AppLayout() {
 
         const unsubscribeNotification = subscribe('notification', (data: unknown) => {
             const notification = data as { title?: string; message?: string; type?: string };
-            
+
             // Refresh notifications in React Query
             queryClient.invalidateQueries({ queryKey: ['notifications'] });
             queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
-            
+
             if (notification.title) {
                 if (notification.type === 'ERROR') {
                     toast.error(notification.title, { duration: 5000 });
@@ -84,6 +86,11 @@ export function AppLayout() {
                     <Outlet />
                 </div>
             </main>
+
+            {/* Softphone — floating WebRTC dialer (Phase 32) */}
+            <Suspense fallback={null}>
+                <Softphone />
+            </Suspense>
         </div>
     );
 }

@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ownerApi } from '@/api/owner.api';
-import { Users, Plus, Power, X } from 'lucide-react';
+import { tenantRolesApi, type TenantRole } from '@/api/tenantRoles';
+import { Users, Plus, Power, X, Shield } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const ROLE_LABELS: Record<string, { label: string; color: string }> = {
@@ -15,7 +16,13 @@ const ROLE_LABELS: Record<string, { label: string; color: string }> = {
 export default function UsersManagementPage() {
     const queryClient = useQueryClient();
     const [showInvite, setShowInvite] = useState(false);
-    const [inviteForm, setInviteForm] = useState({ name: '', email: '', role: 'LAWYER' });
+    const [inviteForm, setInviteForm] = useState({ name: '', email: '', role: 'LAWYER', tenantRoleId: '' });
+    const [tenantRoles, setTenantRoles] = useState<TenantRole[]>([]);
+
+    // Load tenant roles
+    useEffect(() => {
+        tenantRolesApi.getRoles().then(setTenantRoles).catch(() => { });
+    }, []);
 
     const { data: users = [], isLoading } = useQuery({
         queryKey: ['owner-users'],
@@ -28,7 +35,7 @@ export default function UsersManagementPage() {
             queryClient.invalidateQueries({ queryKey: ['owner-users'] });
             toast.success(`تم إنشاء الحساب بنجاح — كلمة المرور المؤقتة: ${result.tempPassword}`, { duration: 15000 });
             setShowInvite(false);
-            setInviteForm({ name: '', email: '', role: 'LAWYER' });
+            setInviteForm({ name: '', email: '', role: 'LAWYER', tenantRoleId: '' });
         },
         onError: (err: any) => toast.error(err?.response?.data?.message || 'فشل إنشاء الحساب'),
     });
@@ -50,13 +57,20 @@ export default function UsersManagementPage() {
         },
     });
 
+    // Get tenant role name for display
+    const getTenantRoleName = (tenantRoleId: string | null | undefined) => {
+        if (!tenantRoleId) return null;
+        const role = tenantRoles.find(r => r.id === tenantRoleId);
+        return role ? role.name : null;
+    };
+
     return (
         <div className="p-8">
             <div className="flex items-center justify-between mb-6">
                 <div>
                     <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                         <Users className="w-5 h-5 text-amber-600" />
-                        المستخدمون والصلاحيات
+                        المستخدمون
                     </h1>
                     <p className="text-sm text-gray-500 mt-1">إدارة حسابات الموظفين وصلاحياتهم</p>
                 </div>
@@ -77,6 +91,7 @@ export default function UsersManagementPage() {
                             <th className="text-right text-xs font-medium text-gray-500 px-6 py-3">الاسم</th>
                             <th className="text-right text-xs font-medium text-gray-500 px-6 py-3">البريد</th>
                             <th className="text-right text-xs font-medium text-gray-500 px-6 py-3">الدور</th>
+                            <th className="text-right text-xs font-medium text-gray-500 px-6 py-3">الصلاحيات</th>
                             <th className="text-right text-xs font-medium text-gray-500 px-6 py-3">الحالة</th>
                             <th className="text-right text-xs font-medium text-gray-500 px-6 py-3">آخر دخول</th>
                             <th className="text-center text-xs font-medium text-gray-500 px-6 py-3">إجراءات</th>
@@ -84,11 +99,12 @@ export default function UsersManagementPage() {
                     </thead>
                     <tbody>
                         {isLoading ? (
-                            <tr><td colSpan={6} className="text-center py-12 text-gray-400">جاري التحميل...</td></tr>
+                            <tr><td colSpan={7} className="text-center py-12 text-gray-400">جاري التحميل...</td></tr>
                         ) : users.length === 0 ? (
-                            <tr><td colSpan={6} className="text-center py-12 text-gray-400">لا يوجد مستخدمون</td></tr>
+                            <tr><td colSpan={7} className="text-center py-12 text-gray-400">لا يوجد مستخدمون</td></tr>
                         ) : users.map((user: any) => {
                             const roleInfo = ROLE_LABELS[user.role] || { label: user.role, color: 'bg-gray-100 text-gray-700' };
+                            const tenantRoleName = getTenantRoleName(user.tenantRoleId);
                             return (
                                 <tr key={user.id} className="border-b border-gray-50 hover:bg-gray-50/50">
                                     <td className="px-6 py-4">
@@ -119,6 +135,16 @@ export default function UsersManagementPage() {
                                                 <option value="SECRETARY">سكرتير</option>
                                                 <option value="ACCOUNTANT">محاسب</option>
                                             </select>
+                                        )}
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        {tenantRoleName ? (
+                                            <span className="text-xs px-2 py-1 rounded-full bg-indigo-100 text-indigo-700 flex items-center gap-1 w-fit">
+                                                <Shield className="w-3 h-3" />
+                                                {tenantRoleName}
+                                            </span>
+                                        ) : (
+                                            <span className="text-xs text-gray-400">—</span>
                                         )}
                                     </td>
                                     <td className="px-6 py-4">
@@ -180,7 +206,7 @@ export default function UsersManagementPage() {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">الدور</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">الدور الأساسي</label>
                                 <select
                                     value={inviteForm.role}
                                     onChange={(e) => setInviteForm({ ...inviteForm, role: e.target.value })}
@@ -192,6 +218,34 @@ export default function UsersManagementPage() {
                                     <option value="ACCOUNTANT">محاسب</option>
                                 </select>
                             </div>
+
+                            {/* Tenant Role Selection */}
+                            {tenantRoles.length > 0 && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        <span className="flex items-center gap-1">
+                                            <Shield className="w-3.5 h-3.5 text-indigo-500" />
+                                            الدور التفصيلي (الصلاحيات)
+                                        </span>
+                                    </label>
+                                    <select
+                                        value={inviteForm.tenantRoleId}
+                                        onChange={(e) => setInviteForm({ ...inviteForm, tenantRoleId: e.target.value })}
+                                        className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm"
+                                    >
+                                        <option value="">— بدون دور تفصيلي —</option>
+                                        {tenantRoles.map((tr) => (
+                                            <option key={tr.id} value={tr.id}>
+                                                {tr.name} {tr.nameEn ? `(${tr.nameEn})` : ''}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <p className="text-xs text-gray-400 mt-1">
+                                        يحدد الصلاحيات التفصيلية للمستخدم داخل النظام
+                                    </p>
+                                </div>
+                            )}
+
                             <button
                                 onClick={() => inviteMutation.mutate(inviteForm)}
                                 disabled={inviteMutation.isPending || !inviteForm.name || !inviteForm.email}

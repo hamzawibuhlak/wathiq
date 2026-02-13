@@ -378,4 +378,49 @@ ${formattedAmount} ر.س
             return { success: false, error: error.message };
         }
     }
+    /**
+     * Send password reset email
+     */
+    async sendPasswordReset(data: {
+        to: string;
+        resetToken: string;
+        tenantId?: string;
+    }): Promise<{ success: boolean; error?: string }> {
+        try {
+            const transporter = await this.getTransporter(data.tenantId);
+            const from = await this.getFromAddress(data.tenantId);
+
+            // In a real app, this would link to the frontend reset page
+            // For MVP/Demo, we might just send a temporary password or a link
+            // Assuming we have a reset page: /reset-password?token=...
+            // But user asked for "change password message comes from API email"
+            // Let's assume a link to frontend
+
+            const resetLink = `${this.configService.get('FRONTEND_URL', 'http://localhost:5173')}/reset-password?token=${data.resetToken}`;
+
+            const htmlContent = `
+            <div dir="rtl" style="font-family: Arial, sans-serif; text-align: right;">
+                <h2>إعادة تعيين كلمة المرور</h2>
+                <p>لقد طلبت إعادة تعيين كلمة المرور الخاصة بك.</p>
+                <p>اضغط على الرابط أدناه لتعيين كلمة مرور جديدة:</p>
+                <a href="${resetLink}" style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;">إعادة تعيين كلمة المرور</a>
+                <p>إذا لم تطلب هذا التغيير، يمكنك تجاهل هذه الرسالة.</p>
+            </div>
+            `;
+
+            const mailOptions = {
+                from,
+                to: data.to,
+                subject: 'إعادة تعيين كلمة المرور - وثيق',
+                html: htmlContent,
+            };
+
+            await transporter.sendMail(mailOptions);
+            this.logger.log(`Password reset email sent to ${data.to}`);
+            return { success: true };
+        } catch (error) {
+            this.logger.error('Failed to send password reset email:', error);
+            return { success: false, error: error.message };
+        }
+    }
 }

@@ -54,6 +54,14 @@ export class AuthController {
         return this.authService.login(loginDto);
     }
 
+    @Post('forgot-password')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'طلب إعادة تعيين كلمة المرور' })
+    @ApiResponse({ status: 200, description: 'تم إرسال الرابط' })
+    async forgotPassword(@Body('email') email: string) {
+        return this.authService.forgotPassword(email);
+    }
+
     @Get('me')
     @UseGuards(JwtAuthGuard)
     @ApiBearerAuth('JWT-auth')

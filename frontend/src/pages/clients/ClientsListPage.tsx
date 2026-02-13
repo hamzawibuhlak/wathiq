@@ -108,7 +108,7 @@ export function ClientsListPage() {
                         <FileDown className="w-4 h-4 ml-2" />
                         {isExporting ? 'جاري التصدير...' : 'تصدير Excel'}
                     </Button>
-                    <Link to="/clients/new">
+                    <Link to="new">
                         <Button>
                             <Plus className="w-4 h-4 ml-2" />
                             عميل جديد

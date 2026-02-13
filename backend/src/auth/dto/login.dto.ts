@@ -20,6 +20,15 @@ export class LoginDto {
     @MaxLength(50, { message: 'كلمة المرور طويلة جداً' })
     password: string;
 
+    @ApiProperty({
+        example: 'Acme Corp',
+        description: 'اسم الشركة (اختياري)',
+        required: false
+    })
+    @IsOptional()
+    @IsString()
+    companyName?: string;
+
     @ApiPropertyOptional({
         example: '123456',
         description: 'رمز المصادقة الثنائية (إذا كانت مفعلة)',

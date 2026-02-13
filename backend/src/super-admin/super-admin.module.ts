@@ -4,8 +4,11 @@ import { SuperAdminService } from './super-admin.service';
 import { SuperAdminAuthService } from './super-admin-auth.service';
 import { StaffService } from './staff.service';
 import { SuperAdminChatService } from './chat.service';
+import { CustomRolesService } from './roles.service';
+import { PermissionService } from './permission.service';
 import { SuperAdminAuthController, SuperAdminDashboardController } from './super-admin.controller';
 import { SuperAdminDashboardGuard } from './guards/super-admin-dashboard.guard';
+import { PermissionGuard } from './guards/permission.guard';
 import { PrismaModule } from '../common/prisma/prisma.module';
 
 @Module({
@@ -21,7 +24,10 @@ import { PrismaModule } from '../common/prisma/prisma.module';
         SuperAdminAuthService,
         StaffService,
         SuperAdminChatService,
+        CustomRolesService,
+        PermissionService,
         SuperAdminDashboardGuard,
+        PermissionGuard,
     ],
     controllers: [
         SuperAdminAuthController,

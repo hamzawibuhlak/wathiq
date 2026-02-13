@@ -52,8 +52,8 @@ COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nodejs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nodejs:nodejs /app/package*.json ./
 
-# Create uploads directory
-RUN mkdir -p /app/uploads && chown -R nodejs:nodejs /app/uploads
+# Create uploads and whatsapp-sessions directories
+RUN mkdir -p /app/uploads /app/whatsapp-sessions && chown -R nodejs:nodejs /app/uploads /app/whatsapp-sessions
 
 # Set environment variables
 ENV NODE_ENV=production

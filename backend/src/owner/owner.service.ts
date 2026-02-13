@@ -51,6 +51,7 @@ export class OwnerService {
                 title: true,
                 createdAt: true,
                 lastLoginAt: true,
+                tenantRoleId: true,
             },
             orderBy: { createdAt: 'asc' },
         });
@@ -63,6 +64,7 @@ export class OwnerService {
             name: string;
             email: string;
             role: 'ADMIN' | 'LAWYER' | 'SECRETARY' | 'ACCOUNTANT';
+            tenantRoleId?: string;
         },
     ) {
         if ((data.role as string) === 'OWNER') {
@@ -88,6 +90,7 @@ export class OwnerService {
                 role: data.role as any,
                 tenantId,
                 createdById: ownerId,
+                ...(data.tenantRoleId && { tenantRoleId: data.tenantRoleId }),
             },
             select: {
                 id: true,
@@ -95,6 +98,7 @@ export class OwnerService {
                 email: true,
                 role: true,
                 isActive: true,
+                tenantRoleId: true,
             },
         });
 

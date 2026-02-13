@@ -25,7 +25,7 @@ export function useWebSocket() {
     useEffect(() => {
         if (isAuthenticated) {
             const socket = connectWebSocket();
-            
+
             if (socket) {
                 socket.on('connect', () => setIsConnected(true));
                 socket.on('disconnect', () => setIsConnected(false));
@@ -55,11 +55,11 @@ export function useWebSocketNotifications() {
     useEffect(() => {
         const unsubscribe = subscribe('notification', (data: unknown) => {
             const notification = data as NotificationData;
-            
+
             // Invalidate queries to refresh the notification badge and list
             queryClient.invalidateQueries({ queryKey: ['notifications'] });
             queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] });
-            
+
             // Show toast notification based on type
             if (notification.title) {
                 switch (notification.type) {
@@ -67,7 +67,7 @@ export function useWebSocketNotifications() {
                         toast.error(notification.title, { duration: 5000 });
                         break;
                     case 'WARNING':
-                        toast(notification.title, { 
+                        toast(notification.title, {
                             icon: '⚠️',
                             duration: 5000,
                         });
@@ -122,4 +122,22 @@ export function useWhatsAppMessages(onMessage: (data: unknown) => void) {
     useEffect(() => {
         return subscribe('whatsapp:message', onMessage);
     }, [subscribe, onMessage]);
+}
+
+// Hook for WhatsApp QR code (Phase 32)
+export function useWhatsAppQR(onQR: (data: { qr: string }) => void) {
+    const { subscribe } = useWebSocket();
+
+    useEffect(() => {
+        return subscribe('whatsapp:qr', (data: unknown) => onQR(data as { qr: string }));
+    }, [subscribe, onQR]);
+}
+
+// Hook for WhatsApp connection status (Phase 32)
+export function useWhatsAppStatus(onStatus: (data: { status: string; phone?: string }) => void) {
+    const { subscribe } = useWebSocket();
+
+    useEffect(() => {
+        return subscribe('whatsapp:status', (data: unknown) => onStatus(data as { status: string; phone?: string }));
+    }, [subscribe, onStatus]);
 }

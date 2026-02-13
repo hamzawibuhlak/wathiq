@@ -164,6 +164,7 @@ const navGroups: NavGroup[] = [
         items: [
             { path: 'settings/profile', icon: User, label: 'الملف الشخصي' },
             { path: 'settings/notifications', icon: Bell, label: 'الإشعارات' },
+            { path: 'settings/call-center', icon: Phone, label: 'السنترال', roles: ['OWNER', 'ADMIN'] },
         ],
     },
 ];

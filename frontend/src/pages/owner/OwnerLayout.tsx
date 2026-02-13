@@ -2,12 +2,8 @@ import { useState } from 'react';
 import { Link, Outlet, useLocation, useParams } from 'react-router-dom';
 import {
     Building2, Users, Link2, GitBranch, CreditCard,
-    LayoutDashboard, Headset, Ticket, Shield, ArrowLeft,
-    Scale, ChevronDown, Briefcase, Calendar, FileText, History,
-    CheckSquare, Receipt, PhoneCall, Megaphone, PieChart,
-    Target, Phone, Handshake, TrendingUp, Send, CalendarDays,
-    BarChart3, Download, UsersRound, Clock, Palmtree, Banknote,
-    Wallet, Calculator, Settings, Mail,
+    LayoutDashboard, Headset, Ticket, Scale, ArrowLeft,
+    ChevronDown, Settings, Mail, Shield,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth.store';
 
@@ -25,97 +21,49 @@ interface NavGroup {
     items: NavItem[];
 }
 
-const navGroups: NavGroup[] = [
-    {
-        id: 'work',
-        title: 'إدارة العمل',
-        icon: Briefcase,
-        items: [
-            { href: '/clients', label: 'العملاء', icon: Users },
-            { href: '/cases', label: 'القضايا', icon: Briefcase },
-            { href: '/hearings', label: 'الجلسات', icon: Calendar },
-            { href: '/documents', label: 'المستندات', icon: FileText },
-            { href: '/tasks', label: 'المهام', icon: CheckSquare },
-            { href: '/invoices', label: 'الفواتير', icon: Receipt },
-            { href: '/calls', label: 'سجل المكالمات', icon: PhoneCall },
-            { href: '/activity-logs', label: 'التايم لاين', icon: History },
-        ],
-    },
-    {
-        id: 'marketing',
-        title: 'التسويق',
-        icon: Megaphone,
-        items: [
-            { href: '/marketing', label: 'لوحة التحكم', icon: PieChart, exact: true },
-            { href: '/marketing/leads', label: 'العملاء المحتملون', icon: Target },
-            { href: '/marketing/telemarketing', label: 'التسويق عبر الهاتف', icon: Phone },
-            { href: '/marketing/affiliate', label: 'التسويق بالعمولة', icon: Handshake },
-            { href: '/marketing/campaigns', label: 'الحملات التسويقية', icon: Megaphone },
-            { href: '/marketing/ads-analytics', label: 'نتائج الإعلانات', icon: TrendingUp },
-            { href: '/marketing/messages', label: 'الرسائل الجماعية', icon: Send },
-            { href: '/marketing/calendar', label: 'تقويم المحتوى', icon: CalendarDays },
-        ],
-    },
-    {
-        id: 'analytics',
-        title: 'التحليلات',
-        icon: BarChart3,
-        items: [
-            { href: '/analytics', label: 'التقارير والإحصائيات', icon: BarChart3, exact: true },
-            { href: '/analytics/performance', label: 'تقرير الأداء', icon: Target },
-            { href: '/reports', label: 'تصدير البيانات', icon: Download },
-        ],
-    },
-    {
-        id: 'hr',
-        title: 'الموارد البشرية',
-        icon: UsersRound,
-        items: [
-            { href: '/hr/employees', label: 'الموظفون', icon: Users },
-            { href: '/hr/attendance', label: 'الحضور والانصراف', icon: Clock },
-            { href: '/hr/leaves', label: 'الإجازات', icon: Palmtree },
-            { href: '/hr/payroll', label: 'الرواتب', icon: Banknote },
-        ],
-    },
-    {
-        id: 'finance',
-        title: 'المالية',
-        icon: Wallet,
-        items: [
-            { href: '/invoices', label: 'الفواتير', icon: Receipt },
-            { href: '/accounting/expenses', label: 'المصروفات', icon: CreditCard },
-            { href: '/accounting', label: 'المحاسبة', icon: Calculator, exact: true },
-        ],
-    },
-    {
-        id: 'settings',
-        title: 'الإعدادات',
-        icon: Settings,
-        items: [
-            { href: '/owner/company', label: 'ملف الشركة', icon: Building2 },
-            { href: '/owner/users', label: 'الصلاحيات', icon: Shield },
-            { href: '/owner/users', label: 'المستخدمون', icon: Users },
-            { href: '/owner/integrations', label: 'قوائم الربط', icon: Link2 },
-            { href: '/owner/workflows', label: 'سير العمل', icon: GitBranch },
-            { href: '/owner/billing', label: 'الاشتراكات والفوترة', icon: CreditCard },
-        ],
-    },
-    {
-        id: 'support',
-        title: 'الدعم الفني',
-        icon: Headset,
-        items: [
-            { href: '/owner/support', label: 'التواصل مع الدعم', icon: Headset },
-            { href: '/owner/tickets', label: 'التذاكر', icon: Ticket },
-            { href: '/owner/support/email', label: 'إرسال بريد إلكتروني', icon: Mail },
-        ],
-    },
-];
+function getNavGroups(slug: string): NavGroup[] {
+    const s = `/${slug}`;
+    return [
+        {
+            id: 'overview',
+            title: 'نظرة عامة',
+            icon: LayoutDashboard,
+            items: [
+                { href: `${s}/owner`, label: 'لوحة المالك', icon: LayoutDashboard, exact: true },
+            ],
+        },
+        {
+            id: 'settings',
+            title: 'الإعدادات',
+            icon: Settings,
+            items: [
+                { href: `${s}/owner/company`, label: 'ملف الشركة', icon: Building2 },
+                { href: `${s}/owner/users`, label: 'المستخدمون', icon: Users },
+                { href: `${s}/owner/roles`, label: 'الأدوار والصلاحيات', icon: Shield },
+                { href: `${s}/owner/integrations`, label: 'الربط والتكاملات', icon: Link2 },
+                { href: `${s}/owner/workflows`, label: 'سير العمل', icon: GitBranch },
+                { href: `${s}/owner/billing`, label: 'الاشتراكات والفوترة', icon: CreditCard },
+            ],
+        },
+        {
+            id: 'support',
+            title: 'الدعم الفني',
+            icon: Headset,
+            items: [
+                { href: `${s}/owner/support`, label: 'التواصل مع الدعم', icon: Headset },
+                { href: `${s}/owner/tickets`, label: 'التذاكر', icon: Ticket },
+                { href: `${s}/owner/support/email`, label: 'إرسال بريد إلكتروني', icon: Mail },
+            ],
+        },
+    ];
+}
 
 export default function OwnerLayout() {
     const location = useLocation();
     const { slug } = useParams<{ slug: string }>();
     const user = useAuthStore((s) => s.user);
+
+    const navGroups = getNavGroups(slug || '');
 
     // Auto-expand the group containing the active path
     const getInitialExpanded = (): Set<string> => {
@@ -169,19 +117,6 @@ export default function OwnerLayout() {
 
                 {/* Navigation */}
                 <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-                    {/* Overview (standalone) */}
-                    <Link
-                        to="/owner"
-                        className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${location.pathname === '/owner'
-                            ? 'bg-primary/10 text-primary font-medium'
-                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                            }`}
-                    >
-                        <LayoutDashboard className={`w-[18px] h-[18px] ${location.pathname === '/owner' ? 'text-primary' : 'text-gray-400'}`} />
-                        نظرة عامة
-                    </Link>
-
-                    <div className="my-2 border-b border-gray-100" />
 
                     {/* Collapsible Groups */}
                     {navGroups.map((group) => {

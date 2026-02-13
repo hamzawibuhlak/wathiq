@@ -133,6 +133,16 @@ export const whatsappApi = {
 
     testConnection: () =>
         api.post<TestConnectionResult>('/whatsapp/test-connection').then((res) => res.data),
+
+    // QR Code (Baileys)
+    qrConnect: () =>
+        api.post<any>('/whatsapp/qr/connect').then((res) => res.data),
+
+    qrDisconnect: () =>
+        api.post<any>('/whatsapp/qr/disconnect').then((res) => res.data),
+
+    getQrStatus: () =>
+        api.get<any>('/whatsapp/qr/status').then((res) => res.data),
 };
 
 export default whatsappApi;

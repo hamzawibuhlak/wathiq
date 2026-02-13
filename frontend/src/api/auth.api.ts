@@ -20,6 +20,9 @@ export const authApi = {
 
     logout: () =>
         api.post('/auth/logout').then((res) => res.data),
+
+    forgotPassword: (email: string) =>
+        api.post('/auth/forgot-password', { email }).then((res) => res.data),
 };
 
 export default authApi;

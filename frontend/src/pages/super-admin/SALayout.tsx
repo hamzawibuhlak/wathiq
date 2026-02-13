@@ -7,6 +7,7 @@ const navItems = [
     { label: 'المكاتب', href: '/super-admin/tenants', icon: '🏢' },
     { label: 'الدردشة', href: '/super-admin/chat', icon: '💬' },
     { label: 'الموظفون', href: '/super-admin/staff', icon: '👥' },
+    { label: 'الصلاحيات', href: '/super-admin/roles', icon: '🔐' },
     { label: 'سجل العمليات', href: '/super-admin/audit', icon: '📋' },
 ];
 

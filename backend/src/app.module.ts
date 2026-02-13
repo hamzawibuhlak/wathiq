@@ -52,6 +52,8 @@ import { OwnerModule } from './owner/owner.module';
 import { LegalDocumentsModule } from './legal-documents/legal-documents.module';
 import { MarketingModule } from './marketing/marketing.module';
 import { LegalLibraryModule } from './legal-library/legal-library.module';
+import { CallCenterModule } from './call-center/call-center.module';
+import { TenantRolesModule } from './tenant-roles/tenant-roles.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -140,6 +142,12 @@ import { AppController } from './app.controller';
 
         // Phase 30: Legal Library
         LegalLibraryModule,
+
+        // Phase 32: Call Center & WhatsApp QR
+        CallCenterModule,
+
+        // Phase 35: Tenant RBAC
+        TenantRolesModule,
     ],
     controllers: [AppController],
     providers: [

@@ -16,21 +16,20 @@ import { JwtService } from '@nestjs/jwt';
   namespace: '/ws',
 })
 export class WebSocketGatewayService
-  implements OnGatewayConnection, OnGatewayDisconnect
-{
+  implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
   private readonly logger = new Logger(WebSocketGatewayService.name);
   private userSockets = new Map<string, Set<string>>(); // userId -> Set of socketIds
 
-  constructor(private jwtService: JwtService) {}
+  constructor(private jwtService: JwtService) { }
 
   async handleConnection(client: Socket) {
     try {
-      const token = client.handshake.auth.token || 
-                    client.handshake.headers.authorization?.replace('Bearer ', '');
-      
+      const token = client.handshake.auth.token ||
+        client.handshake.headers.authorization?.replace('Bearer ', '');
+
       if (!token) {
         this.logger.warn(`Client ${client.id} connected without token`);
         // Allow connection but don't join rooms
@@ -40,7 +39,7 @@ export class WebSocketGatewayService
       const payload = this.jwtService.verify(token, {
         secret: process.env.JWT_SECRET || 'your-secret-key',
       });
-      
+
       const userId = payload.userId || payload.clientId;
       const tenantId = payload.tenantId;
 
@@ -167,4 +166,25 @@ export class WebSocketGatewayService
     this.server?.to(`user:${clientId}`).emit('client:update', data);
     this.logger.debug(`Broadcast client update to client ${clientId}`);
   }
+
+  // =====================================================
+  // Phase 32: WhatsApp QR (Baileys)
+  // =====================================================
+
+  /**
+   * Broadcast WhatsApp QR code to tenant admins
+   */
+  broadcastWhatsAppQR(tenantId: string, qrDataUrl: string) {
+    this.server?.to(`tenant:${tenantId}`).emit('whatsapp:qr', { qr: qrDataUrl });
+    this.logger.debug(`Broadcast WhatsApp QR to tenant ${tenantId}`);
+  }
+
+  /**
+   * Broadcast WhatsApp connection status to tenant admins
+   */
+  broadcastWhatsAppStatus(tenantId: string, status: string, phone?: string) {
+    this.server?.to(`tenant:${tenantId}`).emit('whatsapp:status', { status, phone });
+    this.logger.debug(`Broadcast WhatsApp status '${status}' to tenant ${tenantId}`);
+  }
 }
+

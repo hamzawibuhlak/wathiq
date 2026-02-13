@@ -1,13 +1,15 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Building2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import { Button, Input, Label } from '@/components/ui';
 import { useLogin } from '@/hooks/use-auth';
 
 // Validation schema
 const loginSchema = z.object({
+    companyName: z.string().optional(),
     email: z
         .string()
         .min(1, 'البريد الإلكتروني مطلوب')
@@ -38,6 +40,21 @@ export function LoginPage() {
 
     return (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            {/* Company Name */}
+            <div className="space-y-2">
+                <Label htmlFor="companyName">اسم الشركة (اختياري)</Label>
+                <div className="relative">
+                    <Building2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        id="companyName"
+                        type="text"
+                        placeholder="شركة المثال"
+                        className="pr-10"
+                        {...register('companyName')}
+                    />
+                </div>
+            </div>
+
             {/* Email */}
             <div className="space-y-2">
                 <Label htmlFor="email">البريد الإلكتروني</Label>
@@ -56,7 +73,15 @@ export function LoginPage() {
 
             {/* Password */}
             <div className="space-y-2">
-                <Label htmlFor="password">كلمة المرور</Label>
+                <div className="flex items-center justify-between">
+                    <Label htmlFor="password">كلمة المرور</Label>
+                    <Link
+                        to="/forgot-password"
+                        className="text-sm text-primary hover:underline"
+                    >
+                        نسيت كلمة المرور؟
+                    </Link>
+                </div>
                 <div className="relative">
                     <Lock className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input

@@ -18,14 +18,18 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { WhatsAppService } from './whatsapp.service';
+import { WhatsappBaileysService } from './whatsapp-baileys.service';
 
 @ApiTags('WhatsApp')
 @Controller('whatsapp')
 export class WhatsAppController {
-  constructor(private readonly whatsAppService: WhatsAppService) {}
+  constructor(
+    private readonly whatsAppService: WhatsAppService,
+    private readonly baileysService: WhatsappBaileysService,
+  ) { }
 
   // =====================================================
-  // SETTINGS
+  // SETTINGS (Cloud API)
   // =====================================================
 
   @Get('settings')
@@ -69,7 +73,7 @@ export class WhatsAppController {
   }
 
   // =====================================================
-  // MESSAGING
+  // MESSAGING (Cloud API)
   // =====================================================
 
   @Post('send')
@@ -89,7 +93,6 @@ export class WhatsAppController {
     },
     @CurrentUser() user: any,
   ) {
-    // Support both field names: to/phone and message/body
     const phoneNumber = body.to || body.phone;
     const messageText = body.body || body.message;
 
@@ -203,5 +206,69 @@ export class WhatsAppController {
     }
 
     return 'Forbidden';
+  }
+
+  // =====================================================
+  // BAILEYS QR — Phase 32
+  // =====================================================
+
+  @Post('qr/connect')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('OWNER', 'ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'بدء جلسة واتساب عبر QR (Baileys)' })
+  async qrConnect(@CurrentUser() user: any) {
+    return this.baileysService.initSession(user.tenantId);
+  }
+
+  @Post('qr/disconnect')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('OWNER', 'ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'قطع اتصال واتساب QR' })
+  async qrDisconnect(@CurrentUser() user: any) {
+    return this.baileysService.disconnect(user.tenantId);
+  }
+
+  @Get('qr/status')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'حالة جلسة واتساب QR' })
+  async qrStatus(@CurrentUser() user: any) {
+    const status = await this.baileysService.getSessionStatus(user.tenantId);
+    return { data: status };
+  }
+
+  @Post('qr/send')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'إرسال رسالة عبر واتساب QR' })
+  async qrSend(
+    @Body() body: { phone: string; message: string },
+    @CurrentUser() user: any,
+  ) {
+    return this.baileysService.sendMessage(
+      user.tenantId,
+      body.phone,
+      body.message,
+      user.id,
+    );
+  }
+
+  @Get('qr/messages')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'سجل رسائل واتساب QR' })
+  async qrMessages(
+    @Query('phone') phone: string,
+    @Query('clientId') clientId: string,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @CurrentUser() user: any,
+  ) {
+    return this.baileysService.getMessages(user.tenantId, {
+      phone,
+      clientId,
+      page,
+    });
   }
 }

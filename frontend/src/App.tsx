@@ -19,6 +19,7 @@ const PageLoader = () => (
 // Lazy Load Pages for better bundle size
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'));
 const RegisterPage = lazy(() => import('@/pages/auth/RegisterPage'));
+const ForgotPasswordPage = lazy(() => import('@/pages/auth/ForgotPasswordPage'));
 const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
 
 // Cases
@@ -58,6 +59,11 @@ const WhatsAppSettingsPage = lazy(() => import('@/pages/settings/WhatsAppSetting
 const EmailSettingsPage = lazy(() => import('@/pages/settings/EmailSettingsPage'));
 const TwoFactorPage = lazy(() => import('@/pages/settings/TwoFactorPage'));
 const ImportPage = lazy(() => import('@/pages/settings/ImportPage'));
+const CallCenterSettingsPage = lazy(() => import('@/pages/settings/CallCenterSettingsPage'));
+
+// Tenant Roles (Phase 35)
+const TenantRolesListPage = lazy(() => import('@/pages/settings/TenantRolesListPage'));
+const TenantRoleEditorPage = lazy(() => import('@/pages/settings/TenantRoleEditorPage'));
 
 // Activity Logs
 const ActivityLogsPage = lazy(() => import('@/pages/activity-logs/ActivityLogsPage'));
@@ -124,6 +130,7 @@ const OwnerBillingPage = lazy(() => import('@/pages/owner/BillingPage'));
 
 // Call Center
 const CallCenterPage = lazy(() => import('@/pages/calls/CallCenterPage'));
+const CallCenterSetupPage = lazy(() => import('@/pages/calls/CallCenterSetupPage'));
 
 // Accounting
 const AccountingDashboardPage = lazy(() => import('@/pages/accounting/AccountingDashboardPage'));
@@ -147,6 +154,8 @@ const SATenantDetailsPage = lazy(() => import('@/pages/super-admin/SATenantDetai
 const SAChatPage = lazy(() => import('@/pages/super-admin/SAChatPage'));
 const SAStaffPage = lazy(() => import('@/pages/super-admin/SAStaffPage'));
 const SAAuditLogPage = lazy(() => import('@/pages/super-admin/SAAuditLogPage'));
+const RolesListPage = lazy(() => import('@/pages/super-admin/roles/RolesListPage'));
+const RoleEditorPage = lazy(() => import('@/pages/super-admin/roles/RoleEditorPage'));
 
 // Accept Invitation (Public)
 const AcceptInvitationPage = lazy(() => import('@/pages/invitations/AcceptInvitationPage'));
@@ -227,6 +236,20 @@ function App() {
                     >
                         <Route path="/login" element={<LoginPage />} />
                         <Route path="/register" element={<RegisterPage />} />
+                        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                    </Route>
+
+                    {/* Super Admin — Phase 33 (must be before /:slug) */}
+                    <Route path="/super-admin/login" element={<SuperAdminLoginPage />} />
+                    <Route path="/super-admin" element={<SALayout />}>
+                        <Route index element={<SAOverviewPage />} />
+                        <Route path="tenants" element={<SATenantsPage />} />
+                        <Route path="tenants/:id" element={<SATenantDetailsPage />} />
+                        <Route path="chat" element={<SAChatPage />} />
+                        <Route path="staff" element={<SAStaffPage />} />
+                        <Route path="roles" element={<RolesListPage />} />
+                        <Route path="roles/:id" element={<RoleEditorPage />} />
+                        <Route path="audit" element={<SAAuditLogPage />} />
                     </Route>
 
                     {/* ═══════════════════════════════════════════
@@ -257,6 +280,7 @@ function App() {
 
                         {/* Clients */}
                         <Route path="clients" element={<ClientsListPage />} />
+                        <Route path="customers" element={<Navigate to="clients" replace />} />
                         <Route path="clients/new" element={<CreateClientPage />} />
                         <Route path="clients/:id" element={<ClientDetailsPage />} />
                         <Route path="clients/:id/edit" element={<EditClientPage />} />
@@ -281,6 +305,9 @@ function App() {
                             <Route path="notifications" element={<NotificationsPage />} />
                             <Route path="security" element={<TwoFactorPage />} />
                             <Route path="import" element={<ImportPage />} />
+                            <Route path="call-center" element={<CallCenterSettingsPage />} />
+                            <Route path="roles" element={<TenantRolesListPage />} />
+                            <Route path="roles/:id" element={<TenantRoleEditorPage />} />
                         </Route>
 
                         {/* Activity Logs */}
@@ -332,6 +359,7 @@ function App() {
 
                         {/* Call Center */}
                         <Route path="calls" element={<CallCenterPage />} />
+                        <Route path="calls/setup" element={<CallCenterSetupPage />} />
 
                         {/* Accounting */}
                         <Route path="accounting" element={<AccountingDashboardPage />} />
@@ -355,15 +383,25 @@ function App() {
                         <Route path="legal-library/glossary" element={<GlossaryPage />} />
                         <Route path="legal-library/bookmarks" element={<BookmarksPage />} />
 
-                        {/* Owner Panel (Phase 27) — nested under slug */}
-                        <Route path="owner" element={<OwnerLayout />}>
-                            <Route index element={<OwnerDashboard />} />
-                            <Route path="company" element={<OwnerCompanyPage />} />
-                            <Route path="users" element={<OwnerUsersPage />} />
-                            <Route path="integrations" element={<OwnerIntegrationsPage />} />
-                            <Route path="workflows" element={<OwnerWorkflowsPage />} />
-                            <Route path="billing" element={<OwnerBillingPage />} />
-                        </Route>
+                    </Route>
+
+                    {/* Owner Panel (Phase 27) — standalone layout, outside AppLayout */}
+                    <Route
+                        path="/:slug/owner"
+                        element={
+                            <ProtectedRoute>
+                                <OwnerLayout />
+                            </ProtectedRoute>
+                        }
+                    >
+                        <Route index element={<OwnerDashboard />} />
+                        <Route path="company" element={<OwnerCompanyPage />} />
+                        <Route path="users" element={<OwnerUsersPage />} />
+                        <Route path="roles" element={<TenantRolesListPage />} />
+                        <Route path="roles/:id" element={<TenantRoleEditorPage />} />
+                        <Route path="integrations" element={<OwnerIntegrationsPage />} />
+                        <Route path="workflows" element={<OwnerWorkflowsPage />} />
+                        <Route path="billing" element={<OwnerBillingPage />} />
                     </Route>
 
                     {/* Legacy redirects — backward compat */}
@@ -384,16 +422,7 @@ function App() {
                         <Route path="hearings" element={<PortalHearingsPage />} />
                     </Route>
 
-                    {/* Super Admin — Phase 33 */}
-                    <Route path="/super-admin/login" element={<SuperAdminLoginPage />} />
-                    <Route path="/super-admin" element={<SALayout />}>
-                        <Route index element={<SAOverviewPage />} />
-                        <Route path="tenants" element={<SATenantsPage />} />
-                        <Route path="tenants/:id" element={<SATenantDetailsPage />} />
-                        <Route path="chat" element={<SAChatPage />} />
-                        <Route path="staff" element={<SAStaffPage />} />
-                        <Route path="audit" element={<SAAuditLogPage />} />
-                    </Route>
+
 
                     <Route path="*" element={<NotFoundPage />} />
                 </Routes>
