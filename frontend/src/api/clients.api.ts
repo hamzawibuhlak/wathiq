@@ -1,5 +1,5 @@
 import api from './client';
-import type { Client, PaginatedResponse, ApiResponse } from '@/types';
+import type { Client, PaginatedResponse, ApiResponse, CreateClientRequest } from '@/types';
 
 export interface ClientsFilters {
     search?: string;
@@ -15,10 +15,10 @@ export const clientsApi = {
     getById: (id: string) =>
         api.get<ApiResponse<Client>>(`/clients/${id}`).then((res) => res.data),
 
-    create: (data: Partial<Client>) =>
+    create: (data: CreateClientRequest) =>
         api.post<ApiResponse<Client>>('/clients', data).then((res) => res.data),
 
-    update: (id: string, data: Partial<Client>) =>
+    update: (id: string, data: Partial<CreateClientRequest>) =>
         api.patch<ApiResponse<Client>>(`/clients/${id}`, data).then((res) => res.data),
 
     delete: (id: string) =>

@@ -56,4 +56,56 @@ export class CreateClientDto {
     @IsArray()
     @IsUUID('4', { each: true })
     visibleToUserIds?: string[];
+
+    // Enhanced Company Info
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsString()
+    brandName?: string;
+
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsString()
+    unifiedNumber?: string;
+
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsString()
+    commercialRegDoc?: string;
+
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsString()
+    nationalAddressDoc?: string;
+
+    // Representative Info
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsString()
+    repName?: string;
+
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsString()
+    repPhone?: string;
+
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsString()
+    repEmail?: string;
+
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsString()
+    repIdentity?: string;
+
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsString()
+    repDocType?: string;
+
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsString()
+    repDoc?: string;
 }

@@ -89,6 +89,16 @@ export interface Client {
     nationalId: string | null;
     companyName: string | null;
     commercialReg: string | null;
+    commercialRegDoc: string | null;
+    nationalAddressDoc: string | null;
+    brandName: string | null;
+    unifiedNumber: string | null;
+    repName: string | null;
+    repPhone: string | null;
+    repEmail: string | null;
+    repIdentity: string | null;
+    repDocType: string | null;
+    repDoc: string | null;
     address: string | null;
     city: string | null;
     notes: string | null;
@@ -112,6 +122,17 @@ export interface CreateClientRequest {
     city?: string;
     notes?: string;
     visibleToUserIds?: string[];
+    // Enhanced fields
+    brandName?: string;
+    unifiedNumber?: string;
+    commercialRegDoc?: string;
+    nationalAddressDoc?: string;
+    repName?: string;
+    repPhone?: string;
+    repEmail?: string;
+    repIdentity?: string;
+    repDocType?: string;
+    repDoc?: string;
 }
 
 // =====================

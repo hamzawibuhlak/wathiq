@@ -447,6 +447,20 @@ model Client {
   notes         String?
   isActive      Boolean @default(true)
 
+  // Enhanced Company Info (Phase 34)
+  brandName        String?   // العلامة التجارية
+  unifiedNumber    String?   // الرقم الموحد
+  commercialRegDoc String?   // مستند السجل التجاري
+  nationalAddressDoc String? // مستند العنوان الوطني
+
+  // Representative Info
+  repName      String? // اسم الممثل
+  repPhone     String? // رقم الممثل
+  repEmail     String? // إيميل الممثل
+  repIdentity  String? // هوية الممثل (National ID)
+  repDocType   String? // نوع مستند التمثيل: COMMERCIAL_REG, ARTICLES_OF_ASSOC, AUTH_LETTER, POWER_OF_ATTORNEY
+  repDoc       String? // مستند التمثيل
+
   // Phase 37: Entity Codes
   code       String? @unique // e.g. "test_CL0001"
   codeNumber Int?            // 1, 2, 3...
