@@ -82,7 +82,18 @@ export class AuthController {
         return this.authService.logout(userId);
     }
 
-    // ============ TWO-FACTOR AUTHENTICATION ============
+    @Post('change-password')
+    @HttpCode(HttpStatus.OK)
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth('JWT-auth')
+    @ApiOperation({ summary: 'تغيير كلمة المرور' })
+    @ApiResponse({ status: 200, description: 'تم تغيير كلمة المرور بنجاح' })
+    async changePassword(
+        @CurrentUser('id') userId: string,
+        @Body() data: { currentPassword: string; newPassword: string; confirmPassword: string },
+    ) {
+        return this.authService.changePassword(userId, data);
+    }
 
     @Post('2fa/generate')
     @UseGuards(JwtAuthGuard)

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useSlugPath } from '@/hooks/useSlugPath';
 import { ChevronRight, ChevronLeft, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui';
@@ -20,6 +21,7 @@ const arabicMonths = [
 const arabicDays = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 
 export function Calendar({ hearings, currentDate, onMonthChange, isLoading }: CalendarProps) {
+    const { p } = useSlugPath();
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
     const year = currentDate.getFullYear();
@@ -96,7 +98,7 @@ export function Calendar({ hearings, currentDate, onMonthChange, isLoading }: Ca
                     <Button variant="outline" size="sm" onClick={goToToday}>
                         اليوم
                     </Button>
-                    <Link to="/hearings/new">
+                    <Link to={p('/hearings/new')}>
                         <Button size="sm">
                             <Plus className="w-4 h-4 ml-1" />
                             جلسة جديدة

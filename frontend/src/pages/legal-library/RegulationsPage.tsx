@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { useSlugPath } from '@/hooks/useSlugPath';
 import { Search, Scale, Eye, ChevronLeft } from 'lucide-react';
 import { useRegulations } from '@/hooks/useLegalLibrary';
 
@@ -8,14 +9,14 @@ const CATEGORY_LABELS: Record<string, string> = {
     ADMINISTRATIVE_REG: 'إداري', FAMILY: 'أحوال شخصية', REAL_ESTATE: 'عقاري',
     INTELLECTUAL: 'ملكية فكرية', CORPORATE: 'شركات', BANKING: 'بنكي',
     TAX: 'ضريبي', CYBER: 'معلوماتي', ARBITRATION: 'تحكيم',
-    PROCEDURES: 'مرافعات', NOTARY: 'توثيق', OTHER_REG: 'أخرى',
+    PROCEDURES: 'مرافعات', NOTARY: 'توثيق', OTHER_REG: 'أخرى'
 };
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
     ACTIVE_REG: { label: 'ساري', color: 'bg-green-100 text-green-700' },
     AMENDED: { label: 'معدَّل', color: 'bg-yellow-100 text-yellow-700' },
     REPEALED: { label: 'ملغي', color: 'bg-red-100 text-red-700' },
-    DRAFT_REG: { label: 'مشروع', color: 'bg-gray-100 text-gray-600' },
+    DRAFT_REG: { label: 'مشروع', color: 'bg-gray-100 text-gray-600' }
 };
 
 const CATEGORIES = [
@@ -36,6 +37,7 @@ const CATEGORIES = [
 ];
 
 export function RegulationsPage() {
+    const { p: slugPath } = useSlugPath();
     const [searchParams] = useSearchParams();
     const initialCat = searchParams.get('category') || '';
     const [category, setCategory] = useState(initialCat);
@@ -51,7 +53,7 @@ export function RegulationsPage() {
                     <h1 className="text-xl font-bold text-gray-900 dark:text-white">الأنظمة واللوائح</h1>
                     <p className="text-sm text-gray-500 mt-1">تصفح الأنظمة السعودية المعتمدة</p>
                 </div>
-                <Link to="/legal-library" className="text-sm text-indigo-600 hover:underline flex items-center gap-1">
+                <Link to={slugPath('/legal-library')} className="text-sm text-indigo-600 hover:underline flex items-center gap-1">
                     العودة للمكتبة <ChevronLeft className="w-4 h-4" />
                 </Link>
             </div>
@@ -92,7 +94,7 @@ export function RegulationsPage() {
                 <>
                     <div className="space-y-3">
                         {data?.data?.map((reg: any) => (
-                            <Link key={reg.id} to={`/legal-library/regulations/${reg.id}`}
+                            <Link key={reg.id} to={slugPath(`/legal-library/regulations/${reg.id}`)}
                                 className="block bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 hover:border-indigo-300 hover:shadow-sm transition-all">
                                 <div className="flex items-start justify-between gap-4">
                                     <div className="flex-1">

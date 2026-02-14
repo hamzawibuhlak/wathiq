@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { 
-    ArrowRight, 
-    Trash2, 
-    Calendar, 
-    User, 
+import { useParams, Link } from 'react-router-dom';
+import { useSlugPath } from '@/hooks/useSlugPath';
+import {
+    ArrowRight,
+    Trash2,
+    Calendar,
+    User,
     Briefcase,
     Clock,
     Send,
@@ -41,7 +42,7 @@ const priorityConfig: Record<TaskPriority, { label: string; color: string }> = {
 
 function TaskDetailsPage() {
     const { id } = useParams<{ id: string }>();
-    const navigate = useNavigate();
+    const { p, nav } = useSlugPath();
     const user = useAuthStore((state) => state.user);
     const [newComment, setNewComment] = useState('');
 
@@ -60,7 +61,7 @@ function TaskDetailsPage() {
     const handleDelete = () => {
         if (window.confirm('هل أنت متأكد من حذف هذه المهمة؟')) {
             deleteMutation.mutate(id || '', {
-                onSuccess: () => navigate('/tasks')
+                onSuccess: () => nav('/tasks')
             });
         }
     };
@@ -92,7 +93,7 @@ function TaskDetailsPage() {
         return (
             <div className="text-center py-12">
                 <h2 className="text-xl font-semibold mb-2">المهمة غير موجودة</h2>
-                <Link to="/tasks" className="text-primary hover:underline">
+                <Link to={p('/tasks')} className="text-primary hover:underline">
                     العودة لقائمة المهام
                 </Link>
             </div>
@@ -103,18 +104,18 @@ function TaskDetailsPage() {
     const priorityInfo = priorityConfig[task.priority];
     const StatusIcon = statusInfo.icon;
 
-    const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && 
+    const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() &&
         !['COMPLETED', 'CANCELLED'].includes(task.status);
 
     // Check if user can edit (owner, admin, or assigned lawyer)
-    const canEdit = user?.role === 'OWNER' || user?.role === 'ADMIN' || 
+    const canEdit = user?.role === 'OWNER' || user?.role === 'ADMIN' ||
         task.assignedToId === user?.id || task.createdById === user?.id;
 
     return (
         <div className="space-y-6">
             {/* Header */}
             <div className="flex items-center gap-4">
-                <Button variant="ghost" size="sm" onClick={() => navigate('/tasks')}>
+                <Button variant="ghost" size="sm" onClick={() => nav('/tasks')}>
                     <ArrowRight className="w-4 h-4 ml-1" />
                     العودة
                 </Button>
@@ -188,7 +189,7 @@ function TaskDetailsPage() {
                                                 disabled={task.status === status || updateMutation.isPending}
                                                 className={cn(
                                                     "flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm transition-all",
-                                                    task.status === status 
+                                                    task.status === status
                                                         ? "ring-2 ring-primary " + config.color
                                                         : "bg-muted hover:opacity-80 " + config.color,
                                                     updateMutation.isPending && "opacity-50 cursor-not-allowed"
@@ -230,8 +231,8 @@ function TaskDetailsPage() {
                                 </div>
                             </div>
                             <div className="flex justify-end mt-2">
-                                <Button 
-                                    type="submit" 
+                                <Button
+                                    type="submit"
                                     disabled={!newComment.trim() || addCommentMutation.isPending}
                                     size="sm"
                                 >
@@ -245,12 +246,12 @@ function TaskDetailsPage() {
                         <div className="space-y-4">
                             {task.comments && task.comments.length > 0 ? (
                                 [...task.comments].reverse().map((comment) => (
-                                    <div 
-                                        key={comment.id} 
+                                    <div
+                                        key={comment.id}
                                         className={cn(
                                             "p-4 rounded-lg",
-                                            comment.userId === user?.id 
-                                                ? "bg-primary/5 border-r-4 border-primary" 
+                                            comment.userId === user?.id
+                                                ? "bg-primary/5 border-r-4 border-primary"
                                                 : "bg-muted"
                                         )}
                                     >
@@ -344,8 +345,8 @@ function TaskDetailsPage() {
                                     <Briefcase className="w-5 h-5 text-muted-foreground" />
                                     <div>
                                         <p className="text-xs text-muted-foreground">القضية المرتبطة</p>
-                                        <Link 
-                                            to={`/cases/${task.case.id}`}
+                                        <Link
+                                            to={p(`/cases/${task.case.id}`)}
                                             className="font-medium text-primary hover:underline"
                                         >
                                             {task.case.caseNumber}
@@ -384,7 +385,7 @@ function TaskDetailsPage() {
                             <h3 className="font-semibold mb-4">المهام الفرعية</h3>
                             <div className="space-y-2">
                                 {task.subtasks.map((subtask) => (
-                                    <div 
+                                    <div
                                         key={subtask.id}
                                         className="flex items-center gap-2 p-2 rounded-lg bg-muted"
                                     >

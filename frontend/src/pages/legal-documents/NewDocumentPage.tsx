@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useSlugPath } from '@/hooks/useSlugPath';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import {
     Scale, ScrollText, FileSignature, FileText, Gavel,
@@ -23,7 +23,7 @@ const DOC_TYPES = [
 ];
 
 export default function NewDocumentPage() {
-    const navigate = useNavigate();
+    const { nav } = useSlugPath();
     const [selectedType, setSelectedType] = useState('');
     const [title, setTitle] = useState('');
     const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
@@ -39,7 +39,7 @@ export default function NewDocumentPage() {
         mutationFn: (data: any) => legalDocumentsApi.create(data),
         onSuccess: (doc) => {
             toast.success('تم إنشاء الوثيقة');
-            navigate(`/legal-documents/${doc.id}/edit`);
+            nav(`/legal-documents/${doc.id}/edit`);
         },
         onError: () => toast.error('فشل إنشاء الوثيقة'),
     });
@@ -68,7 +68,7 @@ export default function NewDocumentPage() {
             {/* Header */}
             <div className="flex items-center gap-3 mb-8">
                 <button
-                    onClick={() => step === 'details' ? setStep('type') : navigate('/legal-documents')}
+                    onClick={() => step === 'details' ? setStep('type') : nav('/legal-documents')}
                     className="p-2 rounded-xl hover:bg-gray-100 text-gray-400"
                 >
                     <ArrowRight className="w-5 h-5" />

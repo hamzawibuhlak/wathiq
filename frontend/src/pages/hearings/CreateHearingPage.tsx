@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useSlugPath } from '@/hooks/useSlugPath';
 import { ArrowRight, CalendarDays } from 'lucide-react';
 import { Button, Card, CardHeader, CardTitle, CardContent } from '@/components/ui';
 import { HearingForm, HearingFormData } from '@/components/hearings';
@@ -8,6 +9,7 @@ import { useLawyers } from '@/hooks/use-lawyers';
 import { useClients } from '@/hooks/use-clients';
 
 export function CreateHearingPage() {
+    const { p } = useSlugPath();
     const createMutation = useCreateHearing();
     const { data: casesData, isLoading: casesLoading } = useCases({ limit: 100 });
     const { data: lawyersData, isLoading: lawyersLoading } = useLawyers();
@@ -18,7 +20,7 @@ export function CreateHearingPage() {
         id: c.id,
         title: c.title,
         caseNumber: c.caseNumber,
-        clientId: c.clientId,
+        clientId: c.clientId
     })) || [];
 
     // Extract lawyers from API response
@@ -27,7 +29,7 @@ export function CreateHearingPage() {
     // Extract clients from API response
     const clients = clientsData?.data?.map((c) => ({
         id: c.id,
-        name: c.name,
+        name: c.name
     })) || [];
 
     const handleSubmit = (data: HearingFormData) => {
@@ -41,7 +43,7 @@ export function CreateHearingPage() {
             courtName: data.courtName || undefined,
             judgeName: data.judgeName || undefined,
             notes: data.notes || undefined,
-            status: data.status,
+            status: data.status
         });
     };
 
@@ -51,7 +53,7 @@ export function CreateHearingPage() {
         <div className="space-y-6">
             {/* Header */}
             <div className="flex items-center gap-4">
-                <Link to="/hearings">
+                <Link to={p('/hearings')}>
                     <Button variant="ghost" size="sm">
                         <ArrowRight className="w-4 h-4 ml-2" />
                         العودة للجلسات

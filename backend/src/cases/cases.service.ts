@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { EntityCodeService } from '../common/services/entity-code.service';
 import { CreateCaseDto } from './dto/create-case.dto';
 import { UpdateCaseDto } from './dto/update-case.dto';
 import { FilterCasesDto } from './dto/filter-cases.dto';
@@ -30,6 +31,7 @@ export class CasesService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly notificationsService: NotificationsService,
+        private readonly entityCodeService: EntityCodeService,
     ) { }
 
     /**
@@ -178,12 +180,19 @@ export class CasesService {
         // Generate unique case number for this tenant
         const caseNumber = await this.generateCaseNumber(tenantId);
 
+        // Phase 37: Generate hierarchical case code
+        const caseCode = dto.clientId
+            ? await this.entityCodeService.generateCaseCode(dto.clientId)
+            : await this.entityCodeService.generateFlatCode(tenantId, 'case');
+
         // Convert date strings to proper DateTime format
         const data: any = {
             ...dto,
             caseNumber,
             tenantId,
             createdById: userId,
+            code: caseCode.code,
+            codeNumber: caseCode.codeNumber,
         };
 
         // Convert filingDate to proper DateTime if provided

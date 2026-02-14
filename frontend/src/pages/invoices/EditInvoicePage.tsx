@@ -1,4 +1,5 @@
-import { Link, useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
+import { useSlugPath } from '@/hooks/useSlugPath';
 import { ArrowRight, Receipt, Trash2 } from 'lucide-react';
 import { Button, Card, CardHeader, CardTitle, CardContent } from '@/components/ui';
 import { InvoiceForm, InvoiceFormData } from '@/components/invoices';
@@ -8,7 +9,7 @@ import { useCases } from '@/hooks/use-cases';
 
 export function EditInvoicePage() {
     const { id } = useParams<{ id: string }>();
-    const navigate = useNavigate();
+    const { p, nav } = useSlugPath();
 
     const { data: invoiceData, isLoading: invoiceLoading } = useInvoice(id!);
     const updateMutation = useUpdateInvoice(id!);
@@ -45,7 +46,7 @@ export function EditInvoicePage() {
             },
             {
                 onSuccess: () => {
-                    navigate(`/invoices/${id}`);
+                    nav(`/invoices/${id}`);
                 },
             }
         );
@@ -63,7 +64,7 @@ export function EditInvoicePage() {
         <div className="space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between">
-                <Link to={`/invoices/${id}`}>
+                <Link to={p(`/invoices/${id}`)}>
                     <Button variant="ghost" size="sm">
                         <ArrowRight className="w-4 h-4 ml-2" />
                         العودة للتفاصيل

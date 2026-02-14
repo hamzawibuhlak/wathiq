@@ -1,18 +1,20 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useSlugPath } from '@/hooks/useSlugPath';
 import { Search, Hash, ChevronLeft } from 'lucide-react';
 import { useTerms } from '@/hooks/useLegalLibrary';
 
 const ARABIC_LETTERS = ['أ', 'ب', 'ت', 'ث', 'ج', 'ح', 'خ', 'د', 'ذ', 'ر', 'ز', 'س', 'ش', 'ص', 'ض', 'ط', 'ظ', 'ع', 'غ', 'ف', 'ق', 'ك', 'ل', 'م', 'ن', 'ه', 'و', 'ي'];
 
 export function GlossaryPage() {
+    const { p } = useSlugPath();
     const [search, setSearch] = useState('');
     const [selectedLetter, setSelectedLetter] = useState('');
     const [expandedTerm, setExpandedTerm] = useState<string | null>(null);
 
     const { data: terms, isLoading } = useTerms({
         search: search || undefined,
-        letter: selectedLetter || undefined,
+        letter: selectedLetter || undefined
     });
 
     return (
@@ -22,7 +24,7 @@ export function GlossaryPage() {
                     <h1 className="text-xl font-bold text-gray-900 dark:text-white">المصطلحات القانونية</h1>
                     <p className="text-sm text-gray-500 mt-1">المعجم القانوني السعودي</p>
                 </div>
-                <Link to="/legal-library" className="text-sm text-indigo-600 hover:underline flex items-center gap-1">
+                <Link to={p('/legal-library')} className="text-sm text-indigo-600 hover:underline flex items-center gap-1">
                     العودة للمكتبة <ChevronLeft className="w-4 h-4" />
                 </Link>
             </div>

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ownerApi } from '@/api/owner.api';
 import { tenantRolesApi, type TenantRole } from '@/api/tenantRoles';
-import { Users, Plus, Power, X, Shield } from 'lucide-react';
+import { Users, Plus, Power, X, Shield, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const ROLE_LABELS: Record<string, { label: string; color: string }> = {
@@ -55,6 +55,15 @@ export default function UsersManagementPage() {
             queryClient.invalidateQueries({ queryKey: ['owner-users'] });
             toast.success('تم تغيير الدور');
         },
+    });
+
+    const deleteMutation = useMutation({
+        mutationFn: (userId: string) => ownerApi.deleteUser(userId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['owner-users'] });
+            toast.success('تم حذف المستخدم');
+        },
+        onError: (err: any) => toast.error(err?.response?.data?.message || 'فشل حذف المستخدم'),
     });
 
     // Get tenant role name for display
@@ -165,6 +174,17 @@ export default function UsersManagementPage() {
                                                 >
                                                     <Power className="w-4 h-4" />
                                                 </button>
+                                                <button
+                                                    onClick={() => {
+                                                        if (window.confirm(`هل أنت متأكد من حذف ${user.name}؟`)) {
+                                                            deleteMutation.mutate(user.id);
+                                                        }
+                                                    }}
+                                                    className="p-1.5 rounded-lg text-red-400 hover:bg-red-50 hover:text-red-600"
+                                                    title="حذف المستخدم"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
                                             </div>
                                         )}
                                     </td>
@@ -206,45 +226,36 @@ export default function UsersManagementPage() {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">الدور الأساسي</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">الدور</label>
                                 <select
-                                    value={inviteForm.role}
-                                    onChange={(e) => setInviteForm({ ...inviteForm, role: e.target.value })}
+                                    value={inviteForm.tenantRoleId || inviteForm.role}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        const isLegacy = ['ADMIN', 'LAWYER', 'SECRETARY', 'ACCOUNTANT'].includes(val);
+                                        if (isLegacy) {
+                                            setInviteForm({ ...inviteForm, role: val, tenantRoleId: '' });
+                                        } else {
+                                            setInviteForm({ ...inviteForm, role: 'LAWYER', tenantRoleId: val });
+                                        }
+                                    }}
                                     className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm"
                                 >
-                                    <option value="ADMIN">مدير</option>
-                                    <option value="LAWYER">محامي</option>
-                                    <option value="SECRETARY">سكرتير</option>
-                                    <option value="ACCOUNTANT">محاسب</option>
+                                    {tenantRoles.length > 0 ? (
+                                        tenantRoles.map((tr) => (
+                                            <option key={tr.id} value={tr.id}>
+                                                {tr.name}
+                                            </option>
+                                        ))
+                                    ) : (
+                                        <>
+                                            <option value="ADMIN">مدير</option>
+                                            <option value="LAWYER">محامي</option>
+                                            <option value="SECRETARY">سكرتير</option>
+                                            <option value="ACCOUNTANT">محاسب</option>
+                                        </>
+                                    )}
                                 </select>
                             </div>
-
-                            {/* Tenant Role Selection */}
-                            {tenantRoles.length > 0 && (
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        <span className="flex items-center gap-1">
-                                            <Shield className="w-3.5 h-3.5 text-indigo-500" />
-                                            الدور التفصيلي (الصلاحيات)
-                                        </span>
-                                    </label>
-                                    <select
-                                        value={inviteForm.tenantRoleId}
-                                        onChange={(e) => setInviteForm({ ...inviteForm, tenantRoleId: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm"
-                                    >
-                                        <option value="">— بدون دور تفصيلي —</option>
-                                        {tenantRoles.map((tr) => (
-                                            <option key={tr.id} value={tr.id}>
-                                                {tr.name} {tr.nameEn ? `(${tr.nameEn})` : ''}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <p className="text-xs text-gray-400 mt-1">
-                                        يحدد الصلاحيات التفصيلية للمستخدم داخل النظام
-                                    </p>
-                                </div>
-                            )}
 
                             <button
                                 onClick={() => inviteMutation.mutate(inviteForm)}

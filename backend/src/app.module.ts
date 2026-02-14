@@ -7,6 +7,7 @@ import { join } from 'path';
 
 // Common
 import { PrismaModule } from './common/prisma/prisma.module';
+import { EntityCodeModule } from './common/services/entity-code.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { ActivityLogInterceptor } from './common/interceptors/activity-log.interceptor';
 
@@ -75,6 +76,9 @@ import { AppController } from './app.controller';
 
         // Database
         PrismaModule,
+
+        // Entity Codes (global)
+        EntityCodeModule,
 
         // Rate Limiting (100 requests per minute per IP)
         ThrottlerModule.forRoot([{

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useSlugPath } from '@/hooks/useSlugPath';
 import {
     Briefcase,
     Users,
@@ -18,6 +19,7 @@ import { cn } from '@/lib/utils';
 
 export function DashboardPage() {
     const { user } = useAuthStore();
+    const { p } = useSlugPath();
     const { data: statsData, isLoading: statsLoading } = useDashboardStats();
     const { data: hearingsData, isLoading: hearingsLoading } = useUpcomingHearings(30);
     const { data: activityData, isLoading: activityLoading } = useRecentActivity();
@@ -72,14 +74,14 @@ export function DashboardPage() {
                 {/* Quick Actions */}
                 <div className="flex items-center gap-2">
                     <Link
-                        to="/cases/new"
+                        to={p('/cases/new')}
                         className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-colors text-sm font-medium"
                     >
                         <Plus className="w-4 h-4" />
                         قضية جديدة
                     </Link>
                     <Link
-                        to="/hearings/new"
+                        to={p('/hearings/new')}
                         className="flex items-center gap-2 px-4 py-2 bg-muted hover:bg-muted/80 rounded-xl transition-colors text-sm font-medium"
                     >
                         <Plus className="w-4 h-4" />
@@ -135,7 +137,7 @@ export function DashboardPage() {
                                 {todayHearings.slice(0, 2).map((hearing: any) => (
                                     <Link
                                         key={hearing.id}
-                                        to={`/hearings/${hearing.id}`}
+                                        to={p(`/hearings/${hearing.id}`)}
                                         className="flex items-center justify-between p-3 bg-white/60 dark:bg-white/5 rounded-xl hover:bg-white dark:hover:bg-white/10 transition-colors"
                                     >
                                         <div className="flex items-center gap-3">
@@ -159,7 +161,7 @@ export function DashboardPage() {
                                 ))}
                                 {todayHearings.length > 2 && (
                                     <Link
-                                        to="/hearings?filter=today"
+                                        to={p('/hearings?filter=today')}
                                         className="flex items-center justify-center gap-2 py-2 text-sm text-primary hover:underline"
                                     >
                                         عرض الكل ({todayHearings.length})
@@ -182,7 +184,7 @@ export function DashboardPage() {
                             </div>
                         </div>
                         <Link
-                            to="/cases?status=active"
+                            to={p('/cases?status=active')}
                             className="text-xs text-primary hover:underline flex items-center gap-1"
                         >
                             عرض القضايا
@@ -202,7 +204,7 @@ export function DashboardPage() {
                             </div>
                         </div>
                         <Link
-                            to="/clients"
+                            to={p('/clients')}
                             className="text-xs text-primary hover:underline flex items-center gap-1"
                         >
                             عرض العملاء
@@ -220,7 +222,7 @@ export function DashboardPage() {
                         هذا الأسبوع
                     </h2>
                     <Link
-                        to="/calendar"
+                        to={p('/calendar')}
                         className="text-sm text-primary hover:underline flex items-center gap-1"
                     >
                         عرض التقويم
@@ -262,7 +264,7 @@ export function DashboardPage() {
                             المالية
                         </h2>
                         <Link
-                            to="/invoices"
+                            to={p('/invoices')}
                             className="text-sm text-primary hover:underline flex items-center gap-1"
                         >
                             عرض الفواتير

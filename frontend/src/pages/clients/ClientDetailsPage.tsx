@@ -52,7 +52,7 @@ function InvoiceStatusBadge({ status }: { status: string }) {
 }
 
 export function ClientDetailsPage() {
-    const { id } = useParams<{ id: string }>();
+    const { id, slug } = useParams<{ id: string; slug: string }>();
     const queryClient = useQueryClient();
 
     const { data: clientData, isLoading: clientLoading, error } = useClient(id!);
@@ -119,7 +119,7 @@ export function ClientDetailsPage() {
     if (error || !client) {
         return (
             <div className="space-y-6">
-                <Link to="/clients">
+                <Link to={`/${slug}/clients`}>
                     <Button variant="ghost" size="sm">
                         <ArrowRight className="w-4 h-4 ml-2" />
                         العودة للعملاء
@@ -144,7 +144,7 @@ export function ClientDetailsPage() {
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex items-center gap-4">
-                    <Link to="/clients">
+                    <Link to={`/${slug}/clients`}>
                         <Button variant="ghost" size="sm">
                             <ArrowRight className="w-4 h-4 ml-2" />
                             العملاء
@@ -177,7 +177,7 @@ export function ClientDetailsPage() {
                             )}
                         </>
                     )}
-                    <Link to={`/clients/${id}/edit`}>
+                    <Link to={`/${slug}/clients/${id}/edit`}>
                         <Button variant="outline">
                             <Pencil className="w-4 h-4 ml-2" />
                             تعديل
@@ -322,7 +322,7 @@ export function ClientDetailsPage() {
                                 <Scale className="w-5 h-5 text-muted-foreground" />
                                 القضايا
                             </CardTitle>
-                            <Link to={`/cases/new?clientId=${id}`}>
+                            <Link to={`/${slug}/cases/new?clientId=${id}`}>
                                 <Button size="sm">إضافة قضية</Button>
                             </Link>
                         </CardHeader>
@@ -332,7 +332,7 @@ export function ClientDetailsPage() {
                                     {cases.map((c: any) => (
                                         <Link
                                             key={c.id}
-                                            to={`/cases/${c.id}`}
+                                            to={`/${slug}/cases/${c.id}`}
                                             className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
                                         >
                                             <div>
@@ -360,7 +360,7 @@ export function ClientDetailsPage() {
                                 <CalendarDays className="w-5 h-5 text-muted-foreground" />
                                 الجلسات
                             </CardTitle>
-                            <Link to={`/hearings/new?clientId=${id}`}>
+                            <Link to={`/${slug}/hearings/new?clientId=${id}`}>
                                 <Button size="sm">إضافة جلسة</Button>
                             </Link>
                         </CardHeader>
@@ -370,7 +370,7 @@ export function ClientDetailsPage() {
                                     {hearings.map((h: any) => (
                                         <Link
                                             key={h.id}
-                                            to={`/hearings/${h.id}/edit`}
+                                            to={`/${slug}/hearings/${h.id}/edit`}
                                             className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
                                         >
                                             <div>
@@ -403,7 +403,7 @@ export function ClientDetailsPage() {
                                     <FileText className="w-5 h-5 text-muted-foreground" />
                                     الفواتير
                                 </CardTitle>
-                                <Link to={`/invoices/new?clientId=${id}`}>
+                                <Link to={`/${slug}/invoices/new?clientId=${id}`}>
                                     <Button size="sm">إضافة فاتورة</Button>
                                 </Link>
                             </CardHeader>
@@ -413,7 +413,7 @@ export function ClientDetailsPage() {
                                         {invoices.map((inv: any) => (
                                             <Link
                                                 key={inv.id}
-                                                to={`/invoices/${inv.id}`}
+                                                to={`/${slug}/invoices/${inv.id}`}
                                                 className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
                                             >
                                                 <div>

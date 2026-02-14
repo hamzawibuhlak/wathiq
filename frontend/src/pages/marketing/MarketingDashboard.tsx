@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { marketingApi } from '@/api/marketing';
 import { Users, Target, Zap, TrendingUp, Phone, Star, Megaphone } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useSlugPath } from '@/hooks/useSlugPath';
 
 const SOURCE_LABELS: Record<string, string> = {
     GOOGLE_ADS: 'إعلان جوجل', META_ADS: 'إعلان ميتا', TIKTOK_ADS: 'تيك توك',
@@ -21,7 +21,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
 };
 
 export default function MarketingDashboard() {
-    const navigate = useNavigate();
+    const { nav } = useSlugPath();
     const { data: leadStats } = useQuery({ queryKey: ['leads-stats'], queryFn: marketingApi.getLeadStats });
     const { data: affiliateStats } = useQuery({ queryKey: ['affiliate-stats'], queryFn: marketingApi.getAffiliateStats });
     const { data: callStats } = useQuery({ queryKey: ['call-stats'], queryFn: marketingApi.getCallStats });
@@ -42,7 +42,7 @@ export default function MarketingDashboard() {
                     icon={<Users style={{ width: 20, height: 20, color: '#3b82f6' }} />}
                     bg="#eff6ff"
                     subtitle={`+${leadStats?.newToday || 0} اليوم`}
-                    onClick={() => navigate('/marketing/leads')}
+                    onClick={() => nav('/marketing/leads')}
                 />
                 <KpiCard
                     title="نسبة التحويل"
@@ -57,7 +57,7 @@ export default function MarketingDashboard() {
                     icon={<Phone style={{ width: 20, height: 20, color: '#8b5cf6' }} />}
                     bg="#f5f3ff"
                     subtitle={`معدل الرد ${callStats?.answerRate || 0}%`}
-                    onClick={() => navigate('/marketing/telemarketing')}
+                    onClick={() => nav('/marketing/telemarketing')}
                 />
                 <KpiCard
                     title="عمولات معلقة"
@@ -65,7 +65,7 @@ export default function MarketingDashboard() {
                     icon={<Zap style={{ width: 20, height: 20, color: '#f59e0b' }} />}
                     bg="#fffbeb"
                     subtitle={`${affiliateStats?.pendingCount || 0} عمولة`}
-                    onClick={() => navigate('/marketing/affiliate')}
+                    onClick={() => nav('/marketing/affiliate')}
                 />
             </div>
 
@@ -122,7 +122,7 @@ export default function MarketingDashboard() {
                             return (
                                 <button
                                     key={action.label}
-                                    onClick={() => navigate(action.href)}
+                                    onClick={() => nav(action.href)}
                                     style={{
                                         display: 'flex', alignItems: 'center', gap: 10,
                                         padding: '12px 14px', borderRadius: 12,

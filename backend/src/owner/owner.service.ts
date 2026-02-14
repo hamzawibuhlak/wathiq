@@ -1,10 +1,14 @@
 import { Injectable, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { EntityCodeService } from '../common/services/entity-code.service';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class OwnerService {
-    constructor(private prisma: PrismaService) { }
+    constructor(
+        private prisma: PrismaService,
+        private readonly entityCodeService: EntityCodeService,
+    ) { }
 
     // =============================================
     // COMPANY PROFILE
@@ -82,6 +86,9 @@ export class OwnerService {
         const tempPassword = Math.random().toString(36).slice(-8) + '@Wt1';
         const hashedPassword = await bcrypt.hash(tempPassword, 10);
 
+        // Phase 37: Generate user code
+        const userCode = await this.entityCodeService.generateUserCode(tenantId);
+
         const user = await this.prisma.user.create({
             data: {
                 name: data.name,
@@ -90,6 +97,8 @@ export class OwnerService {
                 role: data.role as any,
                 tenantId,
                 createdById: ownerId,
+                code: userCode.code,
+                codeNumber: userCode.codeNumber,
                 ...(data.tenantRoleId && { tenantRoleId: data.tenantRoleId }),
             },
             select: {
@@ -164,10 +173,70 @@ export class OwnerService {
             throw new ForbiddenException('لا يمكنك حذف حسابك الخاص');
         }
 
-        return this.prisma.user.update({
-            where: { id: userId },
-            data: { isActive: false },
-        });
+        try {
+            // Use a transaction to clean up all references then delete
+            await this.prisma.$transaction(async (tx) => {
+                // Reassign non-nullable Case references to owner
+                await tx.case.updateMany({ where: { assignedToId: userId }, data: { assignedToId: ownerId } });
+                await tx.case.updateMany({ where: { createdById: userId }, data: { createdById: ownerId } });
+
+                // Nullify nullable Hearing references
+                await tx.hearing.updateMany({ where: { assignedToId: userId }, data: { assignedToId: null } });
+                await tx.hearing.updateMany({ where: { createdById: userId }, data: { createdById: null } });
+
+                // Reassign non-nullable Document references to owner
+                await tx.document.updateMany({ where: { uploadedById: userId }, data: { uploadedById: ownerId } });
+
+                // Reassign non-nullable Invoice references to owner
+                await tx.invoice.updateMany({ where: { createdById: userId }, data: { createdById: ownerId } });
+
+                // Reassign non-nullable Task references to owner
+                await tx.task.updateMany({ where: { assignedToId: userId }, data: { assignedToId: ownerId } });
+                await tx.task.updateMany({ where: { createdById: userId }, data: { createdById: ownerId } });
+
+                // Delete task comments by the user
+                await tx.taskComment.deleteMany({ where: { userId } });
+
+                // Delete messages sent/received by user
+                await tx.message.deleteMany({ where: { OR: [{ senderId: userId }, { receiverId: userId }] } });
+
+                // Delete group memberships and messages
+                await tx.groupMessage.deleteMany({ where: { senderId: userId } });
+                await tx.groupMember.deleteMany({ where: { userId } });
+
+                // Delete calls
+                await tx.call.deleteMany({ where: { userId } });
+
+                // Reassign reports
+                await tx.report.updateMany({ where: { createdById: userId }, data: { createdById: ownerId } });
+                await tx.reportExecution.updateMany({ where: { executedById: userId }, data: { executedById: ownerId } });
+
+                // Delete notifications
+                await tx.notification.deleteMany({ where: { userId } });
+
+                // Delete activity logs
+                await tx.activityLog.deleteMany({ where: { userId } });
+
+                // Delete sessions
+                await tx.userSession.deleteMany({ where: { userId } });
+
+                // Remove from client visibility (many-to-many)
+                await tx.user.update({
+                    where: { id: userId },
+                    data: { visibleClients: { set: [] } },
+                });
+
+                // Reassign created users
+                await tx.user.updateMany({ where: { createdById: userId }, data: { createdById: null } });
+
+                // Delete the user
+                await tx.user.delete({ where: { id: userId } });
+            });
+        } catch (error) {
+            throw new BadRequestException('لا يمكن حذف هذا المستخدم لارتباطه ببيانات أخرى. يمكنك تعطيل حسابه بدلاً من ذلك.');
+        }
+
+        return { message: 'تم حذف المستخدم بنجاح' };
     }
 
     // =============================================

@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import { useSlugPath } from '@/hooks/useSlugPath';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
     Save, ArrowRight, History,
@@ -21,7 +22,7 @@ const STATUS_MAP: Record<string, { label: string; color: string; bg: string }> =
 
 export default function LegalDocumentEditorPage() {
     const { id } = useParams<{ id: string }>();
-    const navigate = useNavigate();
+    const { nav } = useSlugPath();
     const queryClient = useQueryClient();
 
     const [content, setContent] = useState('');
@@ -193,7 +194,7 @@ export default function LegalDocumentEditorPage() {
         <div className="flex flex-col h-screen bg-gray-100" dir="rtl">
             {/* ═══ TOP BAR ═══ */}
             <div className="bg-white border-b border-gray-200 px-4 py-2 flex items-center gap-3 flex-shrink-0 shadow-sm">
-                <button onClick={() => navigate('/legal-documents')} className="text-gray-400 hover:text-gray-600 transition-colors">
+                <button onClick={() => nav('/legal-documents')} className="text-gray-400 hover:text-gray-600 transition-colors">
                     <ArrowRight className="w-5 h-5" />
                 </button>
 

@@ -1,4 +1,5 @@
-import { Link, useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
+import { useSlugPath } from '@/hooks/useSlugPath';
 import { ArrowRight, Scale, Trash2 } from 'lucide-react';
 import { Button, Card, CardHeader, CardTitle, CardContent } from '@/components/ui';
 import { CaseForm, CaseFormData } from '@/components/cases';
@@ -9,7 +10,7 @@ import { useAuthStore } from '@/stores/auth.store';
 
 export function EditCasePage() {
     const { id } = useParams<{ id: string }>();
-    const navigate = useNavigate();
+    const { p, nav } = useSlugPath();
     const canDelete = useAuthStore((state) => state.isAdminOrOwner());
 
     const { data: caseData, isLoading: caseLoading } = useCase(id!);
@@ -24,7 +25,7 @@ export function EditCasePage() {
     const handleSubmit = (data: CaseFormData) => {
         updateMutation.mutate(data, {
             onSuccess: () => {
-                navigate(`/cases/${id}`);
+                nav(`/cases/${id}`);
             },
         });
     };
@@ -41,7 +42,7 @@ export function EditCasePage() {
         <div className="space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between">
-                <Link to={`/cases/${id}`}>
+                <Link to={p(`/cases/${id}`)}>
                     <Button variant="ghost" size="sm">
                         <ArrowRight className="w-4 h-4 ml-2" />
                         العودة للتفاصيل

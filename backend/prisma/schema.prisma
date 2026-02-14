@@ -166,6 +166,10 @@ model Tenant {
   logo          String?
   isActive      Boolean @default(true)
 
+  // Phase 37: Entity Codes
+  code       String?  @unique // e.g. "test_law"
+  codePrefix String?           // e.g. "test" (used to generate child codes)
+
   // Plan / Subscription
   planType      PlanType  @default(BASIC)
   planStartDate DateTime?
@@ -325,6 +329,10 @@ model User {
   lastLoginAt DateTime?
   lastLoginIp String?
 
+  // Phase 37: Entity Codes
+  code       String? @unique // e.g. "test_US0001"
+  codeNumber Int?            // 1, 2, 3...
+
   // Two-Factor Authentication
   twoFactorEnabled     Boolean  @default(false)
   twoFactorSecret      String?
@@ -439,6 +447,10 @@ model Client {
   notes         String?
   isActive      Boolean @default(true)
 
+  // Phase 37: Entity Codes
+  code       String? @unique // e.g. "test_CL0001"
+  codeNumber Int?            // 1, 2, 3...
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -492,6 +504,10 @@ model Case {
   priority        CasePriority @default(MEDIUM) // أولوية القضية
   opposingParty   String? // الخصم
 
+  // Phase 37: Entity Codes
+  code       String? @unique // e.g. "test_CL0001_CA00001"
+  codeNumber Int?            // 1, 2, 3... (per client)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -538,6 +554,10 @@ model Case {
 
 model Hearing {
   id String @id @default(uuid())
+
+  // Phase 37: Entity Codes
+  code       String? @unique // e.g. "test_CL0001_CA00001_CS00001"
+  codeNumber Int?            // 1, 2, 3... (per case)
 
   // رقم الجلسة من المحكمة
   hearingNumber String @default("")
@@ -594,6 +614,10 @@ model Document {
   mimeType     String // نوع الملف
   documentType DocumentType @default(OTHER)
   tags         String[] // Array of tags
+
+  // Phase 37: Entity Codes
+  code       String? @unique // e.g. "test_DOC00001"
+  codeNumber Int?            // 1, 2, 3...
 
   // Versioning
   version  Int        @default(1)
@@ -671,6 +695,10 @@ model Invoice {
   paidAt        DateTime? // تاريخ الدفع
   paymentProof  String? // مسار ملف إثبات الدفع
   notes         String?
+
+  // Phase 37: Entity Codes
+  code       String? @unique // e.g. "test_INV00001"
+  codeNumber Int?            // 1, 2, 3...
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -979,6 +1007,10 @@ model Task {
   status      TaskStatus   @default(TODO)
   priority    TaskPriority @default(MEDIUM)
   dueDate     DateTime?
+
+  // Phase 37: Entity Codes
+  code       String? @unique // e.g. "test_TK00001"
+  codeNumber Int?            // 1, 2, 3...
 
   // Relations
   caseId String?
@@ -1742,6 +1774,10 @@ model Expense {
   id                String        @id @default(uuid())
   expenseNumber     String
   date              DateTime
+
+  // Phase 37: Entity Codes
+  code       String? @unique // e.g. "test_EX00001"
+  codeNumber Int?            // 1, 2, 3...
   amount            Decimal       @db.Decimal(15, 2)
   expenseCategoryId String
   description       String

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useSlugPath } from '@/hooks/useSlugPath';
 import { ArrowRight, Receipt } from 'lucide-react';
 import { Button, Card, CardHeader, CardTitle, CardContent } from '@/components/ui';
 import { InvoiceForm, InvoiceFormData } from '@/components/invoices';
@@ -7,19 +8,20 @@ import { useClients } from '@/hooks/use-clients';
 import { useCases } from '@/hooks/use-cases';
 
 export function CreateInvoicePage() {
+    const { p } = useSlugPath();
     const createMutation = useCreateInvoice();
     const { data: clientsData, isLoading: clientsLoading } = useClients({ limit: 100 });
     const { data: casesData, isLoading: casesLoading } = useCases({ limit: 100 });
 
     const clients = clientsData?.data?.map((c) => ({
         id: c.id,
-        name: c.name,
+        name: c.name
     })) || [];
 
     const cases = casesData?.data?.map((c) => ({
         id: c.id,
         title: c.title,
-        caseNumber: c.caseNumber,
+        caseNumber: c.caseNumber
     })) || [];
 
     const handleSubmit = (data: InvoiceFormData) => {
@@ -33,7 +35,7 @@ export function CreateInvoicePage() {
             dueDate: data.dueDate || undefined,
             amount,
             taxRate: data.taxRate,
-            items: data.items,
+            items: data.items
         });
     };
 
@@ -43,7 +45,7 @@ export function CreateInvoicePage() {
         <div className="space-y-6">
             {/* Header */}
             <div className="flex items-center gap-4">
-                <Link to="/invoices">
+                <Link to={p('/invoices')}>
                     <Button variant="ghost" size="sm">
                         <ArrowRight className="w-4 h-4 ml-2" />
                         العودة للفواتير

@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { EntityCodeService } from '../common/services/entity-code.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { FilterTasksDto } from './dto/filter-tasks.dto';
@@ -32,7 +33,8 @@ export class TasksService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly notificationsService: NotificationsService,
-    ) {}
+        private readonly entityCodeService: EntityCodeService,
+    ) { }
 
     /**
      * Get all tasks with pagination, search, and filters
@@ -204,6 +206,9 @@ export class TasksService {
      * Create new task
      */
     async create(dto: CreateTaskDto, tenantId: string, userId: string) {
+        // Phase 37: Generate flat task code
+        const taskCode = await this.entityCodeService.generateFlatCode(tenantId, 'task');
+
         const data: Prisma.TaskCreateInput = {
             title: dto.title,
             description: dto.description,
@@ -214,6 +219,8 @@ export class TasksService {
             tenant: { connect: { id: tenantId } },
             assignedTo: { connect: { id: dto.assignedToId } },
             createdBy: { connect: { id: userId } },
+            code: taskCode.code,
+            codeNumber: taskCode.codeNumber,
         };
 
         if (dto.caseId) {
@@ -500,7 +507,7 @@ export class TasksService {
      */
     async bulkUpdateStatus(ids: string[], status: TaskStatus, tenantId: string) {
         const updateData: Prisma.TaskUpdateInput = { status };
-        
+
         if (status === TaskStatus.COMPLETED) {
             updateData.completedAt = new Date();
         }
@@ -510,7 +517,7 @@ export class TasksService {
                 id: { in: ids },
                 tenantId,
             },
-            data: { 
+            data: {
                 status,
                 completedAt: status === TaskStatus.COMPLETED ? new Date() : undefined,
             },

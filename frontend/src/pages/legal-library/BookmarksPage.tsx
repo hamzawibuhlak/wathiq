@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useSlugPath } from '@/hooks/useSlugPath';
 import { Bookmark, ChevronLeft, Trash2, Folder, FolderPlus, Scale, BookMarked, Hash, Plus } from 'lucide-react';
 import { useBookmarks, useRemoveBookmark, useFolders, useCreateFolder } from '@/hooks/useLegalLibrary';
 
 export function BookmarksPage() {
+    const { p } = useSlugPath();
     const [selectedFolder, setSelectedFolder] = useState<string | undefined>(undefined);
     const [showNewFolder, setShowNewFolder] = useState(false);
     const [newFolderName, setNewFolderName] = useState('');
@@ -59,7 +61,7 @@ export function BookmarksPage() {
                     <h1 className="text-xl font-bold text-gray-900 dark:text-white">المفضلة</h1>
                     <p className="text-sm text-gray-500 mt-1">الأنظمة والأحكام المحفوظة</p>
                 </div>
-                <Link to="/legal-library" className="text-sm text-indigo-600 hover:underline flex items-center gap-1">
+                <Link to={p('/legal-library')} className="text-sm text-indigo-600 hover:underline flex items-center gap-1">
                     العودة للمكتبة <ChevronLeft className="w-4 h-4" />
                 </Link>
             </div>
@@ -159,7 +161,7 @@ export function BookmarksPage() {
                                 <div className="text-center py-16">
                                     <Bookmark className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                                     <p className="text-gray-500">لا توجد مفضلات محفوظة</p>
-                                    <Link to="/legal-library" className="text-sm text-indigo-600 hover:underline mt-2 inline-block">
+                                    <Link to={p('/legal-library')} className="text-sm text-indigo-600 hover:underline mt-2 inline-block">
                                         تصفح المكتبة
                                     </Link>
                                 </div>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useSlugPath } from '@/hooks/useSlugPath';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
     FileText, Plus, Search, Trash2, Copy, Eye,
@@ -31,7 +31,7 @@ const STATUS_MAP: Record<string, { label: string; color: string; bg: string }> =
 };
 
 export default function LegalDocumentsPage() {
-    const navigate = useNavigate();
+    const { nav } = useSlugPath();
     const queryClient = useQueryClient();
     const [search, setSearch] = useState('');
     const [filterType, setFilterType] = useState('');
@@ -76,7 +76,7 @@ export default function LegalDocumentsPage() {
                     <p className="text-gray-500 mt-1">إنشاء وتحرير المذكرات والعقود والوثائق القانونية</p>
                 </div>
                 <button
-                    onClick={() => navigate('/legal-documents/new')}
+                    onClick={() => nav('/legal-documents/new')}
                     className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl hover:bg-blue-700 transition-colors font-medium shadow-lg shadow-blue-600/20"
                 >
                     <Plus className="w-5 h-5" />
@@ -136,7 +136,7 @@ export default function LegalDocumentsPage() {
                     <h3 className="text-lg font-semibold text-gray-600">لا توجد وثائق</h3>
                     <p className="text-gray-400 mt-1">ابدأ بإنشاء وثيقة قانونية جديدة</p>
                     <button
-                        onClick={() => navigate('/legal-documents/new')}
+                        onClick={() => nav('/legal-documents/new')}
                         className="mt-4 text-blue-600 hover:text-blue-700 font-medium"
                     >
                         + إنشاء وثيقة
@@ -153,7 +153,7 @@ export default function LegalDocumentsPage() {
                             <div
                                 key={doc.id}
                                 className="bg-white rounded-2xl border border-gray-100 p-5 hover:shadow-lg hover:border-blue-200 transition-all cursor-pointer group"
-                                onClick={() => navigate(`/legal-documents/${doc.id}/edit`)}
+                                onClick={() => nav(`/legal-documents/${doc.id}/edit`)}
                             >
                                 {/* Type badge + Status */}
                                 <div className="flex items-center justify-between mb-3">
@@ -209,7 +209,7 @@ export default function LegalDocumentsPage() {
                                 {/* Actions */}
                                 <div className="flex items-center gap-1 mt-3 pt-3 border-t border-gray-50 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <button
-                                        onClick={(e) => { e.stopPropagation(); navigate(`/legal-documents/${doc.id}/edit`); }}
+                                        onClick={(e) => { e.stopPropagation(); nav(`/legal-documents/${doc.id}/edit`); }}
                                         className="p-2 rounded-lg hover:bg-gray-100 text-gray-500"
                                         title="تحرير"
                                     >

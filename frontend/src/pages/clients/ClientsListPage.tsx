@@ -182,7 +182,7 @@ export function ClientsListPage() {
                     <p className="text-muted-foreground mb-4">
                         لم يتم العثور على عملاء مطابقين
                     </p>
-                    <Link to="/clients/new">
+                    <Link to="new">
                         <Button>
                             <Plus className="w-4 h-4 ml-2" />
                             إضافة عميل جديد

@@ -33,7 +33,7 @@ export function CreateClientPage() {
         <div className="space-y-6">
             {/* Header */}
             <div className="flex items-center gap-4">
-                <Link to="/clients">
+                <Link to="..">
                     <Button variant="ghost" size="sm">
                         <ArrowRight className="w-4 h-4 ml-2" />
                         العودة للعملاء

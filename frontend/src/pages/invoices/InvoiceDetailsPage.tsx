@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { useSlugPath } from '@/hooks/useSlugPath';
 import { ArrowRight, Pencil, Printer, CheckCircle, AlertTriangle, Mail, MessageSquare, Loader2 } from 'lucide-react';
 import { Button, Card, CardContent } from '@/components/ui';
 import { InvoiceTemplate, InvoiceStatusBadge } from '@/components/invoices';
@@ -10,6 +11,7 @@ import { invoicesApi } from '@/api/invoices.api';
 import toast from 'react-hot-toast';
 
 export function InvoiceDetailsPage() {
+    const { p } = useSlugPath();
     const { id } = useParams<{ id: string }>();
     const printRef = useRef<HTMLDivElement>(null);
     const [isSendingEmail, setIsSendingEmail] = useState(false);
@@ -31,12 +33,12 @@ export function InvoiceDetailsPage() {
         address: firm.address || undefined,
         city: firm.city || undefined,
         phone: firm.phone || undefined,
-        email: firm.email || undefined,
+        email: firm.email || undefined
     } : undefined;
 
     const handlePrint = useReactToPrint({
         contentRef: printRef,
-        documentTitle: invoice?.invoiceNumber || 'فاتورة',
+        documentTitle: invoice?.invoiceNumber || 'فاتورة'
     });
 
     const handleMarkPaid = () => {
@@ -93,7 +95,7 @@ export function InvoiceDetailsPage() {
     if (error || !invoice) {
         return (
             <div className="space-y-6">
-                <Link to="/invoices">
+                <Link to={p('/invoices')}>
                     <Button variant="ghost" size="sm">
                         <ArrowRight className="w-4 h-4 ml-2" />
                         العودة للفواتير
@@ -113,7 +115,7 @@ export function InvoiceDetailsPage() {
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex items-center gap-4">
-                    <Link to="/invoices">
+                    <Link to={p('/invoices')}>
                         <Button variant="ghost" size="sm">
                             <ArrowRight className="w-4 h-4 ml-2" />
                             الفواتير
@@ -132,8 +134,8 @@ export function InvoiceDetailsPage() {
                             تحديد كمدفوعة
                         </Button>
                     )}
-                    <Button 
-                        variant="outline" 
+                    <Button
+                        variant="outline"
                         onClick={handleSendEmail}
                         disabled={isSendingEmail || !invoice.client?.email}
                     >
@@ -144,8 +146,8 @@ export function InvoiceDetailsPage() {
                         )}
                         إرسال بالإيميل
                     </Button>
-                    <Button 
-                        variant="outline" 
+                    <Button
+                        variant="outline"
                         onClick={handleSendSms}
                         disabled={isSendingSms || !invoice.client?.phone}
                     >
@@ -160,7 +162,7 @@ export function InvoiceDetailsPage() {
                         <Printer className="w-4 h-4 ml-2" />
                         طباعة
                     </Button>
-                    <Link to={`/invoices/${id}/edit`}>
+                    <Link to={p(`/invoices/${id}/edit`)}>
                         <Button variant="outline">
                             <Pencil className="w-4 h-4 ml-2" />
                             تعديل

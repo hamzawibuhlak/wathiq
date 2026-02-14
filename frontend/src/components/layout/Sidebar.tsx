@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth.store';
+import { usePermissions } from '@/hooks/usePermissions';
 import {
     LayoutDashboard,
     Calendar,
@@ -54,6 +55,7 @@ interface NavItem {
     icon: typeof LayoutDashboard;
     label: string;
     roles?: ('SUPER_ADMIN' | 'OWNER' | 'ADMIN' | 'LAWYER' | 'SECRETARY' | 'ACCOUNTANT')[];
+    permission?: { resource: string; action: string };
 }
 
 interface NavGroup {
@@ -63,6 +65,7 @@ interface NavGroup {
     items: NavItem[];
     collapsible: boolean;
     roles?: ('SUPER_ADMIN' | 'OWNER' | 'ADMIN' | 'LAWYER' | 'SECRETARY' | 'ACCOUNTANT')[];
+    permission?: { resource: string; action: string };
 }
 
 // ═══════════════════════════════════════════════════════
@@ -80,14 +83,14 @@ const navGroups: NavGroup[] = [
         icon: Briefcase,
         collapsible: true,
         items: [
-            { path: 'clients', icon: Users, label: 'العملاء' },
-            { path: 'cases', icon: Briefcase, label: 'القضايا' },
-            { path: 'hearings', icon: Calendar, label: 'الجلسات' },
-            { path: 'documents', icon: FileText, label: 'المستندات' },
-            { path: 'tasks', icon: CheckSquare, label: 'المهام' },
-            { path: 'legal-documents', icon: FileEdit, label: 'محرر الوثائق' },
-            { path: 'activity-logs', icon: History, label: 'التايم لاين' },
-            { path: 'legal-library', icon: BookOpen, label: 'المكتبة القانونية' },
+            { path: 'clients', icon: Users, label: 'العملاء', permission: { resource: 'clients', action: 'view_list' } },
+            { path: 'cases', icon: Briefcase, label: 'القضايا', permission: { resource: 'cases', action: 'view_list' } },
+            { path: 'hearings', icon: Calendar, label: 'الجلسات', permission: { resource: 'hearings', action: 'view_list' } },
+            { path: 'documents', icon: FileText, label: 'المستندات', permission: { resource: 'documents', action: 'view_list' } },
+            { path: 'tasks', icon: CheckSquare, label: 'المهام', permission: { resource: 'tasks', action: 'view_list' } },
+            { path: 'legal-documents', icon: FileEdit, label: 'محرر الوثائق', permission: { resource: 'documents', action: 'manage_templates' } },
+            { path: 'activity-logs', icon: History, label: 'التايم لاين', permission: { resource: 'settings', action: 'view_activity_log' } },
+            { path: 'legal-library', icon: BookOpen, label: 'المكتبة القانونية', permission: { resource: 'cases', action: 'view_list' } },
         ],
     },
     {
@@ -125,10 +128,11 @@ const navGroups: NavGroup[] = [
         icon: BarChart3,
         collapsible: true,
         roles: ['OWNER', 'ADMIN', 'LAWYER'],
+        permission: { resource: 'reports', action: 'view_dashboard' },
         items: [
-            { path: 'analytics', icon: BarChart3, label: 'التقارير والإحصائيات' },
-            { path: 'analytics/performance', icon: Target, label: 'تقرير الأداء', roles: ['OWNER', 'ADMIN'] },
-            { path: 'reports', icon: Download, label: 'تصدير البيانات', roles: ['OWNER', 'ADMIN', 'LAWYER'] },
+            { path: 'analytics', icon: BarChart3, label: 'التقارير والإحصائيات', permission: { resource: 'reports', action: 'view_dashboard' } },
+            { path: 'analytics/performance', icon: Target, label: 'تقرير الأداء', roles: ['OWNER', 'ADMIN'], permission: { resource: 'reports', action: 'view_performance' } },
+            { path: 'reports', icon: Download, label: 'تصدير البيانات', roles: ['OWNER', 'ADMIN', 'LAWYER'], permission: { resource: 'reports', action: 'export' } },
         ],
     },
     {
@@ -137,11 +141,12 @@ const navGroups: NavGroup[] = [
         icon: UsersRound,
         collapsible: true,
         roles: ['OWNER', 'ADMIN'],
+        permission: { resource: 'hr', action: 'view_employees' },
         items: [
-            { path: 'hr/employees', icon: Users, label: 'الموظفون' },
-            { path: 'hr/attendance', icon: Clock, label: 'الحضور والانصراف' },
-            { path: 'hr/leaves', icon: Palmtree, label: 'الإجازات' },
-            { path: 'hr/payroll', icon: Banknote, label: 'الرواتب' },
+            { path: 'hr/employees', icon: Users, label: 'الموظفون', permission: { resource: 'hr', action: 'view_employees' } },
+            { path: 'hr/attendance', icon: Clock, label: 'الحضور والانصراف', permission: { resource: 'hr', action: 'view_attendance' } },
+            { path: 'hr/leaves', icon: Palmtree, label: 'الإجازات', permission: { resource: 'hr', action: 'view_leaves' } },
+            { path: 'hr/payroll', icon: Banknote, label: 'الرواتب', permission: { resource: 'hr', action: 'view_payroll' } },
         ],
     },
     {
@@ -150,10 +155,11 @@ const navGroups: NavGroup[] = [
         icon: Wallet,
         collapsible: true,
         roles: ['OWNER', 'ADMIN'],
+        permission: { resource: 'invoices', action: 'view_list' },
         items: [
-            { path: 'invoices', icon: Receipt, label: 'الفواتير' },
-            { path: 'accounting/expenses', icon: CreditCard, label: 'المصروفات' },
-            { path: 'accounting', icon: Calculator, label: 'المحاسبة' },
+            { path: 'invoices', icon: Receipt, label: 'الفواتير', permission: { resource: 'invoices', action: 'view_list' } },
+            { path: 'accounting/expenses', icon: CreditCard, label: 'المصروفات', permission: { resource: 'accounting', action: 'manage_expenses' } },
+            { path: 'accounting', icon: Calculator, label: 'المحاسبة', permission: { resource: 'accounting', action: 'view_accounts' } },
         ],
     },
     {
@@ -174,6 +180,7 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
     const { slug } = useParams<{ slug: string }>();
     const user = useAuthStore((state) => state.user);
     const userRole = user?.role;
+    const { can } = usePermissions();
 
     // Build slug prefix for all paths
     const slugPrefix = slug ? `/${slug}` : '';
@@ -208,17 +215,21 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         });
     };
 
-    // Filter nav items based on user role
+    // Filter nav items based on user role AND tenant permissions
     const filterItems = (items: NavItem[]) => {
         return items.filter((item) => {
-            if (!item.roles) return true;
-            return userRole && item.roles.includes(userRole);
+            // System role check
+            if (item.roles && (!userRole || !item.roles.includes(userRole))) return false;
+            // Tenant permission check
+            if (item.permission && !can(item.permission.resource, item.permission.action)) return false;
+            return true;
         });
     };
 
-    // Check if group is visible based on role
+    // Check if group is visible based on role AND permissions
     const isGroupVisible = (group: NavGroup) => {
         if (group.roles && userRole && !group.roles.includes(userRole)) return false;
+        if (group.permission && !can(group.permission.resource, group.permission.action)) return false;
         return filterItems(group.items).length > 0;
     };
 

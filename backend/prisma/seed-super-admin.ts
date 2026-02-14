@@ -6,13 +6,16 @@ const prisma = new PrismaClient();
 async function main() {
     console.log('🔐 Creating Super Admin user...');
 
-    const hashedPassword = await bcrypt.hash('SuperAdmin@2026!', 10);
+    const hashedPassword = await bcrypt.hash('1485591650hH123@#', 10);
 
     const superAdmin = await prisma.user.upsert({
-        where: { email: 'admin@watheeq.sa' },
-        update: { role: UserRole.SUPER_ADMIN },
+        where: { email: 'hamzabuhlak@gmail.com' },
+        update: {
+            role: UserRole.SUPER_ADMIN,
+            password: hashedPassword,
+        },
         create: {
-            email: 'admin@watheeq.sa',
+            email: 'hamzabuhlak@gmail.com',
             password: hashedPassword,
             name: 'مدير النظام',
             role: UserRole.SUPER_ADMIN,
@@ -77,8 +80,8 @@ async function main() {
     console.log(`✅ ${flags.length} feature flags created`);
 
     console.log('\n🎉 Super Admin seeding complete!');
-    console.log('   Email: admin@watheeq.sa');
-    console.log('   Password: SuperAdmin@2026!');
+    console.log('   Email: hamzabuhlak@gmail.com');
+    console.log('   Password: 1485591650hH123@#');
 }
 
 main()

@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { EntityCodeService } from '../common/services/entity-code.service';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
 import { UpdateInvoiceDto } from './dto/update-invoice.dto';
 import { FilterInvoicesDto } from './dto/filter-invoices.dto';
@@ -35,6 +36,7 @@ export class InvoicesService {
         private readonly prisma: PrismaService,
         private readonly emailService: EmailService,
         private readonly smsService: SmsService,
+        private readonly entityCodeService: EntityCodeService,
     ) { }
 
     /**
@@ -256,6 +258,9 @@ export class InvoicesService {
         // Prepare data for creation (exclude items and taxRate)
         const { items, taxRate: _, ...invoiceData } = dto;
 
+        // Phase 37: Generate flat invoice code
+        const invoiceCode = await this.entityCodeService.generateFlatCode(tenantId, 'invoice');
+
         const invoice = await this.prisma.invoice.create({
             data: {
                 ...invoiceData,
@@ -266,6 +271,8 @@ export class InvoicesService {
                 dueDate: new Date(dto.dueDate),
                 tenantId,
                 createdById: userId,
+                code: invoiceCode.code,
+                codeNumber: invoiceCode.codeNumber,
                 // Create invoice items if provided
                 items: items && items.length > 0 ? {
                     create: items.map(item => ({

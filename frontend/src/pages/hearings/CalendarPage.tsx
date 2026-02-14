@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useSlugPath } from '@/hooks/useSlugPath';
 import { CalendarDays, List, Plus, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Calendar } from '@/components/hearings';
@@ -9,13 +10,14 @@ import { cn } from '@/lib/utils';
 type ViewMode = 'calendar' | 'list';
 
 export function CalendarPage() {
+    const { p } = useSlugPath();
     const [currentDate, setCurrentDate] = useState(new Date());
     const [viewMode, setViewMode] = useState<ViewMode>('calendar');
 
     const { data, isLoading, error } = useHearings({
         startDate: new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString(),
         endDate: new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).toISOString(),
-        limit: 100,
+        limit: 100
     });
 
     const hearings = data?.data || [];
@@ -47,7 +49,7 @@ export function CalendarPage() {
                             تقويم
                         </button>
                         <Link
-                            to="/hearings"
+                            to={p('/hearings')}
                             className={cn(
                                 'flex items-center gap-1 px-3 py-1.5 rounded-md text-sm transition-colors',
                                 viewMode === 'list' ? 'bg-card shadow text-foreground' : 'text-muted-foreground'
@@ -57,7 +59,7 @@ export function CalendarPage() {
                             قائمة
                         </Link>
                     </div>
-                    <Link to="/hearings/new">
+                    <Link to={p('/hearings/new')}>
                         <Button>
                             <Plus className="w-4 h-4 ml-2" />
                             جلسة جديدة

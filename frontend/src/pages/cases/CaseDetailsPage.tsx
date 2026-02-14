@@ -42,7 +42,7 @@ const priorityLabels: Record<string, { label: string; className: string }> = {
 };
 
 export function CaseDetailsPage() {
-    const { id } = useParams<{ id: string }>();
+    const { id, slug } = useParams<{ id: string; slug: string }>();
     const [activeTab, setActiveTab] = useState<TabType>('overview');
 
     const { data, isLoading, error } = useCase(id!);
@@ -78,7 +78,7 @@ export function CaseDetailsPage() {
     if (error || !caseData) {
         return (
             <div className="space-y-6">
-                <Link to="/cases">
+                <Link to={`/${slug}/cases`}>
                     <Button variant="ghost" size="sm">
                         <ArrowRight className="w-4 h-4 ml-2" />
                         العودة للقضايا
@@ -100,14 +100,14 @@ export function CaseDetailsPage() {
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex items-center gap-4">
-                    <Link to="/cases">
+                    <Link to={`/${slug}/cases`}>
                         <Button variant="ghost" size="sm">
                             <ArrowRight className="w-4 h-4 ml-2" />
                             القضايا
                         </Button>
                     </Link>
                 </div>
-                <Link to={`/cases/${id}/edit`}>
+                <Link to={`/${slug}/cases/${id}/edit`}>
                     <Button variant="outline">
                         <Pencil className="w-4 h-4 ml-2" />
                         تعديل
@@ -253,7 +253,7 @@ export function CaseDetailsPage() {
                                             {caseData.client.phone}
                                         </p>
                                     )}
-                                    <Link to={`/clients/${caseData.client.id}`}>
+                                    <Link to={`/${slug}/clients/${caseData.client.id}`}>
                                         <Button variant="outline" size="sm" className="w-full">
                                             عرض ملف العميل
                                         </Button>
@@ -268,7 +268,7 @@ export function CaseDetailsPage() {
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between">
                             <CardTitle className="text-lg">الجلسات ({caseData.hearings?.length || 0})</CardTitle>
-                            <Link to={`/hearings/new?caseId=${caseData.id}`}>
+                            <Link to={`/${slug}/hearings/new?caseId=${caseData.id}`}>
                                 <Button size="sm">
                                     إضافة جلسة
                                 </Button>
@@ -303,7 +303,7 @@ export function CaseDetailsPage() {
                                                     {hearing.status === 'POSTPONED' && 'مؤجلة'}
                                                     {hearing.status === 'CANCELLED' && 'ملغية'}
                                                 </span>
-                                                <Link to={`/hearings/${hearing.id}`}>
+                                                <Link to={`/${slug}/hearings/${hearing.id}`}>
                                                     <Button variant="ghost" size="sm">عرض</Button>
                                                 </Link>
                                             </div>
@@ -324,7 +324,7 @@ export function CaseDetailsPage() {
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between">
                             <CardTitle className="text-lg">المستندات ({caseData.documents?.length || 0})</CardTitle>
-                            <Link to={`/documents?caseId=${caseData.id}`}>
+                            <Link to={`/${slug}/documents?caseId=${caseData.id}`}>
                                 <Button size="sm">
                                     رفع مستند
                                 </Button>
@@ -346,7 +346,7 @@ export function CaseDetailsPage() {
                                                     </p>
                                                 </div>
                                             </div>
-                                            <Link to={`/documents/${doc.id}`}>
+                                            <Link to={`/${slug}/documents/${doc.id}`}>
                                                 <Button variant="ghost" size="sm">عرض</Button>
                                             </Link>
                                         </div>
@@ -366,7 +366,7 @@ export function CaseDetailsPage() {
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between">
                             <CardTitle className="text-lg">الفواتير ({caseData.invoices?.length || 0})</CardTitle>
-                            <Link to={`/invoices/new?caseId=${caseData.id}&clientId=${caseData.clientId}`}>
+                            <Link to={`/${slug}/invoices/new?caseId=${caseData.id}&clientId=${caseData.clientId}`}>
                                 <Button size="sm">
                                     إنشاء فاتورة
                                 </Button>
@@ -401,7 +401,7 @@ export function CaseDetailsPage() {
                                                     {invoice.status === 'DRAFT' && 'مسودة'}
                                                     {invoice.status === 'OVERDUE' && 'متأخرة'}
                                                 </span>
-                                                <Link to={`/invoices/${invoice.id}`}>
+                                                <Link to={`/${slug}/invoices/${invoice.id}`}>
                                                     <Button variant="ghost" size="sm">عرض</Button>
                                                 </Link>
                                             </div>

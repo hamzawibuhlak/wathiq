@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useSlugPath } from '@/hooks/useSlugPath';
 import { ChevronDown, ChevronUp, ChevronLeft, Search, Eye } from 'lucide-react';
 import { useRegulation } from '@/hooks/useLegalLibrary';
 
@@ -8,10 +9,11 @@ const CATEGORY_LABELS: Record<string, string> = {
     ADMINISTRATIVE_REG: 'إداري', FAMILY: 'أحوال شخصية', REAL_ESTATE: 'عقاري',
     INTELLECTUAL: 'ملكية فكرية', CORPORATE: 'شركات', BANKING: 'بنكي',
     TAX: 'ضريبي', CYBER: 'معلوماتي', ARBITRATION: 'تحكيم',
-    PROCEDURES: 'مرافعات', NOTARY: 'توثيق', OTHER_REG: 'أخرى',
+    PROCEDURES: 'مرافعات', NOTARY: 'توثيق', OTHER_REG: 'أخرى'
 };
 
 export function RegulationDetailsPage() {
+    const { p } = useSlugPath();
     const { id } = useParams();
     const [expandedArticles, setExpandedArticles] = useState<Set<string>>(new Set());
     const [searchArticle, setSearchArticle] = useState('');
@@ -57,7 +59,7 @@ export function RegulationDetailsPage() {
     return (
         <div className="p-6" dir="rtl">
             {/* Back link */}
-            <Link to="/legal-library/regulations" className="text-sm text-indigo-600 hover:underline flex items-center gap-1 mb-4">
+            <Link to={p('/legal-library/regulations')} className="text-sm text-indigo-600 hover:underline flex items-center gap-1 mb-4">
                 الأنظمة <ChevronLeft className="w-4 h-4" />
             </Link>
 

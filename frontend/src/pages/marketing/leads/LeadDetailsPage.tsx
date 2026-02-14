@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import { useSlugPath } from '@/hooks/useSlugPath';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowRight, Phone, Mail, MessageSquare, FileText, User, ChevronDown } from 'lucide-react';
 import { marketingApi } from '@/api/marketing';
@@ -27,7 +28,7 @@ const ACTIVITY_LABELS: Record<string, string> = {
 
 export default function LeadDetailsPage() {
     const { id } = useParams<{ id: string }>();
-    const navigate = useNavigate();
+    const { nav } = useSlugPath();
     const queryClient = useQueryClient();
     const [showActivityModal, setShowActivityModal] = useState(false);
     const [activityForm, setActivityForm] = useState({ type: 'CALL', notes: '', duration: 0, outcome: '' });
@@ -64,7 +65,7 @@ export default function LeadDetailsPage() {
     return (
         <div style={{ padding: 28 }} dir="rtl">
             {/* Back */}
-            <button onClick={() => navigate('/marketing/leads')}
+            <button onClick={() => nav('/marketing/leads')}
                 style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: 13, marginBottom: 20 }}>
                 <ArrowRight style={{ width: 16, height: 16 }} /> العودة للقائمة
             </button>

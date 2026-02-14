@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import { useSlugPath } from '@/hooks/useSlugPath';
 import { ArrowRight, Phone, Mail, Building2, CreditCard, FileText, Calculator } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth.store';
 
@@ -20,7 +21,7 @@ const statusMap: Record<string, { label: string; color: string }> = {
 
 export default function EmployeeDetailsPage() {
     const { id } = useParams();
-    const navigate = useNavigate();
+    const { nav } = useSlugPath();
     const [employee, setEmployee] = useState<any>(null);
     const [eosb, setEosb] = useState<any>(null);
     const [leaveBalances, setLeaveBalances] = useState<any[]>([]);
@@ -37,7 +38,7 @@ export default function EmployeeDetailsPage() {
                 const [e, lb] = await Promise.all([fetchApi(`${API}/employees/${id}/eosb`), fetchApi(`${API}/leave/balances/${id}`)]);
                 setEosb(e); setLeaveBalances(lb);
             } catch { }
-        } catch { navigate('/hr/employees'); } finally { setLoading(false); }
+        } catch { nav('/hr/employees'); } finally { setLoading(false); }
     };
 
     if (loading) return <div style={{ padding: '60px', textAlign: 'center', color: '#64748b' }}>جاري التحميل...</div>;
@@ -58,7 +59,7 @@ export default function EmployeeDetailsPage() {
 
     return (
         <div style={{ padding: '24px', direction: 'rtl' }}>
-            <button onClick={() => navigate('/hr/employees')} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', color: '#6366f1', cursor: 'pointer', fontSize: '14px', marginBottom: '20px' }}>
+            <button onClick={() => nav('/hr/employees')} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', color: '#6366f1', cursor: 'pointer', fontSize: '14px', marginBottom: '20px' }}>
                 <ArrowRight size={18} /> العودة للقائمة
             </button>
 

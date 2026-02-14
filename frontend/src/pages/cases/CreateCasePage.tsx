@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useSlugPath } from '@/hooks/useSlugPath';
 import { ArrowRight, Scale } from 'lucide-react';
 import { Button, Card, CardHeader, CardTitle, CardContent } from '@/components/ui';
 import { CaseForm, CaseFormData } from '@/components/cases';
@@ -7,6 +8,7 @@ import { useClients } from '@/hooks/use-clients';
 import { useLawyers } from '@/hooks/useUsers';
 
 export function CreateCasePage() {
+    const { p } = useSlugPath();
     const createMutation = useCreateCase();
     const { data: clientsData, isLoading: clientsLoading } = useClients({ limit: 100 });
     const { data: lawyersData, isLoading: lawyersLoading } = useLawyers();
@@ -24,7 +26,7 @@ export function CreateCasePage() {
         <div className="space-y-6">
             {/* Header */}
             <div className="flex items-center gap-4">
-                <Link to="/cases">
+                <Link to={p('/cases')}>
                     <Button variant="ghost" size="sm">
                         <ArrowRight className="w-4 h-4 ml-2" />
                         العودة للقضايا

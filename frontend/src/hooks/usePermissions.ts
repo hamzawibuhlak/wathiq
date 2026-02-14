@@ -71,10 +71,13 @@ export function usePermissions(): UsePermissionsReturn {
 
     const can = useCallback(
         (resource: string, action: string, level: 'VIEW' | 'EDIT' | 'FULL' = 'VIEW'): boolean => {
-            // While loading or no permissions, be permissive for UX
-            if (!permissions) return true;
+            // Owner/Admin system roles bypass everything
+            if (user?.role === 'OWNER' || user?.role === 'SUPER_ADMIN') return true;
 
-            // Owner bypasses everything
+            // While loading — deny access (restrictive by default)
+            if (!permissions) return false;
+
+            // Owner via permissions also bypasses
             if (permissions.isOwner) return true;
 
             // Check specific permission

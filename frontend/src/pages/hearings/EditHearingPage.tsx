@@ -1,4 +1,5 @@
-import { Link, useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
+import { useSlugPath } from '@/hooks/useSlugPath';
 import { ArrowRight, CalendarDays, Trash2 } from 'lucide-react';
 import { Button, Card, CardHeader, CardTitle, CardContent } from '@/components/ui';
 import { HearingForm, HearingFormData } from '@/components/hearings';
@@ -9,7 +10,7 @@ import { useClients } from '@/hooks/use-clients';
 
 export function EditHearingPage() {
     const { id } = useParams<{ id: string }>();
-    const navigate = useNavigate();
+    const { p, nav } = useSlugPath();
 
     const { data: hearingData, isLoading: hearingLoading } = useHearing(id!);
     const updateMutation = useUpdateHearing(id!);
@@ -51,7 +52,7 @@ export function EditHearingPage() {
             },
             {
                 onSuccess: () => {
-                    navigate('/hearings');
+                    nav('/hearings');
                 },
             }
         );
@@ -61,7 +62,7 @@ export function EditHearingPage() {
         if (window.confirm('هل أنت متأكد من حذف هذه الجلسة؟')) {
             deleteMutation.mutate(id!, {
                 onSuccess: () => {
-                    navigate('/hearings');
+                    nav('/hearings');
                 },
             });
         }
@@ -73,7 +74,7 @@ export function EditHearingPage() {
         <div className="space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between">
-                <Link to="/hearings">
+                <Link to={p('/hearings')}>
                     <Button variant="ghost" size="sm">
                         <ArrowRight className="w-4 h-4 ml-2" />
                         العودة للجلسات

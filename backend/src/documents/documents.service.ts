@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Response } from 'express';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { EntityCodeService } from '../common/services/entity-code.service';
 import { CreateDocumentDto, UpdateDocumentDto, FilterDocumentsDto } from './dto/create-document.dto';
 import { Prisma, DocumentType } from '@prisma/client';
 import * as fs from 'fs';
@@ -15,7 +16,10 @@ import * as path from 'path';
 export class DocumentsService {
     private readonly uploadDir = './uploads';
 
-    constructor(private readonly prisma: PrismaService) {
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly entityCodeService: EntityCodeService,
+    ) {
         // Ensure base upload directory exists
         if (!fs.existsSync(this.uploadDir)) {
             fs.mkdirSync(this.uploadDir, { recursive: true });
@@ -46,7 +50,7 @@ export class DocumentsService {
 
         const skip = (page - 1) * limit;
 
-        const where: Prisma.DocumentWhereInput = { 
+        const where: Prisma.DocumentWhereInput = {
             tenantId,
             ...(onlyLatest && { isLatest: true }),
             ...(caseId && { caseId }),
@@ -260,6 +264,9 @@ export class DocumentsService {
                 }
             }
 
+            // Phase 37: Generate flat document code
+            const docCode = await this.entityCodeService.generateFlatCode(tenantId, 'document');
+
             // Save metadata to database
             const document = await this.prisma.document.create({
                 data: {
@@ -275,6 +282,8 @@ export class DocumentsService {
                     caseId: dto.caseId,
                     tenantId,
                     uploadedById: userId,
+                    code: docCode.code,
+                    codeNumber: docCode.codeNumber,
                 },
                 include: {
                     case: { select: { id: true, caseNumber: true, title: true } },

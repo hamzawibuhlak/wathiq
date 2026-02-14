@@ -1,5 +1,6 @@
 import { Calendar, Clock, MapPin, User, ArrowLeft, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useSlugPath } from '@/hooks/useSlugPath';
 import { cn } from '@/lib/utils';
 
 interface Hearing {
@@ -34,6 +35,7 @@ interface UpcomingHearingsProps {
 }
 
 export function UpcomingHearings({ hearings, isLoading }: UpcomingHearingsProps) {
+    const { p } = useSlugPath();
     if (isLoading) {
         return (
             <div className="bg-card rounded-2xl border p-6">
@@ -65,8 +67,8 @@ export function UpcomingHearings({ hearings, isLoading }: UpcomingHearingsProps)
                     </div>
                     <h3 className="text-lg font-semibold">الجلسات القادمة</h3>
                 </div>
-                <Link 
-                    to="/hearings" 
+                <Link
+                    to={p('/hearings')}
                     className="text-sm text-primary hover:underline flex items-center gap-1"
                 >
                     عرض الكل
@@ -81,7 +83,7 @@ export function UpcomingHearings({ hearings, isLoading }: UpcomingHearingsProps)
                     </div>
                     <p className="text-muted-foreground mb-4">لا توجد جلسات قادمة</p>
                     <Link
-                        to="/hearings/new"
+                        to={p('/hearings/new')}
                         className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors"
                     >
                         <Plus className="w-4 h-4" />
@@ -97,9 +99,9 @@ export function UpcomingHearings({ hearings, isLoading }: UpcomingHearingsProps)
                             new Date(Date.now() + 86400000).toDateString() === date.toDateString();
 
                         // Get title - use courtName, hearingNumber, or case title
-                        const title = hearing.courtName || 
+                        const title = hearing.courtName ||
                             (hearing.hearingNumber ? `جلسة رقم ${hearing.hearingNumber}` : null) ||
-                            hearing.case?.title || 
+                            hearing.case?.title ||
                             'جلسة';
 
                         // Get client name from direct client or case's client
@@ -111,7 +113,7 @@ export function UpcomingHearings({ hearings, isLoading }: UpcomingHearingsProps)
                                 to={`/hearings/${hearing.id}/edit`}
                                 className={cn(
                                     'flex gap-4 p-3 rounded-xl transition-all duration-200 block',
-                                    isToday 
+                                    isToday
                                         ? 'bg-red-50 hover:bg-red-100/80 dark:bg-red-950/20 dark:hover:bg-red-950/30 border border-red-100 dark:border-red-900/30'
                                         : 'hover:bg-muted/50'
                                 )}
@@ -165,7 +167,7 @@ export function UpcomingHearings({ hearings, isLoading }: UpcomingHearingsProps)
                                 {hearing.assignedTo && (
                                     <div className="shrink-0 flex items-center">
                                         {hearing.assignedTo.avatar ? (
-                                            <img 
+                                            <img
                                                 src={hearing.assignedTo.avatar}
                                                 alt={hearing.assignedTo.name}
                                                 className="w-9 h-9 rounded-full object-cover ring-2 ring-white dark:ring-gray-800"

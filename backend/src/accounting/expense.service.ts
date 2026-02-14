@@ -1,10 +1,14 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { EntityCodeService } from '../common/services/entity-code.service';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class ExpenseService {
-    constructor(private prisma: PrismaService) { }
+    constructor(
+        private prisma: PrismaService,
+        private readonly entityCodeService: EntityCodeService,
+    ) { }
 
     async createCategory(tenantId: string, dto: { name: string; accountId: string; description?: string }) {
         return this.prisma.expenseCategory.create({ data: { ...dto, tenantId } });
@@ -20,6 +24,10 @@ export class ExpenseService {
         attachments?: string[]; notes?: string;
     }) {
         const expenseNumber = await this.generateNumber(tenantId);
+
+        // Phase 37: Generate flat expense code
+        const expenseCode = await this.entityCodeService.generateFlatCode(tenantId, 'expense');
+
         return this.prisma.expense.create({
             data: {
                 expenseNumber, date: dto.date, amount: new Prisma.Decimal(dto.amount),
@@ -28,6 +36,8 @@ export class ExpenseService {
                 vendorId: dto.vendorId, costCenterId: dto.costCenterId,
                 attachments: dto.attachments || [], notes: dto.notes,
                 submittedBy: userId, tenantId,
+                code: expenseCode.code,
+                codeNumber: expenseCode.codeNumber,
             },
             include: { expenseCategory: true, vendor: true, costCenter: true },
         });

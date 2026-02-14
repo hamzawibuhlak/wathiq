@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { EntityCodeService } from '../common/services/entity-code.service';
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
 import { FilterClientsDto } from './dto/filter-clients.dto';
@@ -18,7 +19,10 @@ export interface PaginatedResponse<T> {
 
 @Injectable()
 export class ClientsService {
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly entityCodeService: EntityCodeService,
+    ) { }
 
     /**
      * Get all clients with pagination and search
@@ -217,10 +221,15 @@ export class ClientsService {
     async create(dto: CreateClientDto, tenantId: string) {
         const { visibleToUserIds, ...clientData } = dto;
 
+        // Phase 37: Generate client code
+        const clientCode = await this.entityCodeService.generateClientCode(tenantId);
+
         const client = await this.prisma.client.create({
             data: {
                 ...clientData,
                 tenantId,
+                code: clientCode.code,
+                codeNumber: clientCode.codeNumber,
                 visibleToUsers: visibleToUserIds?.length
                     ? { connect: visibleToUserIds.map((id) => ({ id })) }
                     : undefined,

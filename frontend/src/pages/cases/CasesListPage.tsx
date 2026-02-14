@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useSlugPath } from '@/hooks/useSlugPath';
 import { Plus, Scale, AlertTriangle, FileDown, Trash2, CheckCircle, Clock, XCircle, Archive } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -12,6 +13,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 
 export function CasesListPage() {
+    const { p } = useSlugPath();
     const [filters, setFilters] = useState<FilterValues>({});
     const [page, setPage] = useState(1);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -23,7 +25,7 @@ export function CasesListPage() {
     const { data, isLoading, error } = useCases({
         ...filters,
         page,
-        limit,
+        limit
     });
 
     const deleteMutation = useDeleteCase();
@@ -57,7 +59,7 @@ export function CasesListPage() {
         try {
             await exportCases({
                 status: filters.status || undefined,
-                ids: selectedIds.length > 0 ? selectedIds : undefined,
+                ids: selectedIds.length > 0 ? selectedIds : undefined
             });
             toast.success('تم تصدير البيانات بنجاح');
         } catch (error) {
@@ -126,7 +128,7 @@ export function CasesListPage() {
                         <FileDown className="w-4 h-4 ml-2" />
                         {isExporting ? 'جاري التصدير...' : 'تصدير Excel'}
                     </Button>
-                    <Link to="/cases/new">
+                    <Link to={p('/cases/new')}>
                         <Button>
                             <Plus className="w-4 h-4 ml-2" />
                             قضية جديدة
@@ -206,7 +208,7 @@ export function CasesListPage() {
                     <p className="text-muted-foreground mb-4">
                         لم يتم العثور على قضايا مطابقة للفلاتر المحددة
                     </p>
-                    <Link to="/cases/new">
+                    <Link to={p('/cases/new')}>
                         <Button>
                             <Plus className="w-4 h-4 ml-2" />
                             إنشاء قضية جديدة
@@ -277,37 +279,37 @@ export function CasesListPage() {
                         label: 'تصدير',
                         icon: <FileDown className="w-4 h-4" />,
                         onClick: handleExport,
-                        disabled: isExporting,
+                        disabled: isExporting
                     },
                     {
                         label: 'مفتوحة',
                         icon: <Clock className="w-4 h-4" />,
                         onClick: () => handleBulkStatusChange('OPEN'),
-                        disabled: isUpdatingStatus,
+                        disabled: isUpdatingStatus
                     },
                     {
                         label: 'جارية',
                         icon: <CheckCircle className="w-4 h-4" />,
                         onClick: () => handleBulkStatusChange('IN_PROGRESS'),
-                        disabled: isUpdatingStatus,
+                        disabled: isUpdatingStatus
                     },
                     {
                         label: 'مغلقة',
                         icon: <XCircle className="w-4 h-4" />,
                         onClick: () => handleBulkStatusChange('CLOSED'),
-                        disabled: isUpdatingStatus,
+                        disabled: isUpdatingStatus
                     },
                     {
                         label: 'أرشفة',
                         icon: <Archive className="w-4 h-4" />,
                         onClick: () => handleBulkStatusChange('ARCHIVED'),
-                        disabled: isUpdatingStatus,
+                        disabled: isUpdatingStatus
                     },
                     {
                         label: 'حذف',
                         icon: <Trash2 className="w-4 h-4" />,
                         onClick: handleBulkDelete,
-                        variant: 'destructive',
+                        variant: 'destructive'
                     },
                 ]}
             />

@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { User, Building2, Mail, Phone, MoreVertical, Eye, Pencil, Trash2 } from 'lucide-react';
 import type { Client } from '@/types';
 import { useState, useRef, useEffect } from 'react';
@@ -9,6 +9,7 @@ interface ClientCardProps {
 }
 
 export function ClientCard({ client, onDelete }: ClientCardProps) {
+    const { slug } = useParams<{ slug: string }>();
     const [showMenu, setShowMenu] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
@@ -34,7 +35,7 @@ export function ClientCard({ client, onDelete }: ClientCardProps) {
                     </div>
                     <div>
                         <Link
-                            to={`/clients/${client.id}`}
+                            to={`/${slug}/clients/${client.id}`}
                             className="font-semibold hover:text-primary transition-colors"
                         >
                             {client.name}
@@ -56,14 +57,14 @@ export function ClientCard({ client, onDelete }: ClientCardProps) {
                     {showMenu && (
                         <div className="absolute left-0 top-full mt-1 w-40 bg-card rounded-lg shadow-lg border py-1 z-10">
                             <Link
-                                to={`/clients/${client.id}`}
+                                to={`/${slug}/clients/${client.id}`}
                                 className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors"
                             >
                                 <Eye className="w-4 h-4" />
                                 عرض التفاصيل
                             </Link>
                             <Link
-                                to={`/clients/${client.id}/edit`}
+                                to={`/${slug}/clients/${client.id}/edit`}
                                 className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors"
                             >
                                 <Pencil className="w-4 h-4" />
@@ -100,8 +101,8 @@ export function ClientCard({ client, onDelete }: ClientCardProps) {
             {/* Footer */}
             <div className="flex items-center justify-between pt-3 mt-3 border-t">
                 <span className={`text-xs px-2 py-1 rounded-full ${client.isActive
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-gray-100 text-gray-600'
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-gray-100 text-gray-600'
                     }`}>
                     {client.isActive ? 'نشط' : 'غير نشط'}
                 </span>

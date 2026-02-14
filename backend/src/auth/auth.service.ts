@@ -12,6 +12,7 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { UserRole } from '@prisma/client';
 import { EmailService } from '../email/email.service';
+import { EntityCodeService } from '../common/services/entity-code.service';
 
 // JWT Payload structure
 export interface JwtPayload {
@@ -38,6 +39,7 @@ export class AuthService {
         private readonly prisma: PrismaService,
         private readonly jwtService: JwtService,
         private readonly emailService: EmailService,
+        private readonly entityCodeService: EntityCodeService,
     ) { }
 
     /**
@@ -96,7 +98,10 @@ export class AuthService {
         // 3. Hash password
         const hashedPassword = await this.hashPassword(password);
 
-        // 4. Create tenant and owner user in a transaction
+        // 4. Generate entity codes
+        const tenantCode = this.entityCodeService.generateTenantCode(slug.toLowerCase());
+
+        // 5. Create tenant and owner user in a transaction
         const result = await this.prisma.$transaction(async (tx) => {
             // Create tenant (law office)
             const tenant = await tx.tenant.create({
@@ -110,6 +115,8 @@ export class AuthService {
                     planType: (planType as any) || 'BASIC',
                     planStartDate: new Date(),
                     planEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days trial
+                    code: tenantCode.code,
+                    codePrefix: tenantCode.codePrefix,
                 },
             });
 
@@ -122,6 +129,8 @@ export class AuthService {
                     phone,
                     role: UserRole.OWNER,
                     tenantId: tenant.id,
+                    code: `${tenantCode.codePrefix}_US0001`,
+                    codeNumber: 1,
                 },
                 include: {
                     tenant: {
@@ -300,6 +309,37 @@ export class AuthService {
         return { message: 'تم إرسال رابط إعادة التعيين بنجاح' };
     }
 
+
+    /**
+     * Change password for authenticated user
+     */
+    async changePassword(userId: string, data: { currentPassword: string; newPassword: string; confirmPassword: string }) {
+        if (data.newPassword !== data.confirmPassword) {
+            throw new BadRequestException('كلمة المرور الجديدة وتأكيدها غير متطابقتين');
+        }
+
+        if (data.newPassword.length < 6) {
+            throw new BadRequestException('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
+        }
+
+        const user = await this.prisma.user.findUnique({ where: { id: userId } });
+        if (!user) {
+            throw new NotFoundException('المستخدم غير موجود');
+        }
+
+        const isCurrentValid = await this.comparePassword(data.currentPassword, user.password);
+        if (!isCurrentValid) {
+            throw new BadRequestException('كلمة المرور الحالية غير صحيحة');
+        }
+
+        const hashedNew = await this.hashPassword(data.newPassword);
+        await this.prisma.user.update({
+            where: { id: userId },
+            data: { password: hashedNew },
+        });
+
+        return { message: 'تم تغيير كلمة المرور بنجاح' };
+    }
 
     /**
      * Get current user data

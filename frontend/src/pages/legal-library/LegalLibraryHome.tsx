@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useSlugPath } from '@/hooks/useSlugPath';
 import { Search, Sparkles, BookOpen, Scale, BookMarked, Hash, Eye } from 'lucide-react';
 import { useLibraryStats, useGlobalSearch } from '@/hooks/useLegalLibrary';
 
@@ -8,7 +9,7 @@ const CATEGORY_LABELS: Record<string, string> = {
     ADMINISTRATIVE_REG: 'إداري', FAMILY: 'أحوال شخصية', REAL_ESTATE: 'عقاري',
     INTELLECTUAL: 'ملكية فكرية', CORPORATE: 'شركات', BANKING: 'بنكي',
     TAX: 'ضريبي', CYBER: 'معلوماتي', ARBITRATION: 'تحكيم',
-    PROCEDURES: 'مرافعات', NOTARY: 'توثيق', OTHER_REG: 'أخرى',
+    PROCEDURES: 'مرافعات', NOTARY: 'توثيق', OTHER_REG: 'أخرى'
 };
 
 const QUICK_CATS = [
@@ -23,6 +24,7 @@ const QUICK_CATS = [
 ];
 
 export function LegalLibraryHome() {
+    const { p: slugPath } = useSlugPath();
     const [searchQuery, setSearchQuery] = useState('');
     const [showAiSearch, setShowAiSearch] = useState(false);
     const { data: stats } = useLibraryStats();
@@ -88,7 +90,7 @@ export function LegalLibraryHome() {
                                     <Scale className="w-3 h-3" /> الأنظمة
                                 </p>
                                 {searchResults.regulations.map((r: any) => (
-                                    <Link key={r.id} to={`/legal-library/regulations/${r.id}`}
+                                    <Link key={r.id} to={slugPath(`/legal-library/regulations/${r.id}`)}
                                         className="block px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg text-sm text-gray-800 dark:text-gray-200">
                                         {r.title}
                                     </Link>
@@ -101,7 +103,7 @@ export function LegalLibraryHome() {
                                     <BookMarked className="w-3 h-3" /> الأحكام
                                 </p>
                                 {searchResults.precedents.map((p: any) => (
-                                    <Link key={p.id} to={`/legal-library/precedents/${p.id}`}
+                                    <Link key={p.id} to={slugPath(`/legal-library/precedents/${p.id}`)}
                                         className="block px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg text-sm text-gray-800 dark:text-gray-200">
                                         {p.court} — {p.caseType}
                                     </Link>
@@ -114,7 +116,7 @@ export function LegalLibraryHome() {
                                     <Hash className="w-3 h-3" /> المصطلحات
                                 </p>
                                 {searchResults.terms.map((t: any) => (
-                                    <Link key={t.id} to={`/legal-library/glossary`}
+                                    <Link key={t.id} to={slugPath(`/legal-library/glossary`)}
                                         className="block px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg text-sm text-gray-800 dark:text-gray-200">
                                         {t.termAr} — {t.termEn}
                                     </Link>
@@ -131,7 +133,7 @@ export function LegalLibraryHome() {
             {/* Quick Access Categories */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
                 {QUICK_CATS.map(cat => (
-                    <Link key={cat.cat} to={`/legal-library/regulations?category=${cat.cat}`}
+                    <Link key={cat.cat} to={slugPath(`/legal-library/regulations?category=${cat.cat}`)}
                         className={`flex items-center gap-3 p-3 rounded-xl border ${cat.color} transition-all`}>
                         <span className="text-2xl">{cat.icon}</span>
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{cat.label}</span>
@@ -145,7 +147,7 @@ export function LegalLibraryHome() {
                     <h2 className="font-semibold text-gray-900 dark:text-white mb-4">الأنظمة الأكثر مشاهدة</h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {stats.popular.map((reg: any) => (
-                            <Link key={reg.id} to={`/legal-library/regulations/${reg.id}`}
+                            <Link key={reg.id} to={slugPath(`/legal-library/regulations/${reg.id}`)}
                                 className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 hover:border-indigo-300 hover:shadow-sm transition-all">
                                 <div className="flex items-center justify-between">
                                     <div>
@@ -167,17 +169,17 @@ export function LegalLibraryHome() {
 
             {/* Quick links */}
             <div className="mt-8 grid grid-cols-3 gap-3">
-                <Link to="/legal-library/regulations"
+                <Link to={slugPath('/legal-library/regulations')}
                     className="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 rounded-xl p-4 text-center hover:bg-indigo-100 transition-colors">
                     <Scale className="w-6 h-6 text-indigo-600 mx-auto mb-2" />
                     <p className="text-sm font-medium text-indigo-800 dark:text-indigo-300">تصفح الأنظمة</p>
                 </Link>
-                <Link to="/legal-library/precedents"
+                <Link to={slugPath('/legal-library/precedents')}
                     className="bg-purple-50 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-800 rounded-xl p-4 text-center hover:bg-purple-100 transition-colors">
                     <BookMarked className="w-6 h-6 text-purple-600 mx-auto mb-2" />
                     <p className="text-sm font-medium text-purple-800 dark:text-purple-300">الأحكام القضائية</p>
                 </Link>
-                <Link to="/legal-library/glossary"
+                <Link to={slugPath('/legal-library/glossary')}
                     className="bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 rounded-xl p-4 text-center hover:bg-emerald-100 transition-colors">
                     <Hash className="w-6 h-6 text-emerald-600 mx-auto mb-2" />
                     <p className="text-sm font-medium text-emerald-800 dark:text-emerald-300">المصطلحات القانونية</p>
@@ -192,6 +194,7 @@ export function LegalLibraryHome() {
 
 // AI Search Modal (inline)
 function AiSearchModal({ onClose }: { onClose: () => void }) {
+    const { p: slugPath } = useSlugPath();
     const [query, setQuery] = useState('');
     const [result, setResult] = useState<any>(null);
     const [loading, setLoading] = useState(false);
@@ -288,14 +291,14 @@ function AiSearchModal({ onClose }: { onClose: () => void }) {
                                     <p className="text-xs text-gray-400 mb-3">المصادر المستخدمة:</p>
                                     <div className="flex flex-col gap-2">
                                         {result.sources?.regulations?.map((r: any) => (
-                                            <Link key={r.id} to={`/legal-library/regulations/${r.id}`} onClick={onClose}
+                                            <Link key={r.id} to={slugPath(`/legal-library/regulations/${r.id}`)} onClick={onClose}
                                                 className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:border-indigo-300">
                                                 <Scale className="w-4 h-4 text-indigo-500 flex-shrink-0" />
                                                 {r.title}
                                             </Link>
                                         ))}
                                         {result.sources?.precedents?.map((p: any) => (
-                                            <Link key={p.id} to={`/legal-library/precedents/${p.id}`} onClick={onClose}
+                                            <Link key={p.id} to={slugPath(`/legal-library/precedents/${p.id}`)} onClick={onClose}
                                                 className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:border-indigo-300">
                                                 <BookMarked className="w-4 h-4 text-purple-500 flex-shrink-0" />
                                                 {p.court} — {p.caseType}

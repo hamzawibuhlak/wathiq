@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { useSlugPath } from '@/hooks/useSlugPath';
 import { Search, BookMarked, Eye, ChevronLeft, Calendar, CheckCircle2 } from 'lucide-react';
 import { usePrecedents } from '@/hooks/useLegalLibrary';
 
@@ -7,7 +8,7 @@ const COURT_LABELS: Record<string, string> = {
     SUPREME_COURT: 'المحكمة العليا', APPEAL_COURT: 'محكمة الاستئناف',
     GENERAL_COURT: 'المحكمة العامة', COMMERCIAL_COURT: 'المحكمة التجارية',
     LABOR_COURT: 'المحكمة العمالية', ADMINISTRATIVE_COURT: 'المحكمة الإدارية',
-    FAMILY_COURT: 'محكمة الأحوال الشخصية', CRIMINAL_COURT: 'المحكمة الجزائية',
+    FAMILY_COURT: 'محكمة الأحوال الشخصية', CRIMINAL_COURT: 'المحكمة الجزائية'
 };
 
 const OUTCOME_LABELS: Record<string, { label: string; color: string }> = {
@@ -15,12 +16,13 @@ const OUTCOME_LABELS: Record<string, { label: string; color: string }> = {
     FOR_DEFENDANT: { label: 'لصالح المدعى عليه', color: 'bg-blue-100 text-blue-700' },
     PARTIAL: { label: 'حكم جزئي', color: 'bg-yellow-100 text-yellow-700' },
     DISMISSED: { label: 'رفض الدعوى', color: 'bg-red-100 text-red-700' },
-    SETTLEMENT: { label: 'صلح', color: 'bg-purple-100 text-purple-700' },
+    SETTLEMENT: { label: 'صلح', color: 'bg-purple-100 text-purple-700' }
 };
 
 const CASE_TYPES = ['تجاري', 'عمالي', 'أحوال شخصية', 'جزائي', 'إداري', 'مدني', 'عقاري'];
 
 export function PrecedentsPage() {
+    const { p: slugPath } = useSlugPath();
     const [searchParams] = useSearchParams();
     const [courtType, setCourtType] = useState(searchParams.get('courtType') || '');
     const [caseType, setCaseType] = useState('');
@@ -31,7 +33,7 @@ export function PrecedentsPage() {
         courtType: courtType || undefined,
         caseType: caseType || undefined,
         search: search || undefined,
-        page,
+        page
     });
 
     return (
@@ -41,7 +43,7 @@ export function PrecedentsPage() {
                     <h1 className="text-xl font-bold text-gray-900 dark:text-white">الأحكام القضائية</h1>
                     <p className="text-sm text-gray-500 mt-1">المبادئ القضائية والأحكام السابقة</p>
                 </div>
-                <Link to="/legal-library" className="text-sm text-indigo-600 hover:underline flex items-center gap-1">
+                <Link to={slugPath('/legal-library')} className="text-sm text-indigo-600 hover:underline flex items-center gap-1">
                     العودة للمكتبة <ChevronLeft className="w-4 h-4" />
                 </Link>
             </div>
@@ -91,7 +93,7 @@ export function PrecedentsPage() {
                 <>
                     <div className="space-y-3">
                         {data?.data?.map((p: any) => (
-                            <Link key={p.id} to={`/legal-library/precedents/${p.id}`}
+                            <Link key={p.id} to={slugPath(`/legal-library/precedents/${p.id}`)}
                                 className="block bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 hover:border-purple-300 hover:shadow-sm transition-all">
                                 <div className="flex items-start justify-between gap-4">
                                     <div className="flex-1">

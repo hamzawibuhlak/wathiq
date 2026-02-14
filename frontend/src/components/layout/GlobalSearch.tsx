@@ -38,21 +38,23 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
         onClose();
         setQuery('');
 
+        const slug = window.location.pathname.split('/')[1] || '';
+
         switch (type) {
             case 'case':
-                navigate(`/cases/${id}`);
+                navigate(`/${slug}/cases/${id}`);
                 break;
             case 'client':
-                navigate(`/clients/${id}`);
+                navigate(`/${slug}/clients/${id}`);
                 break;
             case 'hearing':
-                navigate(`/hearings/${id}/edit`);
+                navigate(`/${slug}/hearings/${id}/edit`);
                 break;
             case 'document':
-                navigate(`/documents/${id}`);
+                navigate(`/${slug}/documents/${id}`);
                 break;
             case 'invoice':
-                navigate(`/invoices/${id}`);
+                navigate(`/${slug}/invoices/${id}`);
                 break;
         }
     }, [navigate, onClose]);

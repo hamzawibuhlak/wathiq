@@ -4,6 +4,13 @@ import type { CreateClientRequest } from '@/types';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 
+// Extract tenant slug from current URL path
+function getTenantSlug() {
+    const parts = window.location.pathname.split('/');
+    // URL pattern: /:slug/clients/...
+    return parts[1] || '';
+}
+
 // List of clients (already exists, enhancing)
 export function useClients(filters?: ClientsFilters) {
     return useQuery({
@@ -33,7 +40,7 @@ export function useCreateClient() {
             queryClient.invalidateQueries({ queryKey: ['clients'] });
             queryClient.invalidateQueries({ queryKey: ['dashboard'] });
             toast.success('تم إنشاء العميل بنجاح');
-            navigate(`/clients/${response.data.id}`);
+            navigate(`/${getTenantSlug()}/clients/${response.data.id}`);
         },
         onError: () => {
             toast.error('حدث خطأ أثناء إنشاء العميل');
@@ -69,7 +76,7 @@ export function useDeleteClient() {
             queryClient.invalidateQueries({ queryKey: ['clients'] });
             queryClient.invalidateQueries({ queryKey: ['dashboard'] });
             toast.success('تم حذف العميل بنجاح');
-            navigate('/clients');
+            navigate(`/${getTenantSlug()}/clients`);
         },
         onError: () => {
             toast.error('حدث خطأ أثناء حذف العميل');

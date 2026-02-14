@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useSlugPath } from '@/hooks/useSlugPath';
 import {
     Calculator, TrendingUp, TrendingDown, DollarSign, CreditCard,
     FileText, BookOpen, Receipt, Wallet, PiggyBank, BarChart3,
@@ -19,6 +20,7 @@ async function fetchApi(url: string) {
 }
 
 export function AccountingDashboardPage() {
+    const { p } = useSlugPath();
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState<any>(null);
     const [ratios, setRatios] = useState<any>(null);
@@ -47,7 +49,7 @@ export function AccountingDashboardPage() {
                     income: incomeRes.status === 'fulfilled' ? incomeRes.value : null,
                     balanceSheet: bsRes.status === 'fulfilled' ? bsRes.value : null,
                     arAging: arRes.status === 'fulfilled' ? arRes.value : null,
-                    apAging: apRes.status === 'fulfilled' ? apRes.value : null,
+                    apAging: apRes.status === 'fulfilled' ? apRes.value : null
                 });
                 setRatios(ratiosRes.status === 'fulfilled' ? ratiosRes.value : null);
                 setVatReport(vatRes.status === 'fulfilled' ? vatRes.value : null);
@@ -99,10 +101,10 @@ export function AccountingDashboardPage() {
                     <p className="text-muted-foreground">نظرة عامة على الوضع المالي</p>
                 </div>
                 <div className="flex gap-2">
-                    <Link to="/accounting/journal-entries">
+                    <Link to={p('/accounting/journal-entries')}>
                         <Button variant="outline"><FileText className="w-4 h-4 ml-2" />القيود</Button>
                     </Link>
-                    <Link to="/accounting/accounts">
+                    <Link to={p('/accounting/accounts')}>
                         <Button><BookOpen className="w-4 h-4 ml-2" />شجرة الحسابات</Button>
                     </Link>
                 </div>

@@ -6,7 +6,7 @@ import { useClient, useUpdateClient, useDeleteClient } from '@/hooks/use-clients
 import { useLawyers } from '@/hooks/useUsers';
 
 export function EditClientPage() {
-    const { id } = useParams<{ id: string }>();
+    const { id, slug } = useParams<{ id: string; slug: string }>();
     const navigate = useNavigate();
 
     const { data: clientData, isLoading } = useClient(id!);
@@ -35,7 +35,7 @@ export function EditClientPage() {
             },
             {
                 onSuccess: () => {
-                    navigate(`/clients/${id}`);
+                    navigate(`/${slug}/clients/${id}`);
                 },
             }
         );
@@ -51,7 +51,7 @@ export function EditClientPage() {
         <div className="space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between">
-                <Link to={`/clients/${id}`}>
+                <Link to={`/${slug}/clients/${id}`}>
                     <Button variant="ghost" size="sm">
                         <ArrowRight className="w-4 h-4 ml-2" />
                         العودة للتفاصيل

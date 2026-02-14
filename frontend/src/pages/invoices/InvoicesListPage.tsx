@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useSlugPath } from '@/hooks/useSlugPath';
 import { Plus, Receipt, AlertTriangle, Search, X, TrendingUp, TrendingDown, DollarSign, Clock, FileDown, Trash2, CheckCircle } from 'lucide-react';
 import { Button, Input } from '@/components/ui';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -10,6 +11,7 @@ import { exportInvoices } from '@/api/exports.api';
 import toast from 'react-hot-toast';
 
 export function InvoicesListPage() {
+    const { p } = useSlugPath();
     const [search, setSearch] = useState('');
     const [status, setStatus] = useState('');
     const [page, setPage] = useState(1);
@@ -21,7 +23,7 @@ export function InvoicesListPage() {
         search: search || undefined,
         status: status || undefined,
         page,
-        limit,
+        limit
     });
 
     const deleteMutation = useDeleteInvoice();
@@ -56,7 +58,7 @@ export function InvoicesListPage() {
         try {
             await exportInvoices({
                 status: status || undefined,
-                ids: selectedIds.length > 0 ? selectedIds : undefined,
+                ids: selectedIds.length > 0 ? selectedIds : undefined
             });
             toast.success('تم تصدير البيانات بنجاح');
         } catch (error) {
@@ -105,14 +107,14 @@ export function InvoicesListPage() {
             if (inv.status === 'PAID') return false;
             if (!inv.dueDate) return false;
             return new Date(inv.dueDate) < new Date();
-        }).reduce((sum, inv) => sum + inv.totalAmount, 0),
+        }).reduce((sum, inv) => sum + inv.totalAmount, 0)
     };
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('ar-SA', {
             style: 'currency',
             currency: 'SAR',
-            maximumFractionDigits: 0,
+            maximumFractionDigits: 0
         }).format(amount);
     };
 
@@ -160,7 +162,7 @@ export function InvoicesListPage() {
                         <FileDown className="w-4 h-4 ml-2" />
                         {isExporting ? 'جاري التصدير...' : 'تصدير Excel'}
                     </Button>
-                    <Link to="/invoices/new">
+                    <Link to={p('/invoices/new')}>
                         <Button>
                             <Plus className="w-4 h-4 ml-2" />
                             فاتورة جديدة
@@ -312,7 +314,7 @@ export function InvoicesListPage() {
                     <p className="text-muted-foreground mb-4">
                         لم يتم العثور على فواتير مطابقة
                     </p>
-                    <Link to="/invoices/new">
+                    <Link to={p('/invoices/new')}>
                         <Button>
                             <Plus className="w-4 h-4 ml-2" />
                             إنشاء فاتورة جديدة
@@ -384,19 +386,19 @@ export function InvoicesListPage() {
                         label: 'تصدير',
                         icon: <FileDown className="w-4 h-4" />,
                         onClick: handleExport,
-                        disabled: isExporting,
+                        disabled: isExporting
                     },
                     {
                         label: 'تعليم كمدفوعة',
                         icon: <CheckCircle className="w-4 h-4" />,
                         onClick: handleBulkMarkPaid,
-                        variant: 'secondary',
+                        variant: 'secondary'
                     },
                     {
                         label: 'حذف',
                         icon: <Trash2 className="w-4 h-4" />,
                         onClick: handleBulkDelete,
-                        variant: 'destructive',
+                        variant: 'destructive'
                     },
                 ]}
             />

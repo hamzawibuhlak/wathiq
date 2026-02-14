@@ -1,4 +1,5 @@
 import { useParams, Link } from 'react-router-dom';
+import { useSlugPath } from '@/hooks/useSlugPath';
 import { ChevronLeft, Calendar, Eye, CheckCircle2, BookMarked } from 'lucide-react';
 import { usePrecedent } from '@/hooks/useLegalLibrary';
 
@@ -6,7 +7,7 @@ const COURT_LABELS: Record<string, string> = {
     SUPREME_COURT: 'المحكمة العليا', APPEAL_COURT: 'محكمة الاستئناف',
     GENERAL_COURT: 'المحكمة العامة', COMMERCIAL_COURT: 'المحكمة التجارية',
     LABOR_COURT: 'المحكمة العمالية', ADMINISTRATIVE_COURT: 'المحكمة الإدارية',
-    FAMILY_COURT: 'محكمة الأحوال الشخصية', CRIMINAL_COURT: 'المحكمة الجزائية',
+    FAMILY_COURT: 'محكمة الأحوال الشخصية', CRIMINAL_COURT: 'المحكمة الجزائية'
 };
 
 const OUTCOME_LABELS: Record<string, { label: string; color: string }> = {
@@ -14,10 +15,11 @@ const OUTCOME_LABELS: Record<string, { label: string; color: string }> = {
     FOR_DEFENDANT: { label: 'لصالح المدعى عليه', color: 'bg-blue-100 text-blue-700' },
     PARTIAL: { label: 'حكم جزئي', color: 'bg-yellow-100 text-yellow-700' },
     DISMISSED: { label: 'رفض الدعوى', color: 'bg-red-100 text-red-700' },
-    SETTLEMENT: { label: 'صلح', color: 'bg-purple-100 text-purple-700' },
+    SETTLEMENT: { label: 'صلح', color: 'bg-purple-100 text-purple-700' }
 };
 
 export function PrecedentDetailsPage() {
+    const { p } = useSlugPath();
     const { id } = useParams();
     const { data: precedent, isLoading } = usePrecedent(id!);
 
@@ -38,7 +40,7 @@ export function PrecedentDetailsPage() {
 
     return (
         <div className="p-6 max-w-3xl mx-auto" dir="rtl">
-            <Link to="/legal-library/precedents" className="text-sm text-indigo-600 hover:underline flex items-center gap-1 mb-4">
+            <Link to={p('/legal-library/precedents')} className="text-sm text-indigo-600 hover:underline flex items-center gap-1 mb-4">
                 الأحكام القضائية <ChevronLeft className="w-4 h-4" />
             </Link>
 

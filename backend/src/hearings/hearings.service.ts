@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { EntityCodeService } from '../common/services/entity-code.service';
 import { CreateHearingDto } from './dto/create-hearing.dto';
 import { UpdateHearingDto } from './dto/update-hearing.dto';
 import { FilterHearingsDto } from './dto/filter-hearings.dto';
@@ -36,6 +37,7 @@ export class HearingsService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly emailService: EmailService,
+        private readonly entityCodeService: EntityCodeService,
     ) { }
 
     /**
@@ -374,6 +376,11 @@ export class HearingsService {
             }
         }
 
+        // Phase 37: Generate hierarchical hearing code
+        const hearingCode = dto.caseId
+            ? await this.entityCodeService.generateHearingCode(dto.caseId)
+            : await this.entityCodeService.generateFlatCode(tenantId, 'hearing');
+
         const hearing = await this.prisma.hearing.create({
             data: {
                 hearingNumber: dto.hearingNumber || '',
@@ -389,6 +396,8 @@ export class HearingsService {
                 notes: dto.notes || null,
                 tenantId,
                 createdById: userId,
+                code: hearingCode.code,
+                codeNumber: hearingCode.codeNumber,
             },
             include: {
                 case: {

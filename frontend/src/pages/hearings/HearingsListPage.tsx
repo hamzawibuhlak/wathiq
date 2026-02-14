@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useSlugPath } from '@/hooks/useSlugPath';
 import { Plus, CalendarDays, List, AlertTriangle, Search, X, FileDown, Trash2, Clock, CheckCircle, PauseCircle, XCircle } from 'lucide-react';
 import { Button, Input } from '@/components/ui';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -12,6 +13,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 
 export function HearingsListPage() {
+    const { p } = useSlugPath();
     const [search, setSearch] = useState('');
     const [status, setStatus] = useState('');
     const [page, setPage] = useState(1);
@@ -25,7 +27,7 @@ export function HearingsListPage() {
         search: search || undefined,
         status: status || undefined,
         page,
-        limit,
+        limit
     });
 
     const deleteMutation = useDeleteHearing();
@@ -59,7 +61,7 @@ export function HearingsListPage() {
         try {
             await exportHearings({
                 status: status || undefined,
-                ids: selectedIds.length > 0 ? selectedIds : undefined,
+                ids: selectedIds.length > 0 ? selectedIds : undefined
             });
             toast.success('تم تصدير البيانات بنجاح');
         } catch (error) {
@@ -141,7 +143,7 @@ export function HearingsListPage() {
                     {/* View Toggle */}
                     <div className="flex items-center bg-muted rounded-lg p-1">
                         <Link
-                            to="/hearings/calendar"
+                            to={p('/hearings/calendar')}
                             className="flex items-center gap-1 px-3 py-1.5 rounded-md text-sm text-muted-foreground transition-colors"
                         >
                             <CalendarDays className="w-4 h-4" />
@@ -158,7 +160,7 @@ export function HearingsListPage() {
                         <FileDown className="w-4 h-4 ml-2" />
                         {isExporting ? 'جاري التصدير...' : 'تصدير'}
                     </Button>
-                    <Link to="/hearings/new">
+                    <Link to={p('/hearings/new')}>
                         <Button>
                             <Plus className="w-4 h-4 ml-2" />
                             جلسة جديدة
@@ -270,7 +272,7 @@ export function HearingsListPage() {
                     <p className="text-muted-foreground mb-4">
                         لم يتم العثور على جلسات مطابقة
                     </p>
-                    <Link to="/hearings/new">
+                    <Link to={p('/hearings/new')}>
                         <Button>
                             <Plus className="w-4 h-4 ml-2" />
                             إنشاء جلسة جديدة
@@ -341,37 +343,37 @@ export function HearingsListPage() {
                         label: 'تصدير',
                         icon: <FileDown className="w-4 h-4" />,
                         onClick: handleExport,
-                        disabled: isExporting,
+                        disabled: isExporting
                     },
                     {
                         label: 'مجدولة',
                         icon: <Clock className="w-4 h-4" />,
                         onClick: () => handleBulkStatusChange('SCHEDULED'),
-                        disabled: isUpdatingStatus,
+                        disabled: isUpdatingStatus
                     },
                     {
                         label: 'منتهية',
                         icon: <CheckCircle className="w-4 h-4" />,
                         onClick: () => handleBulkStatusChange('COMPLETED'),
-                        disabled: isUpdatingStatus,
+                        disabled: isUpdatingStatus
                     },
                     {
                         label: 'مؤجلة',
                         icon: <PauseCircle className="w-4 h-4" />,
                         onClick: () => handleBulkStatusChange('POSTPONED'),
-                        disabled: isUpdatingStatus,
+                        disabled: isUpdatingStatus
                     },
                     {
                         label: 'ملغاة',
                         icon: <XCircle className="w-4 h-4" />,
                         onClick: () => handleBulkStatusChange('CANCELLED'),
-                        disabled: isUpdatingStatus,
+                        disabled: isUpdatingStatus
                     },
                     {
                         label: 'حذف',
                         icon: <Trash2 className="w-4 h-4" />,
                         onClick: handleBulkDelete,
-                        variant: 'destructive',
+                        variant: 'destructive'
                     },
                 ]}
             />
