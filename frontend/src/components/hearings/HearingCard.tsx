@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useSlugPath } from '@/hooks/useSlugPath';
 import { Clock, MapPin, Scale, MoreVertical, Pencil, Trash2, User, Users, Gavel, Hash } from 'lucide-react';
 import { cn, formatDate } from '@/lib/utils';
 import { HearingStatusBadge } from './HearingStatusBadge';
@@ -13,6 +14,7 @@ interface HearingCardProps {
 export function HearingCard({ hearing, onDelete }: HearingCardProps) {
     const [showMenu, setShowMenu] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
+    const { p } = useSlugPath();
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
@@ -29,7 +31,7 @@ export function HearingCard({ hearing, onDelete }: HearingCardProps) {
 
     // Get lawyer info from hearing.assignedTo (direct) or fallback to case.assignedTo
     const lawyer = (hearing as any).assignedTo || hearing.case?.assignedTo;
-    
+
     // Get opponent name from hearing directly or from case
     const opponentName = (hearing as any).opponentName || hearing.case?.opposingParty;
 
@@ -46,9 +48,9 @@ export function HearingCard({ hearing, onDelete }: HearingCardProps) {
                         'bg-primary/10'
                     )}>
                         {lawyer?.avatar ? (
-                            <img 
-                                src={lawyer.avatar} 
-                                alt={lawyer.name} 
+                            <img
+                                src={lawyer.avatar}
+                                alt={lawyer.name}
                                 className="w-full h-full object-cover"
                             />
                         ) : (
@@ -86,7 +88,7 @@ export function HearingCard({ hearing, onDelete }: HearingCardProps) {
                     {showMenu && (
                         <div className="absolute left-0 top-full mt-1 w-36 bg-card rounded-lg shadow-lg border py-1 z-10">
                             <Link
-                                to={`/hearings/${hearing.id}/edit`}
+                                to={p(`/hearings/${hearing.id}/edit`)}
                                 className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors"
                             >
                                 <Pencil className="w-4 h-4" />
@@ -107,7 +109,7 @@ export function HearingCard({ hearing, onDelete }: HearingCardProps) {
             {/* Case Info */}
             {hearing.case && (
                 <Link
-                    to={`/cases/${hearing.case.id}`}
+                    to={p(`/cases/${hearing.case.id}`)}
                     className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors mb-3"
                 >
                     <Scale className="w-4 h-4" />

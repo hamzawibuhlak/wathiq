@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-    Clock, 
-    User, 
-    Calendar, 
-    Briefcase, 
-    MessageSquare, 
+import { useSlugPath } from '@/hooks/useSlugPath';
+import {
+    Clock,
+    User,
+    Calendar,
+    Briefcase,
+    MessageSquare,
     MoreVertical,
     Trash2,
     Edit,
@@ -49,12 +50,13 @@ const priorityConfig = {
 export function TaskCard({ task, isSelected, onSelect, onDelete }: TaskCardProps) {
     const [showMenu, setShowMenu] = useState(false);
     const updateStatusMutation = useUpdateTaskStatus();
+    const { p } = useSlugPath();
 
     const statusInfo = statusConfig[task.status];
     const priorityInfo = priorityConfig[task.priority];
     const StatusIcon = statusInfo.icon;
 
-    const isOverdue = task.dueDate && isPast(new Date(task.dueDate)) && 
+    const isOverdue = task.dueDate && isPast(new Date(task.dueDate)) &&
         !['COMPLETED', 'CANCELLED'].includes(task.status);
 
     const formatDueDate = (dateStr: string) => {
@@ -69,7 +71,7 @@ export function TaskCard({ task, isSelected, onSelect, onDelete }: TaskCardProps
         setShowMenu(false);
     };
 
-    const quickStatusOptions: TaskStatus[] = task.status === 'COMPLETED' 
+    const quickStatusOptions: TaskStatus[] = task.status === 'COMPLETED'
         ? ['TODO', 'IN_PROGRESS']
         : ['COMPLETED'];
 
@@ -115,7 +117,7 @@ export function TaskCard({ task, isSelected, onSelect, onDelete }: TaskCardProps
                         <div className="absolute left-0 top-full mt-1 w-48 bg-popover border rounded-lg shadow-lg z-10">
                             <div className="p-1">
                                 <Link
-                                    to={`/tasks/${task.id}`}
+                                    to={p(`/tasks/${task.id}`)}
                                     className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent rounded-md"
                                 >
                                     <Edit className="w-4 h-4" />
@@ -162,7 +164,7 @@ export function TaskCard({ task, isSelected, onSelect, onDelete }: TaskCardProps
             </div>
 
             {/* Title & Description */}
-            <Link to={`/tasks/${task.id}`}>
+            <Link to={p(`/tasks/${task.id}`)}>
                 <h3 className={cn(
                     "font-semibold text-lg mb-2 hover:text-primary transition-colors",
                     task.status === 'COMPLETED' && "line-through text-muted-foreground"
@@ -212,8 +214,8 @@ export function TaskCard({ task, isSelected, onSelect, onDelete }: TaskCardProps
 
             {/* Related Case/Hearing */}
             {task.case && (
-                <Link 
-                    to={`/cases/${task.case.id}`}
+                <Link
+                    to={p(`/cases/${task.case.id}`)}
                     className="inline-flex items-center gap-1 text-xs bg-muted px-2 py-1 rounded-full hover:bg-muted/80"
                 >
                     <Briefcase className="w-3 h-3" />

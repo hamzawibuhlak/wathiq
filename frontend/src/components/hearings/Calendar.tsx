@@ -159,7 +159,7 @@ export function Calendar({ hearings, currentDate, onMonthChange, isLoading }: Ca
                                 {dayHearings.slice(0, 3).map((hearing) => (
                                     <Link
                                         key={hearing.id}
-                                        to={`/hearings/${hearing.id}/edit`}
+                                        to={p(`/hearings/${hearing.id}/edit`)}
                                         onClick={(e) => e.stopPropagation()}
                                         className={cn(
                                             'block text-xs p-1 rounded truncate',

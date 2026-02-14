@@ -110,7 +110,7 @@ export function UpcomingHearings({ hearings, isLoading }: UpcomingHearingsProps)
                         return (
                             <Link
                                 key={hearing.id}
-                                to={`/hearings/${hearing.id}/edit`}
+                                to={p(`/hearings/${hearing.id}/edit`)}
                                 className={cn(
                                     'flex gap-4 p-3 rounded-xl transition-all duration-200 block',
                                     isToday

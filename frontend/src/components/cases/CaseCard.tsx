@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useSlugPath } from '@/hooks/useSlugPath';
 import { Scale, Calendar, User, MoreVertical, Eye, Pencil, Trash2 } from 'lucide-react';
 import { cn, formatDate } from '@/lib/utils';
 import { CaseStatusBadge } from './CaseStatusBadge';
@@ -28,6 +29,7 @@ const priorityConfig: Record<string, { label: string; className: string }> = {
 export function CaseCard({ caseData, onDelete }: CaseCardProps) {
     const [showMenu, setShowMenu] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
+    const { p } = useSlugPath();
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
@@ -50,7 +52,7 @@ export function CaseCard({ caseData, onDelete }: CaseCardProps) {
                     </div>
                     <div>
                         <Link
-                            to={`/cases/${caseData.id}`}
+                            to={p(`/cases/${caseData.id}`)}
                             className="font-semibold hover:text-primary transition-colors"
                         >
                             {caseData.title}
@@ -70,14 +72,14 @@ export function CaseCard({ caseData, onDelete }: CaseCardProps) {
                     {showMenu && (
                         <div className="absolute left-0 top-full mt-1 w-40 bg-card rounded-lg shadow-lg border py-1 z-10">
                             <Link
-                                to={`/cases/${caseData.id}`}
+                                to={p(`/cases/${caseData.id}`)}
                                 className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors"
                             >
                                 <Eye className="w-4 h-4" />
                                 عرض التفاصيل
                             </Link>
                             <Link
-                                to={`/cases/${caseData.id}/edit`}
+                                to={p(`/cases/${caseData.id}/edit`)}
                                 className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors"
                             >
                                 <Pencil className="w-4 h-4" />

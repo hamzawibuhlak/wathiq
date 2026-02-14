@@ -113,7 +113,7 @@ export function AccountingDashboardPage() {
             {/* Quick Links */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {quickLinks.map(link => (
-                    <Link key={link.path} to={link.path} className="bg-card rounded-xl border p-4 hover:shadow-md transition-all group">
+                    <Link key={link.path} to={p(link.path)} className="bg-card rounded-xl border p-4 hover:shadow-md transition-all group">
                         <div className="flex items-center gap-3">
                             <div className={`w-10 h-10 rounded-full ${link.color} flex items-center justify-center group-hover:scale-110 transition`}>
                                 <link.icon className="w-5 h-5" />

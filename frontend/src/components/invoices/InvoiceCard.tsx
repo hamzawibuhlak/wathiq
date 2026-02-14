@@ -1,4 +1,5 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { useSlugPath } from '@/hooks/useSlugPath';
 import { Receipt, MoreVertical, Eye, Pencil, Trash2, CheckCircle } from 'lucide-react';
 import type { Invoice } from '@/types';
 import { formatDate } from '@/lib/utils';
@@ -14,7 +15,7 @@ interface InvoiceCardProps {
 export function InvoiceCard({ invoice, onMarkPaid, onDelete }: InvoiceCardProps) {
     const [showMenu, setShowMenu] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
-    const navigate = useNavigate();
+    const { p, nav } = useSlugPath();
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
@@ -40,11 +41,11 @@ export function InvoiceCard({ invoice, onMarkPaid, onDelete }: InvoiceCardProps)
         if (menuRef.current?.contains(e.target as Node)) {
             return;
         }
-        navigate(`/invoices/${invoice.id}`);
+        nav(`/invoices/${invoice.id}`);
     };
 
     return (
-        <div 
+        <div
             className="bg-card rounded-xl border p-5 hover:shadow-md transition-shadow cursor-pointer"
             onClick={handleCardClick}
         >
@@ -55,7 +56,7 @@ export function InvoiceCard({ invoice, onMarkPaid, onDelete }: InvoiceCardProps)
                     </div>
                     <div>
                         <Link
-                            to={`/invoices/${invoice.id}`}
+                            to={p(`/invoices/${invoice.id}`)}
                             className="font-semibold hover:text-primary transition-colors"
                         >
                             {invoice.invoiceNumber}
@@ -77,14 +78,14 @@ export function InvoiceCard({ invoice, onMarkPaid, onDelete }: InvoiceCardProps)
                     {showMenu && (
                         <div className="absolute left-0 top-full mt-1 w-44 bg-card rounded-lg shadow-lg border py-1 z-10">
                             <Link
-                                to={`/invoices/${invoice.id}`}
+                                to={p(`/invoices/${invoice.id}`)}
                                 className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors"
                             >
                                 <Eye className="w-4 h-4" />
                                 عرض
                             </Link>
                             <Link
-                                to={`/invoices/${invoice.id}/edit`}
+                                to={p(`/invoices/${invoice.id}/edit`)}
                                 className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors"
                             >
                                 <Pencil className="w-4 h-4" />
