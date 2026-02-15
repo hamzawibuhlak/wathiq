@@ -91,7 +91,7 @@ class ApiService {
 
     // ── Auth endpoints (no tenant prefix) ─────
     async login(tenantSlug: string, email: string, password: string) {
-        const res = await this.client.post(`/${tenantSlug}/auth/login`, { email, password });
+        const res = await this.client.post('/auth/login', { email, password, slug: tenantSlug });
         this.tenantSlug = tenantSlug;
         return res.data;
     }
