@@ -87,6 +87,7 @@ export class LegalLibraryService {
         source?: string;
         version?: string;
         tags?: string[];
+        attachments?: string[];
         articles?: { number: string; title?: string; content: string; notes?: string }[];
     }) {
         const { articles, ...regData } = data;

@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useSlugPath } from '@/hooks/useSlugPath';
-import { Search, Scale, Eye, ChevronLeft, Plus, X, Loader2, Trash2 } from 'lucide-react';
+import { Search, Scale, Eye, ChevronLeft, Plus, X, Loader2, Trash2, Upload, FileText } from 'lucide-react';
 import { useRegulations, useCreateRegulation, useDeleteRegulation } from '@/hooks/useLegalLibrary';
 import toast from 'react-hot-toast';
+import api from '@/api/client';
 
 const CATEGORY_LABELS: Record<string, string> = {
     CIVIL: 'مدني', COMMERCIAL: 'تجاري', LABOR: 'عمل', CRIMINAL: 'جنائي',
@@ -194,9 +195,17 @@ export function RegulationsPage() {
     );
 }
 
+// ─── Helper: check if URL is an image ──────────────
+function isImageUrl(url: string) {
+    return /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(url);
+}
+
 // ─── Create Regulation Modal ──────────────────────
 function CreateRegulationModal({ onClose }: { onClose: () => void }) {
     const createMutation = useCreateRegulation();
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [uploading, setUploading] = useState(false);
+    const [attachments, setAttachments] = useState<string[]>([]);
     const [form, setForm] = useState({
         title: '',
         titleEn: '',
@@ -217,6 +226,41 @@ function CreateRegulationModal({ onClose }: { onClose: () => void }) {
         setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
     };
 
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (!files?.length) return;
+
+        setUploading(true);
+        const newAttachments: string[] = [];
+
+        for (const file of Array.from(files)) {
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                const res = await api.post('/uploads/document', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' },
+                });
+                if (res.data?.url) {
+                    newAttachments.push(res.data.url);
+                }
+            } catch {
+                toast.error(`فشل رفع الملف: ${file.name}`);
+            }
+        }
+
+        setAttachments(prev => [...prev, ...newAttachments]);
+        setUploading(false);
+        if (newAttachments.length > 0) {
+            toast.success(`تم رفع ${newAttachments.length} ملف بنجاح`);
+        }
+        // Reset input
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    const removeAttachment = (index: number) => {
+        setAttachments(prev => prev.filter((_, i) => i !== index));
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!form.title.trim() || !form.content.trim()) {
@@ -227,6 +271,7 @@ function CreateRegulationModal({ onClose }: { onClose: () => void }) {
         createMutation.mutate({
             ...form,
             tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+            attachments,
         }, {
             onSuccess: () => {
                 toast.success('تم إضافة النظام بنجاح');
@@ -347,13 +392,64 @@ function CreateRegulationModal({ onClose }: { onClose: () => void }) {
                             placeholder="عمل, عقود, إجازات (مفصولة بفاصلة)" />
                     </div>
 
+                    {/* File Uploads */}
+                    <div>
+                        <label className={labelClass}>المرفقات (ملفات وصور)</label>
+                        <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-4 text-center hover:border-indigo-400 transition-colors">
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                multiple
+                                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"
+                                onChange={handleFileUpload}
+                                className="hidden"
+                                id="regulation-files"
+                            />
+                            <label htmlFor="regulation-files" className="cursor-pointer flex flex-col items-center gap-2">
+                                {uploading ? (
+                                    <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+                                ) : (
+                                    <Upload className="w-8 h-8 text-gray-400" />
+                                )}
+                                <span className="text-sm text-gray-500">
+                                    {uploading ? 'جاري الرفع...' : 'اضغط لرفع ملفات أو صور'}
+                                </span>
+                                <span className="text-xs text-gray-400">PDF, Word, Excel, صور</span>
+                            </label>
+                        </div>
+
+                        {/* Uploaded files preview */}
+                        {attachments.length > 0 && (
+                            <div className="mt-3 space-y-2">
+                                {attachments.map((url, idx) => (
+                                    <div key={idx} className="flex items-center gap-3 bg-gray-50 dark:bg-gray-700 rounded-lg p-2.5">
+                                        {isImageUrl(url) ? (
+                                            <img src={url} alt="" className="w-10 h-10 rounded object-cover flex-shrink-0" />
+                                        ) : (
+                                            <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/50 rounded flex items-center justify-center flex-shrink-0">
+                                                <FileText className="w-5 h-5 text-indigo-600" />
+                                            </div>
+                                        )}
+                                        <span className="flex-1 text-sm text-gray-700 dark:text-gray-300 truncate">
+                                            {decodeURIComponent(url.split('/').pop() || 'ملف')}
+                                        </span>
+                                        <button type="button" onClick={() => removeAttachment(idx)}
+                                            className="text-gray-400 hover:text-red-500 p-1">
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
                     {/* Submit */}
                     <div className="flex justify-end gap-3 pt-3 border-t border-gray-200 dark:border-gray-700">
                         <button type="button" onClick={onClose}
                             className="px-5 py-2.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700 dark:text-gray-300">
                             إلغاء
                         </button>
-                        <button type="submit" disabled={createMutation.isPending}
+                        <button type="submit" disabled={createMutation.isPending || uploading}
                             className="flex items-center gap-2 px-5 py-2.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">
                             {createMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                             إضافة النظام

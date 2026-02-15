@@ -3327,6 +3327,7 @@ model LegalRegulation {
   version       String?
   tags          String[]
   viewCount     Int                @default(0)
+  attachments   String[]
 
   articles  RegulationArticle[]
   bookmarks LegalBookmark[]

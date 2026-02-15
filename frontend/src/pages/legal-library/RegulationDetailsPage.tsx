@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useSlugPath } from '@/hooks/useSlugPath';
-import { ChevronDown, ChevronUp, ChevronLeft, Search, Eye } from 'lucide-react';
+import { ChevronDown, ChevronUp, ChevronLeft, Search, Eye, FileText, Download, Image as ImageIcon } from 'lucide-react';
 import { useRegulation } from '@/hooks/useLegalLibrary';
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -11,6 +11,14 @@ const CATEGORY_LABELS: Record<string, string> = {
     TAX: 'ضريبي', CYBER: 'معلوماتي', ARBITRATION: 'تحكيم',
     PROCEDURES: 'مرافعات', NOTARY: 'توثيق', OTHER_REG: 'أخرى'
 };
+
+function isImageUrl(url: string) {
+    return /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(url);
+}
+
+function getFileName(url: string) {
+    return decodeURIComponent(url.split('/').pop() || 'ملف');
+}
 
 export function RegulationDetailsPage() {
     const { p } = useSlugPath();
@@ -55,6 +63,9 @@ export function RegulationDetailsPage() {
     if (!regulation) {
         return <div className="p-8 text-center text-gray-400">النظام غير موجود</div>;
     }
+
+    const imageAttachments = regulation.attachments?.filter((url: string) => isImageUrl(url)) || [];
+    const fileAttachments = regulation.attachments?.filter((url: string) => !isImageUrl(url)) || [];
 
     return (
         <div className="p-6" dir="rtl">
@@ -103,6 +114,49 @@ export function RegulationDetailsPage() {
                     </div>
                 )}
             </div>
+
+            {/* Attachments Section */}
+            {regulation.attachments?.length > 0 && (
+                <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 mb-5">
+                    <h2 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-indigo-500" />
+                        المرفقات ({regulation.attachments.length})
+                    </h2>
+
+                    {/* Images Grid */}
+                    {imageAttachments.length > 0 && (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+                            {imageAttachments.map((url: string, idx: number) => (
+                                <a key={idx} href={url} target="_blank" rel="noopener noreferrer"
+                                    className="group relative rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 hover:border-indigo-300 transition-all">
+                                    <img src={url} alt={getFileName(url)}
+                                        className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300" />
+                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                        <ImageIcon className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </div>
+                                    <p className="text-xs text-gray-500 p-2 truncate">{getFileName(url)}</p>
+                                </a>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* File Links */}
+                    {fileAttachments.length > 0 && (
+                        <div className="space-y-2">
+                            {fileAttachments.map((url: string, idx: number) => (
+                                <a key={idx} href={url} target="_blank" rel="noopener noreferrer"
+                                    className="flex items-center gap-3 bg-gray-50 dark:bg-gray-700 rounded-xl p-3 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors group">
+                                    <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/50 rounded-lg flex items-center justify-center flex-shrink-0">
+                                        <FileText className="w-5 h-5 text-indigo-600" />
+                                    </div>
+                                    <span className="flex-1 text-sm text-gray-700 dark:text-gray-300 truncate">{getFileName(url)}</span>
+                                    <Download className="w-4 h-4 text-gray-400 group-hover:text-indigo-600 transition-colors" />
+                                </a>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Articles Header */}
             <div className="flex items-center justify-between mb-4">
