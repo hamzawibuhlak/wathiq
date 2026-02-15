@@ -240,8 +240,9 @@ function CreateRegulationModal({ onClose }: { onClose: () => void }) {
                 const res = await api.post('/uploads/document', formData, {
                     headers: { 'Content-Type': 'multipart/form-data' },
                 });
-                if (res.data?.url) {
-                    newAttachments.push(res.data.url);
+                const url = res.data?.data?.url || res.data?.url;
+                if (url) {
+                    newAttachments.push(url);
                 }
             } catch {
                 toast.error(`فشل رفع الملف: ${file.name}`);
