@@ -73,6 +73,48 @@ export class LegalLibraryService {
         return regulation;
     }
 
+    async createRegulation(data: {
+        title: string;
+        titleEn?: string;
+        number?: string;
+        issuedBy?: string;
+        issuedDate?: string;
+        effectiveDate?: string;
+        category: string;
+        status?: string;
+        description?: string;
+        content: string;
+        source?: string;
+        version?: string;
+        tags?: string[];
+        articles?: { number: string; title?: string; content: string; notes?: string }[];
+    }) {
+        const { articles, ...regData } = data;
+        const regulation = await this.prisma.legalRegulation.create({
+            data: {
+                ...regData,
+                category: regData.category as any,
+                status: (regData.status as any) || 'ACTIVE_REG',
+                issuedDate: regData.issuedDate ? new Date(regData.issuedDate) : undefined,
+                effectiveDate: regData.effectiveDate ? new Date(regData.effectiveDate) : undefined,
+                contentText: regData.content.replace(/<[^>]*>/g, ''),
+                tags: regData.tags || [],
+                articles: articles?.length
+                    ? { create: articles }
+                    : undefined,
+            },
+            include: { articles: true },
+        });
+        return regulation;
+    }
+
+    async deleteRegulation(id: string) {
+        const reg = await this.prisma.legalRegulation.findUnique({ where: { id } });
+        if (!reg) throw new NotFoundException('النظام غير موجود');
+        await this.prisma.legalRegulation.delete({ where: { id } });
+        return { message: 'تم حذف النظام بنجاح' };
+    }
+
     // ─── PRECEDENTS ───────────────────────────────
     async getPrecedents(filters?: {
         courtType?: string;

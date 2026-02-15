@@ -13,6 +13,8 @@ export const legalLibraryApi = {
     // Regulations
     getRegulations: (params?: any) => api.get('/legal-library/regulations', { params }).then((r: any) => r.data),
     getRegulationById: (id: string) => api.get(`/legal-library/regulations/${id}`).then((r: any) => r.data),
+    createRegulation: (data: any) => api.post('/legal-library/regulations', data).then((r: any) => r.data),
+    deleteRegulation: (id: string) => api.delete(`/legal-library/regulations/${id}`).then((r: any) => r.data),
 
     // Precedents
     getPrecedents: (params?: any) => api.get('/legal-library/precedents', { params }).then((r: any) => r.data),

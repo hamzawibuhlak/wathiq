@@ -12,6 +12,28 @@ export const useRegulations = (params?: any) =>
 export const useRegulation = (id: string) =>
     useQuery({ queryKey: ['regulation', id], queryFn: () => legalLibraryApi.getRegulationById(id), enabled: !!id });
 
+export const useCreateRegulation = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (data: any) => legalLibraryApi.createRegulation(data),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ['regulations'] });
+            qc.invalidateQueries({ queryKey: ['library-stats'] });
+        },
+    });
+};
+
+export const useDeleteRegulation = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (id: string) => legalLibraryApi.deleteRegulation(id),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ['regulations'] });
+            qc.invalidateQueries({ queryKey: ['library-stats'] });
+        },
+    });
+};
+
 // Precedents
 export const usePrecedents = (params?: any) =>
     useQuery({ queryKey: ['precedents', params], queryFn: () => legalLibraryApi.getPrecedents(params) });

@@ -50,6 +50,16 @@ export class LegalLibraryController {
         return this.service.getRegulationById(id);
     }
 
+    @Post('regulations')
+    createRegulation(@Body() data: any) {
+        return this.service.createRegulation(data);
+    }
+
+    @Delete('regulations/:id')
+    deleteRegulation(@Param('id') id: string) {
+        return this.service.deleteRegulation(id);
+    }
+
     // ── PRECEDENTS ────────────────────────────────
     @Get('precedents')
     getPrecedents(
