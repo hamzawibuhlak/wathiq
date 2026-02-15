@@ -44,7 +44,7 @@ export class TenantRolesController {
     @Get('my-permissions')
     async getMyPermissions(@Request() req: any) {
         return this.permissionService.getPermissionsForFrontend(
-            req.user.userId,
+            req.user.id,
             req.user.tenantId,
         );
     }
