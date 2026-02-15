@@ -34,11 +34,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         set({ isLoading: true });
         try {
             const response = await apiService.login(tenantSlug, email, password);
-            const { access_token, user } = response;
+            const { accessToken, user } = response;
 
             // Persist
             await AsyncStorage.multiSet([
-                ['auth_token', access_token],
+                ['auth_token', accessToken],
                 ['auth_user', JSON.stringify(user)],
                 ['tenant_slug', tenantSlug],
             ]);
@@ -48,7 +48,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
             set({
                 user,
-                token: access_token,
+                token: accessToken,
                 tenantSlug,
                 isAuthenticated: true,
                 isLoading: false,
