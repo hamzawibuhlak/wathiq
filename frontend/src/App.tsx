@@ -118,6 +118,7 @@ const PrecedentsPage = lazy(() => import('@/pages/legal-library/PrecedentsPage')
 const PrecedentDetailsPage = lazy(() => import('@/pages/legal-library/PrecedentDetailsPage'));
 const GlossaryPage = lazy(() => import('@/pages/legal-library/GlossaryPage'));
 const BookmarksPage = lazy(() => import('@/pages/legal-library/BookmarksPage'));
+const LegalAISearchPage = lazy(() => import('@/pages/legal-library/LegalAISearchPage'));
 
 // Owner Panel (Phase 27)
 const OwnerLayout = lazy(() => import('@/pages/owner/OwnerLayout'));
@@ -156,9 +157,23 @@ const SAStaffPage = lazy(() => import('@/pages/super-admin/SAStaffPage'));
 const SAAuditLogPage = lazy(() => import('@/pages/super-admin/SAAuditLogPage'));
 const RolesListPage = lazy(() => import('@/pages/super-admin/roles/RolesListPage'));
 const RoleEditorPage = lazy(() => import('@/pages/super-admin/roles/RoleEditorPage'));
+const SALegalContentPage = lazy(() => import('@/pages/super-admin/SALegalContentPage'));
+const SAIntegrationsPage = lazy(() => import('@/pages/super-admin/SAIntegrationsPage'));
+const AIIntegrationPage = lazy(() => import('@/pages/super-admin/integrations/AIIntegrationPage'));
+const SMTPIntegrationPage = lazy(() => import('@/pages/super-admin/integrations/SMTPIntegrationPage'));
+const WhatsAppIntegrationPage = lazy(() => import('@/pages/super-admin/integrations/WhatsAppIntegrationPage'));
+const CallCenterIntegrationPage = lazy(() => import('@/pages/super-admin/integrations/CallCenterIntegrationPage'));
+const CalendarIntegrationPage = lazy(() => import('@/pages/super-admin/integrations/CalendarIntegrationPage'));
+const SendGridIntegrationPage = lazy(() => import('@/pages/super-admin/integrations/SendGridIntegrationPage'));
 
 // Accept Invitation (Public)
 const AcceptInvitationPage = lazy(() => import('@/pages/invitations/AcceptInvitationPage'));
+
+// Phase 38: Dynamic Forms
+const FormsListPage = lazy(() => import('@/pages/forms/FormsListPage'));
+const FormBuilderPage = lazy(() => import('@/pages/forms/FormBuilderPage'));
+const FormSubmissionsPage = lazy(() => import('@/pages/forms/FormSubmissionsPage'));
+const PublicFormPage = lazy(() => import('@/pages/public/PublicFormPage'));
 
 // Client Portal
 const PortalLoginPage = lazy(() => import('@/pages/portal/PortalLoginPage'));
@@ -250,6 +265,14 @@ function App() {
                         <Route path="roles" element={<RolesListPage />} />
                         <Route path="roles/:id" element={<RoleEditorPage />} />
                         <Route path="audit" element={<SAAuditLogPage />} />
+                        <Route path="legal-content" element={<SALegalContentPage />} />
+                        <Route path="integrations" element={<SAIntegrationsPage />} />
+                        <Route path="integrations/ai" element={<AIIntegrationPage />} />
+                        <Route path="integrations/smtp" element={<SMTPIntegrationPage />} />
+                        <Route path="integrations/whatsapp" element={<WhatsAppIntegrationPage />} />
+                        <Route path="integrations/callcenter" element={<CallCenterIntegrationPage />} />
+                        <Route path="integrations/calendar" element={<CalendarIntegrationPage />} />
+                        <Route path="integrations/sendgrid" element={<SendGridIntegrationPage />} />
                     </Route>
 
                     {/* ═══════════════════════════════════════════
@@ -382,6 +405,13 @@ function App() {
                         <Route path="legal-library/precedents/:id" element={<PrecedentDetailsPage />} />
                         <Route path="legal-library/glossary" element={<GlossaryPage />} />
                         <Route path="legal-library/bookmarks" element={<BookmarksPage />} />
+                        <Route path="legal-search" element={<LegalAISearchPage />} />
+
+                        {/* Dynamic Forms (Phase 38) */}
+                        <Route path="forms" element={<FormsListPage />} />
+                        <Route path="forms/new" element={<FormBuilderPage />} />
+                        <Route path="forms/:id" element={<FormBuilderPage />} />
+                        <Route path="forms/:id/submissions" element={<FormSubmissionsPage />} />
 
                     </Route>
 
@@ -423,6 +453,9 @@ function App() {
                     </Route>
 
 
+
+                    {/* Public Form (Phase 38) */}
+                    <Route path="/f/:slug" element={<PublicFormPage />} />
 
                     <Route path="*" element={<NotFoundPage />} />
                 </Routes>
