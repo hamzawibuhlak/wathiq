@@ -29,10 +29,14 @@ export function LoginScreen() {
     const handleLogin = async () => {
         if (!validate()) return;
         try {
+            console.log('[LOGIN] Attempting login with:', { tenantSlug: tenantSlug.trim(), email: email.trim() });
             await login(tenantSlug.trim(), email.trim(), password);
+            console.log('[LOGIN] Login successful!');
         } catch (error: any) {
-            const msg = error.response?.data?.message || 'بيانات الدخول غير صحيحة';
-            Alert.alert('خطأ', msg);
+            console.log('[LOGIN] Error:', JSON.stringify(error?.response?.data || error?.message || error, null, 2));
+            console.log('[LOGIN] Status:', error?.response?.status);
+            const msg = error.response?.data?.message || error?.message || 'بيانات الدخول غير صحيحة';
+            Alert.alert('خطأ', typeof msg === 'string' ? msg : JSON.stringify(msg));
         }
     };
 

@@ -255,4 +255,33 @@ export class SuperAdminDashboardController {
     cloneRole(@Param('id') id: string, @Body('name') name: string, @Req() req: any) {
         return this.rolesService.cloneRole(id, name, req.superAdmin.sub);
     }
+
+    // ═══════════════════════════════════════
+    // CONFIG — System Integrations & API Keys
+    // ═══════════════════════════════════════
+
+    @Get('config')
+    getConfigs(@Query('category') category?: string) {
+        return this.svc.getConfigs(category);
+    }
+
+    @Post('config')
+    setConfig(@Body() body: { key: string; value: string; category?: string; label?: string; encrypted?: boolean }) {
+        return this.svc.setConfig(body);
+    }
+
+    @Delete('config/:key')
+    deleteConfig(@Param('key') key: string) {
+        return this.svc.deleteConfig(key);
+    }
+
+    @Post('config/test-ai')
+    testAIConnection() {
+        return this.svc.testAIConnection();
+    }
+
+    @Post('config/test-smtp')
+    testSmtpConnection(@Body('testEmail') testEmail: string) {
+        return this.svc.testSmtpConnection(testEmail);
+    }
 }

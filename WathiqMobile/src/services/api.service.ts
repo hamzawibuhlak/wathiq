@@ -24,6 +24,7 @@ class ApiService {
                 if (token) {
                     config.headers.Authorization = `Bearer ${token}`;
                 }
+                console.log(`🌐 API ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
                 return config;
             },
             (error) => Promise.reject(error),
@@ -31,8 +32,12 @@ class ApiService {
 
         // ── Response Interceptor ────────────────
         this.client.interceptors.response.use(
-            (response) => response,
+            (response) => {
+                console.log(`✅ API ${response.status} ${response.config.url}`, JSON.stringify(response.data).substring(0, 200));
+                return response;
+            },
             async (error: AxiosError) => {
+                console.log(`❌ API Error ${error.response?.status} ${error.config?.url}`, error.response?.data);
                 if (error.response?.status === 401) {
                     // Token expired — clear auth
                     await AsyncStorage.multiRemove(['auth_token', 'auth_user', 'tenant_slug']);
@@ -91,7 +96,7 @@ class ApiService {
 
     // ── Auth endpoints (no tenant prefix) ─────
     async login(tenantSlug: string, email: string, password: string) {
-        const res = await this.client.post('/auth/login', { email, password, slug: tenantSlug });
+        const res = await this.client.post('/auth/login', { email, password });
         this.tenantSlug = tenantSlug;
         return res.data;
     }

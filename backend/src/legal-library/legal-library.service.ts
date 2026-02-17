@@ -116,6 +116,22 @@ export class LegalLibraryService {
         return { message: 'تم حذف النظام بنجاح' };
     }
 
+    async updateRegulation(id: string, data: any) {
+        const reg = await this.prisma.legalRegulation.findUnique({ where: { id } });
+        if (!reg) throw new NotFoundException('النظام غير موجود');
+        const { articles, ...regData } = data;
+        if (regData.issuedDate) regData.issuedDate = new Date(regData.issuedDate);
+        if (regData.effectiveDate) regData.effectiveDate = new Date(regData.effectiveDate);
+        if (regData.content) regData.contentText = regData.content.replace(/<[^>]*>/g, '');
+        if (regData.category) regData.category = regData.category as any;
+        if (regData.status) regData.status = regData.status as any;
+        return this.prisma.legalRegulation.update({
+            where: { id },
+            data: regData,
+            include: { articles: true },
+        });
+    }
+
     // ─── PRECEDENTS ───────────────────────────────
     async getPrecedents(filters?: {
         courtType?: string;
@@ -190,6 +206,46 @@ export class LegalLibraryService {
         return precedent;
     }
 
+    async createPrecedent(data: {
+        caseNumber?: string;
+        court: string;
+        courtType: string;
+        circuit?: string;
+        judgmentDate?: string;
+        summary: string;
+        fullText?: string;
+        legalPrinciple: string;
+        caseType: string;
+        outcome: string;
+        keywords?: string[];
+    }) {
+        return this.prisma.legalPrecedent.create({
+            data: {
+                ...data,
+                courtType: data.courtType as any,
+                outcome: data.outcome as any,
+                judgmentDate: data.judgmentDate ? new Date(data.judgmentDate) : undefined,
+                keywords: data.keywords || [],
+            },
+        });
+    }
+
+    async updatePrecedent(id: string, data: any) {
+        const p = await this.prisma.legalPrecedent.findUnique({ where: { id } });
+        if (!p) throw new NotFoundException('الحكم غير موجود');
+        if (data.courtType) data.courtType = data.courtType as any;
+        if (data.outcome) data.outcome = data.outcome as any;
+        if (data.judgmentDate) data.judgmentDate = new Date(data.judgmentDate);
+        return this.prisma.legalPrecedent.update({ where: { id }, data });
+    }
+
+    async deletePrecedent(id: string) {
+        const p = await this.prisma.legalPrecedent.findUnique({ where: { id } });
+        if (!p) throw new NotFoundException('الحكم غير موجود');
+        await this.prisma.legalPrecedent.delete({ where: { id } });
+        return { message: 'تم حذف الحكم بنجاح' };
+    }
+
     // ─── GLOSSARY ─────────────────────────────────
     async getTerms(filters?: {
         search?: string;
@@ -235,6 +291,36 @@ export class LegalLibraryService {
         return term;
     }
 
+    async createTerm(data: {
+        termAr: string;
+        termEn?: string;
+        definition: string;
+        example?: string;
+        category?: string;
+        relatedTerms?: string[];
+        source?: string;
+    }) {
+        return this.prisma.legalTerm.create({
+            data: {
+                ...data,
+                relatedTerms: data.relatedTerms || [],
+            },
+        });
+    }
+
+    async updateTerm(id: string, data: any) {
+        const t = await this.prisma.legalTerm.findUnique({ where: { id } });
+        if (!t) throw new NotFoundException('المصطلح غير موجود');
+        return this.prisma.legalTerm.update({ where: { id }, data });
+    }
+
+    async deleteTerm(id: string) {
+        const t = await this.prisma.legalTerm.findUnique({ where: { id } });
+        if (!t) throw new NotFoundException('المصطلح غير موجود');
+        await this.prisma.legalTerm.delete({ where: { id } });
+        return { message: 'تم حذف المصطلح بنجاح' };
+    }
+
     // ─── GLOBAL SEARCH ────────────────────────────
     async globalSearch(query: string) {
         const [regulations, precedents, terms] = await Promise.all([
@@ -275,6 +361,8 @@ export class LegalLibraryService {
     }
 
     // ─── AI SMART SEARCH ──────────────────────────
+    // NOTE: AI search is now handled by LegalAIService.askAI()
+    // This method is kept for backward compatibility
     async aiSearch(query: string, tenantId: string, userId: string) {
         // 1. Regular search first
         const searchResults = await this.globalSearch(query);
@@ -282,8 +370,8 @@ export class LegalLibraryService {
         // 2. Build context from results
         const context = this.buildSearchContext(searchResults);
 
-        // 3. Return results with context (AI call would happen here if OpenAI is configured)
-        const aiAnswer = `بناءً على البحث في المكتبة القانونية عن "${query}":\n\n${context}\n\nللحصول على إجابة أكثر تفصيلاً، يرجى مراجعة المصادر المرفقة أدناه.`;
+        // 3. Return results with context
+        const aiAnswer = `بناءً على البحث في المكتبة القانونية عن "${query}":\n\n${context}\n\nللحصول على إجابة أكثر تفصيلاً بالذكاء الاصطناعي، استخدم ميزة "البحث القانوني الذكي".`;
 
         // 4. Log search
         await this.prisma.legalSearchLog.create({
@@ -292,6 +380,7 @@ export class LegalLibraryService {
                 results: { aiAnswer, sources: searchResults } as any,
                 tenantId,
                 createdBy: userId,
+                queryType: 'KEYWORD',
             },
         });
 

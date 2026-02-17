@@ -7,8 +7,11 @@ export const legalLibraryApi = {
     // Global Search
     globalSearch: (q: string) => api.get('/legal-library/search', { params: { q } }).then((r: any) => r.data),
 
-    // AI Search
+    // AI Search (enhanced with Claude)
     aiSearch: (query: string) => api.post('/legal-library/ai-search', { query }).then((r: any) => r.data),
+
+    // AI Usage Stats
+    getAIUsage: () => api.get('/legal-library/ai-usage').then((r: any) => r.data),
 
     // Regulations
     getRegulations: (params?: any) => api.get('/legal-library/regulations', { params }).then((r: any) => r.data),
@@ -24,6 +27,11 @@ export const legalLibraryApi = {
     getTerms: (params?: any) => api.get('/legal-library/terms', { params }).then((r: any) => r.data),
     getTermById: (id: string) => api.get(`/legal-library/terms/${id}`).then((r: any) => r.data),
 
+    // Article Notes
+    getArticleNotes: (articleId: string) => api.get(`/legal-library/articles/${articleId}/notes`).then((r: any) => r.data),
+    createArticleNote: (articleId: string, data: any) => api.post(`/legal-library/articles/${articleId}/notes`, data).then((r: any) => r.data),
+    deleteArticleNote: (noteId: string) => api.delete(`/legal-library/notes/${noteId}`).then((r: any) => r.data),
+
     // Bookmarks
     getBookmarks: (folderId?: string) => api.get('/legal-library/bookmarks', { params: { folderId } }).then((r: any) => r.data),
     addBookmark: (data: any) => api.post('/legal-library/bookmarks', data).then((r: any) => r.data),
@@ -37,3 +45,4 @@ export const legalLibraryApi = {
     linkToCase: (caseId: string, data: any) => api.post(`/legal-library/cases/${caseId}/references`, data).then((r: any) => r.data),
     getCaseReferences: (caseId: string) => api.get(`/legal-library/cases/${caseId}/references`).then((r: any) => r.data),
 };
+

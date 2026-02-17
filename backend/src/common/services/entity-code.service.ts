@@ -118,7 +118,7 @@ export class EntityCodeService {
 
     async generateFlatCode(
         tenantId: string,
-        entityType: 'document' | 'invoice' | 'task' | 'expense' | 'case' | 'hearing',
+        entityType: 'document' | 'invoice' | 'task' | 'expense' | 'case' | 'hearing' | 'form',
     ): Promise<{ code: string; codeNumber: number }> {
         const tenant = await this.prisma.tenant.findUnique({
             where: { id: tenantId },
@@ -134,6 +134,7 @@ export class EntityCodeService {
             expense: { prefix: 'EX', digits: 5 },
             case: { prefix: 'CA', digits: 5 },
             hearing: { prefix: 'CS', digits: 5 },
+            form: { prefix: 'FM', digits: 5 },
         };
 
         const { prefix: typePrefix, digits } = config[entityType];
@@ -179,6 +180,13 @@ export class EntityCodeService {
             case 'hearing':
                 last = await this.prisma.hearing.findFirst({
                     where: { tenantId, codeNumber: { not: null } },
+                    orderBy: { codeNumber: 'desc' },
+                    select: { codeNumber: true },
+                });
+                break;
+            case 'form':
+                last = await this.prisma.form.findFirst({
+                    where: { tenantId },
                     orderBy: { codeNumber: 'desc' },
                     select: { codeNumber: true },
                 });

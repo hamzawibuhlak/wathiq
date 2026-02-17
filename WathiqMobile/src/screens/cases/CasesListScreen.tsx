@@ -22,12 +22,22 @@ export function CasesListScreen({ navigation }: any) {
     const [search, setSearch] = useState('');
     const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
 
-    const { data, isLoading, refetch, isRefetching } = useQuery({
+    const { data, isLoading, error, refetch, isRefetching } = useQuery({
         queryKey: ['cases', search, selectedStatus],
-        queryFn: () => casesApi.getAll({ search: search || undefined, status: selectedStatus || undefined }),
+        queryFn: async () => {
+            const res = await casesApi.getAll({ search: search || undefined, status: selectedStatus || undefined });
+            console.log('📦 Cases API response:', JSON.stringify(res).substring(0, 500));
+            return res;
+        },
+        retry: 1,
     });
 
-    const cases = data?.data || [];
+    // Handle multiple response shapes: { data: [] }, [], { items: [] }, etc.
+    const rawData = data as any;
+    const cases = Array.isArray(rawData) ? rawData
+        : Array.isArray(rawData?.data) ? rawData.data
+            : Array.isArray(rawData?.items) ? rawData.items
+                : [];
 
     const renderCase = ({ item }: { item: Case }) => (
         <TouchableOpacity
@@ -116,7 +126,21 @@ export function CasesListScreen({ navigation }: any) {
             </View>
 
             {/* Cases List */}
-            {isLoading ? (
+            {error ? (
+                <View style={{ padding: 20, alignItems: 'center' }}>
+                    <Icon name="alert-circle" size={40} color="#EF5350" />
+                    <Text style={{ color: '#EF5350', fontWeight: '600', marginTop: 8, fontSize: 16 }}>خطأ في تحميل القضايا</Text>
+                    <Text style={{ color: colors.textMuted, marginTop: 4, textAlign: 'center', fontSize: 12 }}>
+                        {(error as any)?.message || 'حدث خطأ غير متوقع'}
+                    </Text>
+                    <Text style={{ color: colors.textMuted, marginTop: 4, textAlign: 'center', fontSize: 10 }}>
+                        {(error as any)?.response?.status} — {JSON.stringify((error as any)?.response?.data).substring(0, 150)}
+                    </Text>
+                    <TouchableOpacity onPress={() => refetch()} style={{ marginTop: 12, backgroundColor: colors.primary, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 }}>
+                        <Text style={{ color: '#fff', fontWeight: '600' }}>إعادة المحاولة</Text>
+                    </TouchableOpacity>
+                </View>
+            ) : isLoading ? (
                 <LoadingSpinner />
             ) : cases.length === 0 ? (
                 <EmptyState

@@ -25,10 +25,25 @@ export class PermissionService {
 
         if (!user) return false;
 
-        // If no customRole assigned, fall back to old role check
+        // If no customRole assigned, fall back to built-in role defaults
         if (!user.customRole) {
             // OWNER always passes
-            return user.role === 'OWNER';
+            if (user.role === 'OWNER') return true;
+
+            // Built-in role defaults (when custom roles table doesn't exist or no role assigned)
+            const roleDefaults: Record<string, string> = {
+                MANAGER: 'FULL',    // Managers get full access by default
+                SUPPORT: 'EDIT',    // Support can view and edit
+                MODERATOR: 'EDIT',  // Moderators can view and edit
+                SALES: 'VIEW',      // Sales can only view
+            };
+
+            const defaultLevel = roleDefaults[user.role];
+            if (!defaultLevel) return false;
+
+            const userLevelIndex = LEVEL_ORDER.indexOf(defaultLevel);
+            const requiredLevelIndex = LEVEL_ORDER.indexOf(requiredLevel);
+            return userLevelIndex >= requiredLevelIndex;
         }
 
         // System OWNER role always passes

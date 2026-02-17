@@ -9,6 +9,8 @@ const navItems = [
     { label: 'الموظفون', href: '/super-admin/staff', icon: '👥' },
     { label: 'الصلاحيات', href: '/super-admin/roles', icon: '🔐' },
     { label: 'سجل العمليات', href: '/super-admin/audit', icon: '📋' },
+    { label: 'المحتوى القانوني', href: '/super-admin/legal-content', icon: '📚' },
+    { label: 'التكاملات والربط', href: '/super-admin/integrations', icon: '🔗' },
 ];
 
 export default function SuperAdminLayout() {

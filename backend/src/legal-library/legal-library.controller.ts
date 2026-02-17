@@ -1,16 +1,20 @@
 import {
-    Controller, Get, Post, Delete,
+    Controller, Get, Post, Delete, Patch,
     Param, Query, Body, UseGuards
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { TenantId } from '../common/decorators/tenant-id.decorator';
 import { LegalLibraryService } from './legal-library.service';
+import { LegalAIService } from './legal-ai.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller('legal-library')
 export class LegalLibraryController {
-    constructor(private service: LegalLibraryService) { }
+    constructor(
+        private service: LegalLibraryService,
+        private aiService: LegalAIService,
+    ) { }
 
     // ── STATS ─────────────────────────────────────
     @Get('stats')
@@ -31,7 +35,16 @@ export class LegalLibraryController {
         @TenantId() tenantId: string,
         @CurrentUser() user: any,
     ) {
-        return this.service.aiSearch(query, tenantId, user.id);
+        return this.aiService.askAI(query, tenantId, user.id);
+    }
+
+    // ── AI USAGE STATS ────────────────────────────
+    @Get('ai-usage')
+    getAIUsage(
+        @TenantId() tenantId: string,
+        @CurrentUser() user: any,
+    ) {
+        return this.aiService.getUsageStats(tenantId, user.id);
     }
 
     // ── REGULATIONS ───────────────────────────────
@@ -60,6 +73,11 @@ export class LegalLibraryController {
         return this.service.deleteRegulation(id);
     }
 
+    @Patch('regulations/:id')
+    updateRegulation(@Param('id') id: string, @Body() data: any) {
+        return this.service.updateRegulation(id, data);
+    }
+
     // ── PRECEDENTS ────────────────────────────────
     @Get('precedents')
     getPrecedents(
@@ -84,6 +102,21 @@ export class LegalLibraryController {
         return this.service.getPrecedentById(id);
     }
 
+    @Post('precedents')
+    createPrecedent(@Body() data: any) {
+        return this.service.createPrecedent(data);
+    }
+
+    @Patch('precedents/:id')
+    updatePrecedent(@Param('id') id: string, @Body() data: any) {
+        return this.service.updatePrecedent(id, data);
+    }
+
+    @Delete('precedents/:id')
+    deletePrecedent(@Param('id') id: string) {
+        return this.service.deletePrecedent(id);
+    }
+
     // ── GLOSSARY ──────────────────────────────────
     @Get('terms')
     getTerms(
@@ -97,6 +130,50 @@ export class LegalLibraryController {
     @Get('terms/:id')
     getTermById(@Param('id') id: string) {
         return this.service.getTermById(id);
+    }
+
+    @Post('terms')
+    createTerm(@Body() data: any) {
+        return this.service.createTerm(data);
+    }
+
+    @Patch('terms/:id')
+    updateTerm(@Param('id') id: string, @Body() data: any) {
+        return this.service.updateTerm(id, data);
+    }
+
+    @Delete('terms/:id')
+    deleteTerm(@Param('id') id: string) {
+        return this.service.deleteTerm(id);
+    }
+
+    // ── ARTICLE NOTES ─────────────────────────────
+    @Post('articles/:articleId/notes')
+    createNote(
+        @Param('articleId') articleId: string,
+        @TenantId() tenantId: string,
+        @CurrentUser() user: any,
+        @Body() data: any,
+    ) {
+        return this.aiService.createNote(articleId, tenantId, user.id, data);
+    }
+
+    @Get('articles/:articleId/notes')
+    getNotes(
+        @Param('articleId') articleId: string,
+        @TenantId() tenantId: string,
+        @CurrentUser() user: any,
+    ) {
+        return this.aiService.getNotes(articleId, tenantId, user.id);
+    }
+
+    @Delete('notes/:id')
+    deleteNote(
+        @Param('id') id: string,
+        @TenantId() tenantId: string,
+        @CurrentUser() user: any,
+    ) {
+        return this.aiService.deleteNote(id, tenantId, user.id);
     }
 
     // ── BOOKMARKS ─────────────────────────────────

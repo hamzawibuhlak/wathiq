@@ -27,6 +27,7 @@
     "prisma:push": "prisma db push"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.74.0",
     "@hapi/boom": "^10.0.1",
     "@nestjs/axios": "^4.0.1",
     "@nestjs/cache-manager": "^3.1.0",
@@ -57,7 +58,7 @@
     "keyv": "^5.3.3",
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^7.0.13",
-    "openai": "^6.18.0",
+    "openai": "^6.22.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "pdf-parse": "^2.2.2",

@@ -55,6 +55,7 @@ import { MarketingModule } from './marketing/marketing.module';
 import { LegalLibraryModule } from './legal-library/legal-library.module';
 import { CallCenterModule } from './call-center/call-center.module';
 import { TenantRolesModule } from './tenant-roles/tenant-roles.module';
+import { FormsModule } from './forms/forms.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -152,6 +153,9 @@ import { AppController } from './app.controller';
 
         // Phase 35: Tenant RBAC
         TenantRolesModule,
+
+        // Phase 38: Dynamic Forms
+        FormsModule,
     ],
     controllers: [AppController],
     providers: [

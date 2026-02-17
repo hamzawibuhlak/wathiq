@@ -1,25 +1,65 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PrismaService } from '../common/prisma/prisma.service';
 import OpenAI from 'openai';
 
 @Injectable()
 export class AiService {
     private readonly logger = new Logger(AiService.name);
     private openai: OpenAI | null = null;
+    private currentModel: string = 'gpt-4o-mini';
 
-    constructor(private configService: ConfigService) {
+    constructor(
+        private configService: ConfigService,
+        private prisma: PrismaService,
+    ) {
+        this.initClient();
+    }
+
+    private async initClient() {
+        try {
+            // Try loading from system_configs first
+            const configs = await this.prisma.systemConfig.findMany({ where: { category: 'ai' } });
+            const map: Record<string, string> = {};
+            configs.forEach((c: any) => { map[c.key] = c.value; });
+
+            const provider = map['AI_PROVIDER'] || 'auto';
+
+            // OpenRouter
+            if (provider === 'openrouter' || (provider === 'auto' && map['OPENROUTER_API_KEY'])) {
+                this.openai = new OpenAI({
+                    apiKey: map['OPENROUTER_API_KEY'],
+                    baseURL: 'https://openrouter.ai/api/v1',
+                });
+                this.currentModel = map['OPENROUTER_MODEL'] || 'openai/gpt-4o-mini';
+                this.logger.log(`OpenRouter client initialized (model: ${this.currentModel})`);
+                return;
+            }
+
+            // OpenAI direct
+            if (provider === 'openai' || (provider === 'auto' && map['OPENAI_API_KEY'])) {
+                this.openai = new OpenAI({ apiKey: map['OPENAI_API_KEY'] });
+                this.currentModel = map['OPENAI_MODEL'] || 'gpt-4o-mini';
+                this.logger.log(`OpenAI client initialized (model: ${this.currentModel})`);
+                return;
+            }
+        } catch {
+            // system_configs table may not exist yet
+        }
+
+        // Fallback to env var
         const apiKey = this.configService.get<string>('OPENAI_API_KEY');
         if (apiKey) {
             this.openai = new OpenAI({ apiKey });
-            this.logger.log('OpenAI client initialized');
+            this.logger.log('OpenAI client initialized from env');
         } else {
-            this.logger.warn('OPENAI_API_KEY not configured - AI features disabled');
+            this.logger.warn('No AI API key configured - AI features disabled');
         }
     }
 
     private ensureClient(): OpenAI {
         if (!this.openai) {
-            throw new Error('خدمة الذكاء الاصطناعي غير متاحة. يرجى تكوين OPENAI_API_KEY.');
+            throw new Error('خدمة الذكاء الاصطناعي غير متاحة. يرجى تكوين مفتاح API من إعدادات التكاملات.');
         }
         return this.openai;
     }

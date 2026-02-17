@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { api, ConfigItem } from './integrations/integrationUtils';
 
 const INTEGRATIONS = [
-    { id: 'ai', path: '/super-admin/integrations/ai', label: 'الذكاء الاصطناعي', icon: '🧠', color: '#6366f1', desc: 'ChatGPT و Claude للبحث القانوني الذكي', keys: ['OPENAI_API_KEY', 'ANTHROPIC_API_KEY'] },
+    { id: 'ai', path: '/super-admin/integrations/ai', label: 'الذكاء الاصطناعي', icon: '🧠', color: '#6366f1', desc: 'ChatGPT و Claude و OpenRouter للبحث القانوني الذكي', keys: ['OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'OPENROUTER_API_KEY'] },
     { id: 'smtp', path: '/super-admin/integrations/smtp', label: 'البريد الإلكتروني (SMTP)', icon: '📧', color: '#3b82f6', desc: 'إرسال الإشعارات والفواتير عبر البريد', keys: ['SMTP_HOST', 'SMTP_USER', 'SMTP_PASS'] },
     { id: 'whatsapp', path: '/super-admin/integrations/whatsapp', label: 'واتساب Business', icon: '📱', color: '#25D366', desc: 'إشعارات وتذكيرات واتساب للعملاء', keys: ['WA_TOKEN', 'WA_PHONE_ID'] },
     { id: 'callcenter', path: '/super-admin/integrations/callcenter', label: 'مركز الاتصال', icon: '📞', color: '#06b6d4', desc: 'إجراء واستقبال المكالمات (Twilio/Unifonic)', keys: ['CC_API_KEY'] },

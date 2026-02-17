@@ -13,10 +13,27 @@ export class EmailService {
     ) { }
 
     /**
+     * Read SMTP config from SystemConfig table (set via Super Admin UI)
+     */
+    private async getSystemSmtpConfig(): Promise<Record<string, string>> {
+        try {
+            const configs = await this.prisma.systemConfig.findMany({
+                where: { category: 'smtp' },
+            });
+            const map: Record<string, string> = {};
+            configs.forEach(c => { map[c.key] = c.value; });
+            return map;
+        } catch {
+            return {};
+        }
+    }
+
+    /**
      * Get transporter for a specific tenant (uses tenant SMTP settings if available)
+     * Priority: 1) Tenant SMTP → 2) SystemConfig SMTP → 3) env vars
      */
     private async getTransporter(tenantId?: string): Promise<nodemailer.Transporter> {
-        // Try to get tenant-specific SMTP settings
+        // 1. Try tenant-specific SMTP settings
         if (tenantId) {
             const tenant = await this.prisma.tenant.findUnique({
                 where: { id: tenantId },
@@ -43,7 +60,21 @@ export class EmailService {
             }
         }
 
-        // Fallback to default SMTP from environment
+        // 2. Try SystemConfig SMTP (set via Super Admin UI)
+        const sysSmtp = await this.getSystemSmtpConfig();
+        if (sysSmtp['SMTP_HOST'] && sysSmtp['SMTP_USER'] && sysSmtp['SMTP_PASS']) {
+            return nodemailer.createTransport({
+                host: sysSmtp['SMTP_HOST'],
+                port: parseInt(sysSmtp['SMTP_PORT'] || '587', 10),
+                secure: sysSmtp['SMTP_SECURE'] === 'true',
+                auth: {
+                    user: sysSmtp['SMTP_USER'],
+                    pass: sysSmtp['SMTP_PASS'],
+                },
+            });
+        }
+
+        // 3. Fallback to default SMTP from environment variables
         return nodemailer.createTransport({
             host: this.configService.get('SMTP_HOST', 'smtp.gmail.com'),
             port: this.configService.get('SMTP_PORT', 587),
@@ -57,6 +88,7 @@ export class EmailService {
 
     /**
      * Get "from" address for a tenant
+     * Priority: 1) Tenant → 2) SystemConfig → 3) env vars
      */
     private async getFromAddress(tenantId?: string): Promise<string> {
         if (tenantId) {
@@ -76,6 +108,14 @@ export class EmailService {
                 const fromEmail = tenant.smtpFrom || tenant.smtpUser;
                 return `"${fromName}" <${fromEmail}>`;
             }
+        }
+
+        // Check SystemConfig
+        const sysSmtp = await this.getSystemSmtpConfig();
+        if (sysSmtp['SMTP_FROM'] || sysSmtp['SMTP_USER']) {
+            const fromName = sysSmtp['SMTP_FROM_NAME'] || 'وثيق';
+            const fromEmail = sysSmtp['SMTP_FROM'] || sysSmtp['SMTP_USER'];
+            return `"${fromName}" <${fromEmail}>`;
         }
 
         return this.configService.get('SMTP_FROM', 'noreply@watheeq.sa');

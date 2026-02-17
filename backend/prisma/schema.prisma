@@ -291,6 +291,8 @@ model Tenant {
   bookmarkFolders     BookmarkFolder[]
   caseLegalReferences CaseLegalReference[]
   legalSearchLogs     LegalSearchLog[]
+  legalArticleNotes   LegalArticleNote[]
+  legalAIUsage        LegalAIUsage[]
 
   // Phase 33: Super Admin Dashboard
   tenantNotes        TenantNote[]
@@ -307,6 +309,10 @@ model Tenant {
 
   // Phase 35: Tenant RBAC
   tenantRoles TenantRole[]
+
+  // Phase 38: Dynamic Forms
+  forms         Form[]
+  formTemplates FormTemplate[]
 
   @@map("tenants")
 }
@@ -414,6 +420,8 @@ model User {
   bookmarkFolders     BookmarkFolder[]
   caseLegalReferences CaseLegalReference[]
   legalSearchLogs     LegalSearchLog[]
+  legalArticleNotes   LegalArticleNote[]
+  legalAIUsage        LegalAIUsage[]
 
   // Phase 32: Call Center + WhatsApp QR
   sipExtension            SipExtension?
@@ -423,6 +431,11 @@ model User {
   // Phase 35: Tenant RBAC
   tenantRoleId String?
   tenantRole   TenantRole? @relation(fields: [tenantRoleId], references: [id], onDelete: SetNull)
+
+  // Phase 38: Dynamic Forms
+  createdForms        Form[]
+  formSubmissions     FormSubmission[]
+  reviewedSubmissions FormSubmission[] @relation("ReviewedSubmissions")
 
   @@index([tenantId])
   @@index([email])
@@ -553,6 +566,9 @@ model Case {
 
   // Phase 32: Call Center
   callRecords CallRecord[]
+
+  // Phase 38: Dynamic Forms
+  forms Form[]
 
   @@unique([tenantId, caseNumber])
   @@index([tenantId])
@@ -3341,15 +3357,19 @@ model LegalRegulation {
 }
 
 model RegulationArticle {
-  id           String  @id @default(uuid())
+  id           String   @id @default(uuid())
   regulationId String
   number       String
   title        String?
-  content      String  @db.Text
-  notes        String? @db.Text
+  content      String   @db.Text
+  editorialNotes String? @db.Text
+  keywords     String[]
+  chapter      String?
+  section      String?
 
-  regulation LegalRegulation @relation(fields: [regulationId], references: [id], onDelete: Cascade)
-  bookmarks  LegalBookmark[]
+  regulation    LegalRegulation    @relation(fields: [regulationId], references: [id], onDelete: Cascade)
+  bookmarks     LegalBookmark[]
+  articleNotes  LegalArticleNote[]
 
   @@index([regulationId])
   @@map("regulation_articles")
@@ -3444,16 +3464,18 @@ model BookmarkFolder {
 }
 
 model CaseLegalReference {
-  id           String       @id @default(uuid())
-  caseId       String
-  type         BookmarkType
-  regulationId String?
-  articleId    String?
-  precedentId  String?
-  termId       String?
-  notes        String?      @db.Text
-  addedBy      String
-  tenantId     String
+  id              String       @id @default(uuid())
+  caseId          String
+  type            BookmarkType
+  regulationId    String?
+  articleId       String?
+  precedentId     String?
+  termId          String?
+  notes           String?      @db.Text
+  purpose         String?      // "للاستناد", "للدفاع", "للرد"
+  highlightedText String?      @db.Text
+  addedBy         String
+  tenantId        String
 
   case   Case   @relation(fields: [caseId], references: [id], onDelete: Cascade)
   tenant Tenant @relation(fields: [tenantId], references: [id])
@@ -3467,12 +3489,18 @@ model CaseLegalReference {
 }
 
 model LegalSearchLog {
-  id        String   @id @default(uuid())
-  query     String
-  results   Json
-  helpful   Boolean?
-  tenantId  String
-  createdBy String
+  id           String   @id @default(uuid())
+  query        String
+  results      Json
+  helpful      Boolean?
+  tenantId     String
+  createdBy    String
+  queryType    String   @default("KEYWORD") // KEYWORD, AI_QUESTION
+  aiResponse   String?  @db.Text
+  aiCitations  Json?
+  aiTokensUsed Int?
+  responseTime Int?     // milliseconds
+  cached       Boolean  @default(false)
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
   user   User   @relation(fields: [createdBy], references: [id])
@@ -3480,6 +3508,8 @@ model LegalSearchLog {
   createdAt DateTime @default(now())
 
   @@index([tenantId])
+  @@index([queryType])
+  @@index([createdAt])
   @@map("legal_search_logs")
 }
 
@@ -3533,6 +3563,50 @@ enum BookmarkType {
   ARTICLE
   PRECEDENT
   TERM
+}
+
+// =====================================================
+// PHASE 39: LEGAL AI — البحث القانوني الذكي
+// =====================================================
+
+model LegalArticleNote {
+  id             String   @id @default(uuid())
+  articleId      String
+  noteText       String   @db.Text
+  highlightStart Int?
+  highlightEnd   Int?
+  isPrivate      Boolean  @default(true)
+  tenantId       String
+  createdBy      String
+
+  article RegulationArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  user    User              @relation(fields: [createdBy], references: [id])
+  tenant  Tenant            @relation(fields: [tenantId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([articleId])
+  @@index([tenantId, createdBy])
+  @@map("legal_article_notes")
+}
+
+model LegalAIUsage {
+  id             String   @id @default(uuid())
+  tenantId       String
+  userId         String
+  month          DateTime
+  questionsCount Int      @default(0)
+  tokensUsed     Int      @default(0)
+  cacheHits      Int      @default(0)
+  cacheMisses    Int      @default(0)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@unique([tenantId, userId, month])
+  @@index([tenantId, month])
+  @@map("legal_ai_usage")
 }
 
 // =====================================================
@@ -3912,4 +3986,189 @@ model PermissionCache {
   @@index([userId])
   @@index([expiresAt])
   @@map("permission_cache")
+}
+
+// =====================================================
+// PHASE 38: DYNAMIC FORMS
+// =====================================================
+
+model Form {
+  id         String  @id @default(uuid())
+  code       String  @unique
+  codeNumber Int
+
+  title       String
+  description String? @db.Text
+  slug        String  @unique
+
+  // Settings
+  isActive      Boolean @default(true)
+  isPublic      Boolean @default(true)
+  allowMultiple Boolean @default(false)
+  requireAuth   Boolean @default(false)
+
+  // Appearance
+  theme       String @default("light")
+  coverImage  String?
+  accentColor String @default("#3b82f6")
+
+  // Notifications
+  notifyOnSubmit   Boolean  @default(true)
+  notifyEmails     String[]
+  autoReply        Boolean  @default(false)
+  autoReplyMessage String?  @db.Text
+
+  // After Submit
+  successMessage String  @default("شكراً لك! تم إرسال النموذج بنجاح")
+  redirectUrl    String?
+
+  // Relations
+  tenantId  String
+  createdBy String
+  caseId    String?
+
+  tenant  Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  creator User   @relation(fields: [createdBy], references: [id])
+  case    Case?  @relation(fields: [caseId], references: [id])
+
+  fields      FormField[]
+  submissions FormSubmission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([code])
+  @@index([tenantId])
+  @@index([slug])
+  @@index([caseId])
+  @@map("forms")
+}
+
+model FormField {
+  id     String @id @default(uuid())
+  formId String
+
+  type        String
+  label       String
+  placeholder String?
+  helpText    String?
+
+  order Int
+  width String @default("full")
+
+  required   Boolean @default(false)
+  validation Json?
+  options    Json?
+
+  conditionalShow Json?
+  fileSettings    Json?
+
+  form    Form              @relation(fields: [formId], references: [id], onDelete: Cascade)
+  answers FormFieldAnswer[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([formId])
+  @@index([formId, order])
+  @@map("form_fields")
+}
+
+model FormSubmission {
+  id         String @id @default(uuid())
+  code       String @unique
+  codeNumber Int
+
+  formId String
+
+  submitterName  String?
+  submitterEmail String?
+  submitterPhone String?
+  userId         String?
+
+  ipAddress String?
+  userAgent String?
+
+  status     String    @default("NEW")
+  reviewedBy String?
+  reviewedAt DateTime?
+  notes      String?   @db.Text
+
+  form     Form  @relation(fields: [formId], references: [id], onDelete: Cascade)
+  user     User? @relation(fields: [userId], references: [id])
+  reviewer User? @relation("ReviewedSubmissions", fields: [reviewedBy], references: [id])
+
+  answers FormFieldAnswer[]
+
+  submittedAt DateTime @default(now())
+
+  @@index([code])
+  @@index([formId])
+  @@index([formId, codeNumber])
+  @@index([status])
+  @@map("form_submissions")
+}
+
+model FormFieldAnswer {
+  id String @id @default(uuid())
+
+  submissionId String
+  fieldId      String
+
+  valueText    String?   @db.Text
+  valueNumber  Decimal?
+  valueDate    DateTime?
+  valueBoolean Boolean?
+  valueJson    Json?
+
+  submission FormSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  field      FormField      @relation(fields: [fieldId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([submissionId])
+  @@index([fieldId])
+  @@map("form_field_answers")
+}
+
+model FormTemplate {
+  id String @id @default(uuid())
+
+  name        String
+  category    String
+  description String? @db.Text
+  icon        String?
+  thumbnail   String?
+
+  isPublic Boolean @default(true)
+  tenantId String?
+
+  template   Json
+  usageCount Int  @default(0)
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+  @@index([tenantId])
+  @@map("form_templates")
+}
+
+// ═══════════════════════════════════════════════
+// System Configuration (Super Admin)
+// ═══════════════════════════════════════════════
+model SystemConfig {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  category  String   @default("general")
+  label     String?
+  encrypted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+  @@map("system_configs")
 }

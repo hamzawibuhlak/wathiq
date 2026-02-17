@@ -43,6 +43,8 @@ import {
     Banknote,
     History,
     BookOpen,
+    ClipboardList,
+    Sparkles,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -91,6 +93,8 @@ const navGroups: NavGroup[] = [
             { path: 'legal-documents', icon: FileEdit, label: 'محرر الوثائق', permission: { resource: 'documents', action: 'manage_templates' } },
             { path: 'activity-logs', icon: History, label: 'التايم لاين', permission: { resource: 'settings', action: 'view_activity_log' } },
             { path: 'legal-library', icon: BookOpen, label: 'المكتبة القانونية', permission: { resource: 'cases', action: 'view_list' } },
+            { path: 'legal-search', icon: Sparkles, label: 'البحث الذكي', permission: { resource: 'cases', action: 'view_list' } },
+            { path: 'forms', icon: ClipboardList, label: 'النماذج', permission: { resource: 'cases', action: 'view_list' } },
         ],
     },
     {
