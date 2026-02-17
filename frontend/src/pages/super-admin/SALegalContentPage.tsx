@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API = import.meta.env.VITE_API_URL || '/api';
 
 async function api(url: string, options?: RequestInit) {
     const token = localStorage.getItem('sa_token') || localStorage.getItem('token');
-    const res = await fetch(`${API}/api${url}`, {
+    const res = await fetch(`${API}${url}`, {
         ...options,
         headers: {
             'Content-Type': 'application/json',
@@ -169,7 +169,7 @@ function RegulationsTab({ onRefresh }: { onRefresh: () => void }) {
             formData.append('category', form.category);
             if (form.tags) formData.append('tags', JSON.stringify(form.tags.split(',').map(t => t.trim()).filter(Boolean)));
 
-            const res = await fetch(`${API}/api/legal-library/regulations/upload-pdf`, {
+            const res = await fetch(`${API}/legal-library/regulations/upload-pdf`, {
                 method: 'POST',
                 headers: { Authorization: `Bearer ${token}` },
                 body: formData,
