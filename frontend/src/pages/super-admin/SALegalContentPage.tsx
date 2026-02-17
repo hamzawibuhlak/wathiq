@@ -119,6 +119,10 @@ function RegulationsTab({ onRefresh }: { onRefresh: () => void }) {
     const [items, setItems] = useState<Regulation[]>([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
+    const [inputMode, setInputMode] = useState<'text' | 'pdf'>('text');
+    const [pdfFile, setPdfFile] = useState<File | null>(null);
+    const [uploading, setUploading] = useState(false);
+    const [uploadResult, setUploadResult] = useState<string | null>(null);
     const [form, setForm] = useState({
         title: '', titleEn: '', number: '', issuedBy: '', category: 'SYSTEM',
         status: 'ACTIVE_REG', content: '', issuedDate: '', effectiveDate: '',
@@ -149,6 +153,41 @@ function RegulationsTab({ onRefresh }: { onRefresh: () => void }) {
         } catch (e: any) { alert('خطأ: ' + e.message); }
     };
 
+    const handlePdfUpload = async () => {
+        if (!pdfFile) return;
+        setUploading(true); setUploadResult(null);
+        try {
+            const token = localStorage.getItem('sa_token') || localStorage.getItem('token');
+            const formData = new FormData();
+            formData.append('file', pdfFile);
+            formData.append('title', form.title || pdfFile.name.replace(/\.pdf$/i, ''));
+            if (form.titleEn) formData.append('titleEn', form.titleEn);
+            if (form.number) formData.append('number', form.number);
+            if (form.issuedBy) formData.append('issuedBy', form.issuedBy);
+            if (form.issuedDate) formData.append('issuedDate', form.issuedDate);
+            if (form.effectiveDate) formData.append('effectiveDate', form.effectiveDate);
+            formData.append('category', form.category);
+            if (form.tags) formData.append('tags', JSON.stringify(form.tags.split(',').map(t => t.trim()).filter(Boolean)));
+
+            const res = await fetch(`${API}/api/legal-library/regulations/upload-pdf`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}` },
+                body: formData,
+            });
+            if (!res.ok) throw new Error(await res.text());
+            const data = await res.json();
+            setUploadResult(`✅ تم استخراج ${data.content?.length || 0} حرف من PDF وحفظ النظام "${data.title}"`);
+            setPdfFile(null);
+            setShowForm(false);
+            setForm({ title: '', titleEn: '', number: '', issuedBy: '', category: 'SYSTEM', status: 'ACTIVE_REG', content: '', issuedDate: '', effectiveDate: '', tags: '', articles: [{ number: '1', title: '', content: '' }] });
+            load();
+            onRefresh();
+        } catch (e: any) {
+            setUploadResult(`❌ فشل: ${e.message}`);
+        }
+        setUploading(false);
+    };
+
     const handleDelete = async (id: string) => {
         if (!confirm('هل أنت متأكد من حذف هذا النظام؟')) return;
         try {
@@ -161,6 +200,12 @@ function RegulationsTab({ onRefresh }: { onRefresh: () => void }) {
         setForm(f => ({ ...f, articles: [...f.articles, { number: String(f.articles.length + 1), title: '', content: '' }] }));
     };
 
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        const file = e.dataTransfer.files[0];
+        if (file?.type === 'application/pdf') setPdfFile(file);
+    };
+
     return (
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -168,9 +213,27 @@ function RegulationsTab({ onRefresh }: { onRefresh: () => void }) {
                 <button onClick={() => setShowForm(!showForm)} style={btnStyle}>{showForm ? '✕ إلغاء' : '+ إضافة نظام'}</button>
             </div>
 
+            {uploadResult && (
+                <div style={{ padding: '12px 16px', marginBottom: '16px', borderRadius: '10px', fontSize: '13px', background: uploadResult.startsWith('✅') ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)', color: uploadResult.startsWith('✅') ? '#4ade80' : '#f87171', border: `1px solid ${uploadResult.startsWith('✅') ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}` }}>
+                    {uploadResult}
+                </div>
+            )}
+
             {showForm && (
                 <div style={formBoxStyle}>
                     <h3 style={{ color: '#fff', margin: '0 0 16px', fontSize: '16px' }}>إضافة نظام جديد</h3>
+
+                    {/* ── Input Mode Toggle ── */}
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                        <button onClick={() => setInputMode('text')} style={{ ...btnStyle, flex: 1, background: inputMode === 'text' ? '#6366f1' : '#1e293b', borderColor: inputMode === 'text' ? '#818cf8' : '#334155' }}>
+                            📝 نص
+                        </button>
+                        <button onClick={() => setInputMode('pdf')} style={{ ...btnStyle, flex: 1, background: inputMode === 'pdf' ? '#6366f1' : '#1e293b', borderColor: inputMode === 'pdf' ? '#818cf8' : '#334155' }}>
+                            📄 PDF
+                        </button>
+                    </div>
+
+                    {/* ── Common Metadata Fields ── */}
                     <div style={gridStyle}>
                         <input style={inputStyle} placeholder="عنوان النظام *" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
                         <input style={inputStyle} placeholder="العنوان بالإنجليزية" value={form.titleEn} onChange={e => setForm(f => ({ ...f, titleEn: e.target.value }))} />
@@ -181,33 +244,85 @@ function RegulationsTab({ onRefresh }: { onRefresh: () => void }) {
                         </select>
                         <input style={inputStyle} type="date" placeholder="تاريخ الإصدار" value={form.issuedDate} onChange={e => setForm(f => ({ ...f, issuedDate: e.target.value }))} />
                     </div>
-                    <textarea style={{ ...inputStyle, marginTop: '12px', minHeight: '100px' }} placeholder="نص النظام *" value={form.content} onChange={e => setForm(f => ({ ...f, content: e.target.value }))} />
                     <input style={{ ...inputStyle, marginTop: '12px' }} placeholder="الوسوم (مفصولة بفاصلة)" value={form.tags} onChange={e => setForm(f => ({ ...f, tags: e.target.value }))} />
 
-                    {/* Articles */}
-                    <div style={{ marginTop: '16px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                            <h4 style={{ color: '#cbd5e1', margin: 0, fontSize: '14px' }}>المواد</h4>
-                            <button onClick={addArticle} style={{ ...btnStyle, fontSize: '12px', padding: '4px 12px' }}>+ مادة</button>
-                        </div>
-                        {form.articles.map((art, i) => (
-                            <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                                <input style={{ ...inputStyle, width: '60px', textAlign: 'center' }} value={art.number} onChange={e => {
-                                    const arts = [...form.articles]; arts[i] = { ...arts[i], number: e.target.value }; setForm(f => ({ ...f, articles: arts }));
-                                }} />
-                                <input style={{ ...inputStyle, flex: 1 }} placeholder="عنوان المادة" value={art.title} onChange={e => {
-                                    const arts = [...form.articles]; arts[i] = { ...arts[i], title: e.target.value }; setForm(f => ({ ...f, articles: arts }));
-                                }} />
-                                <input style={{ ...inputStyle, flex: 2 }} placeholder="نص المادة *" value={art.content} onChange={e => {
-                                    const arts = [...form.articles]; arts[i] = { ...arts[i], content: e.target.value }; setForm(f => ({ ...f, articles: arts }));
-                                }} />
-                            </div>
-                        ))}
-                    </div>
+                    {/* ── TEXT MODE ── */}
+                    {inputMode === 'text' && (
+                        <>
+                            <textarea style={{ ...inputStyle, marginTop: '12px', minHeight: '100px' }} placeholder="نص النظام *" value={form.content} onChange={e => setForm(f => ({ ...f, content: e.target.value }))} />
 
-                    <button onClick={handleSubmit} style={{ ...btnStyle, marginTop: '16px', width: '100%', background: '#16a34a' }} disabled={!form.title || !form.content}>
-                        💾 حفظ النظام
-                    </button>
+                            {/* Articles */}
+                            <div style={{ marginTop: '16px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                    <h4 style={{ color: '#cbd5e1', margin: 0, fontSize: '14px' }}>المواد</h4>
+                                    <button onClick={addArticle} style={{ ...btnStyle, fontSize: '12px', padding: '4px 12px' }}>+ مادة</button>
+                                </div>
+                                {form.articles.map((art, i) => (
+                                    <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                                        <input style={{ ...inputStyle, width: '60px', textAlign: 'center' }} value={art.number} onChange={e => {
+                                            const arts = [...form.articles]; arts[i] = { ...arts[i], number: e.target.value }; setForm(f => ({ ...f, articles: arts }));
+                                        }} />
+                                        <input style={{ ...inputStyle, flex: 1 }} placeholder="عنوان المادة" value={art.title} onChange={e => {
+                                            const arts = [...form.articles]; arts[i] = { ...arts[i], title: e.target.value }; setForm(f => ({ ...f, articles: arts }));
+                                        }} />
+                                        <input style={{ ...inputStyle, flex: 2 }} placeholder="نص المادة *" value={art.content} onChange={e => {
+                                            const arts = [...form.articles]; arts[i] = { ...arts[i], content: e.target.value }; setForm(f => ({ ...f, articles: arts }));
+                                        }} />
+                                    </div>
+                                ))}
+                            </div>
+
+                            <button onClick={handleSubmit} style={{ ...btnStyle, marginTop: '16px', width: '100%', background: '#16a34a' }} disabled={!form.title || !form.content}>
+                                💾 حفظ النظام
+                            </button>
+                        </>
+                    )}
+
+                    {/* ── PDF MODE ── */}
+                    {inputMode === 'pdf' && (
+                        <>
+                            <div
+                                onDragOver={e => e.preventDefault()}
+                                onDrop={handleDrop}
+                                onClick={() => document.getElementById('pdf-input')?.click()}
+                                style={{
+                                    marginTop: '12px', border: '2px dashed #334155', borderRadius: '16px',
+                                    padding: pdfFile ? '20px' : '48px 20px', textAlign: 'center', cursor: 'pointer',
+                                    background: pdfFile ? 'rgba(99,102,241,0.1)' : '#0f172a',
+                                    transition: 'all 0.2s', color: '#94a3b8',
+                                }}
+                            >
+                                <input id="pdf-input" type="file" accept=".pdf" style={{ display: 'none' }} onChange={e => {
+                                    const f = e.target.files?.[0];
+                                    if (f) setPdfFile(f);
+                                }} />
+                                {pdfFile ? (
+                                    <div>
+                                        <span style={{ fontSize: '32px' }}>📄</span>
+                                        <p style={{ color: '#e2e8f0', fontWeight: 600, margin: '8px 0 4px' }}>{pdfFile.name}</p>
+                                        <p style={{ fontSize: '12px', color: '#64748b' }}>{(pdfFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                                        <button onClick={e => { e.stopPropagation(); setPdfFile(null); }} style={{ ...btnStyle, fontSize: '12px', padding: '4px 12px', marginTop: '8px', background: '#ef4444' }}>
+                                            ✕ إزالة
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div>
+                                        <span style={{ fontSize: '48px' }}>📁</span>
+                                        <p style={{ marginTop: '12px', fontWeight: 500 }}>اسحب ملف PDF هنا أو اضغط للاختيار</p>
+                                        <p style={{ fontSize: '12px', color: '#475569' }}>الحد الأقصى: 20 ميجابايت</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            <button
+                                onClick={handlePdfUpload}
+                                style={{ ...btnStyle, marginTop: '16px', width: '100%', background: pdfFile ? '#6366f1' : '#334155', opacity: (!pdfFile || uploading) ? 0.6 : 1 }}
+                                disabled={!pdfFile || uploading}
+                            >
+                                {uploading ? '⏳ جاري استخراج النص...' : '📄 رفع واستخراج النص'}
+                            </button>
+                        </>
+                    )}
                 </div>
             )}
 

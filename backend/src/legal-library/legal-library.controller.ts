@@ -1,7 +1,9 @@
 import {
     Controller, Get, Post, Delete, Patch,
-    Param, Query, Body, UseGuards
+    Param, Query, Body, UseGuards,
+    UseInterceptors, UploadedFile, BadRequestException,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { TenantId } from '../common/decorators/tenant-id.decorator';
@@ -66,6 +68,37 @@ export class LegalLibraryController {
     @Post('regulations')
     createRegulation(@Body() data: any) {
         return this.service.createRegulation(data);
+    }
+
+    @Post('regulations/upload-pdf')
+    @UseInterceptors(
+        FileInterceptor('file', {
+            limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
+            fileFilter: (_req: any, file: any, cb: any) => {
+                if (file.mimetype !== 'application/pdf') {
+                    return cb(new BadRequestException('يجب أن يكون الملف بصيغة PDF'), false);
+                }
+                cb(null, true);
+            },
+        }),
+    )
+    async uploadRegulationPdf(
+        @UploadedFile() file: Express.Multer.File,
+        @Body() body: any,
+    ) {
+        if (!file) throw new BadRequestException('لم يتم رفع ملف');
+        const metadata = {
+            title: body.title || file.originalname.replace(/\.pdf$/i, ''),
+            titleEn: body.titleEn,
+            number: body.number,
+            issuedBy: body.issuedBy,
+            issuedDate: body.issuedDate,
+            effectiveDate: body.effectiveDate,
+            category: body.category || 'SYSTEM',
+            status: body.status,
+            tags: body.tags ? JSON.parse(body.tags) : undefined,
+        };
+        return this.service.createRegulationFromPdf(file.buffer, metadata);
     }
 
     @Delete('regulations/:id')

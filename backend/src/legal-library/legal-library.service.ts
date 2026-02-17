@@ -109,6 +109,39 @@ export class LegalLibraryService {
         return regulation;
     }
 
+    async createRegulationFromPdf(
+        file: Buffer,
+        metadata: {
+            title: string;
+            titleEn?: string;
+            number?: string;
+            issuedBy?: string;
+            issuedDate?: string;
+            effectiveDate?: string;
+            category?: string;
+            status?: string;
+            tags?: string[];
+        },
+    ) {
+        // Extract text from PDF
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const pdfParse = require('pdf-parse');
+        const pdfData = await pdfParse(file);
+        const extractedText = pdfData.text?.trim();
+
+        if (!extractedText) {
+            throw new Error('لم يتمكن من استخراج نص من ملف PDF');
+        }
+
+        // Create the regulation with extracted text
+        return this.createRegulation({
+            ...metadata,
+            category: metadata.category || 'SYSTEM',
+            content: extractedText,
+            source: 'PDF Upload',
+        });
+    }
+
     async deleteRegulation(id: string) {
         const reg = await this.prisma.legalRegulation.findUnique({ where: { id } });
         if (!reg) throw new NotFoundException('النظام غير موجود');
