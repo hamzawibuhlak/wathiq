@@ -21,7 +21,7 @@ export class WhatsAppService {
     private httpService: HttpService,
     private prisma: PrismaService,
     private notificationsService: NotificationsService,
-  ) {}
+  ) { }
 
   /**
    * Get WhatsApp config for a tenant
@@ -63,8 +63,8 @@ export class WhatsAppService {
 
     return {
       // Mask token for security (show only last 10 chars)
-      whatsappAccessToken: tenant?.whatsappAccessToken 
-        ? '••••••••' + tenant.whatsappAccessToken.slice(-10) 
+      whatsappAccessToken: tenant?.whatsappAccessToken
+        ? '••••••••' + tenant.whatsappAccessToken.slice(-10)
         : '',
       whatsappPhoneNumberId: tenant?.whatsappPhoneNumberId || '',
       whatsappBusinessId: tenant?.whatsappBusinessId || '',
@@ -86,7 +86,7 @@ export class WhatsAppService {
   }) {
     // Don't update token if it's the masked version
     const updateData: any = {};
-    
+
     if (data.whatsappAccessToken && !data.whatsappAccessToken.startsWith('••••')) {
       updateData.whatsappAccessToken = data.whatsappAccessToken;
     }
@@ -624,7 +624,7 @@ export class WhatsAppService {
         tenantId,
         OR: [
           { clientId, direction: 'OUTBOUND' },
-          { from: { contains: client.phone.replace(/^0/, '') }, direction: 'INBOUND' },
+          { from: { contains: (client.phone || '').replace(/^0/, '') }, direction: 'INBOUND' },
         ],
       },
       orderBy: { createdAt: 'asc' },

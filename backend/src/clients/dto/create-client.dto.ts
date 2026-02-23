@@ -7,10 +7,10 @@ export class CreateClientDto {
     @IsNotEmpty({ message: 'اسم العميل مطلوب' })
     name: string;
 
-    @ApiProperty({ example: '+966501234567' })
+    @ApiProperty({ example: '+966501234567', required: false })
+    @IsOptional()
     @IsString()
-    @IsNotEmpty({ message: 'رقم الهاتف مطلوب' })
-    phone: string;
+    phone?: string;
 
     @ApiProperty({ required: false })
     @IsOptional()
@@ -21,6 +21,11 @@ export class CreateClientDto {
     @IsOptional()
     @IsString()
     nationalId?: string;
+
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsString()
+    nationalIdDoc?: string;
 
     @ApiProperty({ required: false })
     @IsOptional()
@@ -98,6 +103,11 @@ export class CreateClientDto {
     @IsOptional()
     @IsString()
     repIdentity?: string;
+
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsString()
+    repIdentityDoc?: string;
 
     @ApiProperty({ required: false })
     @IsOptional()

@@ -53,9 +53,7 @@ class ApiService {
     }
 
     private getUrl(path: string): string {
-        if (this.tenantSlug && !path.startsWith('/auth')) {
-            return `/${this.tenantSlug}${path}`;
-        }
+        // Backend identifies tenant from JWT token, not URL path
         return path;
     }
 

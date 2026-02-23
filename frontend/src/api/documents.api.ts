@@ -19,6 +19,7 @@ export interface UploadDocumentData {
     description?: string;
     documentType?: string;
     caseId?: string;
+    caseIds?: string[];
     tags?: string[];
 }
 
@@ -71,6 +72,9 @@ export const documentsApi = {
         if (data.description) formData.append('description', data.description);
         if (data.documentType) formData.append('documentType', data.documentType);
         if (data.caseId) formData.append('caseId', data.caseId);
+        if (data.caseIds && data.caseIds.length > 0) {
+            formData.append('caseIds', JSON.stringify(data.caseIds));
+        }
         if (data.tags && data.tags.length > 0) {
             formData.append('tags', JSON.stringify(data.tags));
         }

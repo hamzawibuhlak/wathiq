@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ownerApi } from '@/api/owner.api';
-import { GitBranch, Plus, Power, Trash2, X } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { GitBranch, Plus, Power, Trash2 } from 'lucide-react';
+import { useWorkflows, useToggleWorkflow, useDeleteWorkflow } from '@/hooks/use-workflows';
+import { CreateWorkflowDialog } from '@/components/workflows/CreateWorkflowDialog';
 
 const TRIGGER_LABELS: Record<string, string> = {
     CASE_CREATED: 'عند إنشاء قضية',
@@ -11,45 +10,20 @@ const TRIGGER_LABELS: Record<string, string> = {
     HEARING_REMINDER: 'تذكير بجلسة',
     TASK_OVERDUE: 'تأخر مهمة',
     CLIENT_CREATED: 'إنشاء عميل',
+    INVOICE_CREATED: 'إنشاء فاتورة',
     INVOICE_OVERDUE: 'تأخر فاتورة',
     DOCUMENT_UPLOADED: 'رفع مستند',
+    MANUAL: 'تشغيل يدوي',
 };
 
 export default function WorkflowsPage() {
-    const queryClient = useQueryClient();
     const [showCreate, setShowCreate] = useState(false);
-    const [form, setForm] = useState({ name: '', triggerType: 'CASE_CREATED', description: '' });
 
-    const { data: workflows = [], isLoading } = useQuery({
-        queryKey: ['owner-workflows'],
-        queryFn: ownerApi.getWorkflows,
-    });
+    const { data, isLoading } = useWorkflows();
+    const toggleMutation = useToggleWorkflow();
+    const deleteMutation = useDeleteWorkflow();
 
-    const createMutation = useMutation({
-        mutationFn: (data: typeof form) => ownerApi.createWorkflow(data),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['owner-workflows'] });
-            toast.success('تم إنشاء سير العمل');
-            setShowCreate(false);
-            setForm({ name: '', triggerType: 'CASE_CREATED', description: '' });
-        },
-    });
-
-    const toggleMutation = useMutation({
-        mutationFn: (id: string) => ownerApi.toggleWorkflow(id),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['owner-workflows'] });
-            toast.success('تم تحديث الحالة');
-        },
-    });
-
-    const deleteMutation = useMutation({
-        mutationFn: (id: string) => ownerApi.deleteWorkflow(id),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['owner-workflows'] });
-            toast.success('تم حذف سير العمل');
-        },
-    });
+    const workflows = data?.data || [];
 
     return (
         <div className="p-8">
@@ -93,6 +67,8 @@ export default function WorkflowsPage() {
                                     <p className="text-xs text-gray-400 mt-0.5">
                                         {TRIGGER_LABELS[wf.triggerType] || wf.triggerType}
                                         {' · '}
+                                        {(wf.actions as any[])?.length || 0} إجراء
+                                        {' · '}
                                         {wf._count?.executions || 0} تنفيذ
                                     </p>
                                 </div>
@@ -121,58 +97,11 @@ export default function WorkflowsPage() {
                 </div>
             )}
 
-            {/* Create Modal */}
-            {showCreate && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6" dir="rtl">
-                        <div className="flex items-center justify-between mb-4">
-                            <h2 className="font-bold text-gray-900">إنشاء سير عمل جديد</h2>
-                            <button onClick={() => setShowCreate(false)} className="text-gray-400">
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">اسم القاعدة</label>
-                                <input
-                                    value={form.name}
-                                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm"
-                                    placeholder="مثال: إشعار عند إنشاء قضية"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">المحفز</label>
-                                <select
-                                    value={form.triggerType}
-                                    onChange={(e) => setForm({ ...form, triggerType: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm"
-                                >
-                                    {Object.entries(TRIGGER_LABELS).map(([key, label]) => (
-                                        <option key={key} value={key}>{label}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">الوصف (اختياري)</label>
-                                <textarea
-                                    value={form.description}
-                                    onChange={(e) => setForm({ ...form, description: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm"
-                                    rows={2}
-                                />
-                            </div>
-                            <button
-                                onClick={() => createMutation.mutate(form)}
-                                disabled={!form.name || createMutation.isPending}
-                                className="w-full py-2.5 bg-amber-600 text-white rounded-xl hover:bg-amber-700 text-sm font-medium disabled:opacity-50"
-                            >
-                                {createMutation.isPending ? 'جاري الإنشاء...' : 'إنشاء'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* Full 3-step Create Workflow Dialog */}
+            <CreateWorkflowDialog
+                isOpen={showCreate}
+                onClose={() => setShowCreate(false)}
+            />
         </div>
     );
 }

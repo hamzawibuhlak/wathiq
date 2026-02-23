@@ -25,6 +25,8 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { TenantId } from '../common/decorators/tenant-id.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { PrismaService } from '../common/prisma/prisma.service';
+import { getDefaultModulesByPlan, getRegistrationDefaults } from '../common/constants/modules.constants';
 import { UserRole } from '@prisma/client';
 import { IsEnum, IsNotEmpty } from 'class-validator';
 
@@ -40,7 +42,32 @@ export class ChangeRoleDto {
 @Controller('users')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class UsersController {
-    constructor(private readonly usersService: UsersService) { }
+    constructor(
+        private readonly usersService: UsersService,
+        private readonly prisma: PrismaService,
+    ) { }
+
+    // ========== أقسام المكتب (Module Control) ==========
+    @Get('my-modules')
+    @ApiOperation({ summary: 'الحصول على الأقسام المتاحة للمكتب' })
+    async getMyModules(@TenantId() tenantId: string) {
+        const tenant = await (this.prisma as any).tenant.findUnique({
+            where: { id: tenantId },
+            include: { moduleSettings: true },
+        });
+        if (!tenant) return getRegistrationDefaults();
+
+        // If Super Admin has not configured modules, return restricted defaults
+        if (!tenant.moduleSettings) return getRegistrationDefaults();
+
+        const defaults = getDefaultModulesByPlan(tenant.planType);
+        const saved = tenant.moduleSettings.modules as Record<string, any>;
+        const merged: Record<string, any> = { ...defaults };
+        Object.keys(saved).forEach(key => {
+            if (merged[key]) merged[key] = { ...merged[key], ...saved[key] };
+        });
+        return merged;
+    }
 
     // ========== إحصائيات المستخدمين ==========
     @Get('stats')

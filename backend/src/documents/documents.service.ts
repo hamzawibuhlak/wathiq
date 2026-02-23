@@ -50,22 +50,37 @@ export class DocumentsService {
 
         const skip = (page - 1) * limit;
 
-        const where: Prisma.DocumentWhereInput = {
-            tenantId,
-            ...(onlyLatest && { isLatest: true }),
-            ...(caseId && { caseId }),
-            ...(documentType && { documentType: documentType as DocumentType }),
-            ...(tags && tags.length > 0 && { tags: { hasSome: tags } }),
-            ...(search && {
+        // Build AND conditions to avoid OR conflicts
+        const andConditions: Prisma.DocumentWhereInput[] = [];
+
+        if (caseId) {
+            andConditions.push({
+                OR: [
+                    { caseId },
+                    { caseIds: { has: caseId } },
+                ],
+            });
+        }
+
+        if (search) {
+            andConditions.push({
                 OR: [
                     { title: { contains: search, mode: 'insensitive' } },
                     { fileName: { contains: search, mode: 'insensitive' } },
                     { description: { contains: search, mode: 'insensitive' } },
                     { ocrText: { contains: search, mode: 'insensitive' } },
                 ],
-            }),
+            });
+        }
+
+        const where: Prisma.DocumentWhereInput = {
+            tenantId,
+            ...(onlyLatest && { isLatest: true }),
+            ...(documentType && { documentType: documentType as DocumentType }),
+            ...(tags && tags.length > 0 && { tags: { hasSome: tags } }),
             ...(fromDate && { createdAt: { gte: new Date(fromDate) } }),
             ...(toDate && { createdAt: { lte: new Date(toDate) } }),
+            ...(andConditions.length > 0 && { AND: andConditions }),
         };
 
         // Lawyers only see documents from their assigned cases
@@ -264,6 +279,23 @@ export class DocumentsService {
                 }
             }
 
+            // Parse caseIds if provided
+            let caseIds: string[] = [];
+            if (dto.caseIds) {
+                if (typeof dto.caseIds === 'string') {
+                    try {
+                        caseIds = JSON.parse(dto.caseIds);
+                    } catch {
+                        caseIds = (dto.caseIds as string).split(',').map(t => t.trim()).filter(Boolean);
+                    }
+                } else if (Array.isArray(dto.caseIds)) {
+                    caseIds = dto.caseIds;
+                }
+            }
+
+            // If caseIds provided but no caseId, set caseId to first one (backward compat)
+            const primaryCaseId = dto.caseId || (caseIds.length > 0 ? caseIds[0] : undefined);
+
             // Phase 37: Generate flat document code
             const docCode = await this.entityCodeService.generateFlatCode(tenantId, 'document');
 
@@ -279,7 +311,8 @@ export class DocumentsService {
                     documentType: dto.documentType || DocumentType.OTHER,
                     tags,
                     ocrStatus,
-                    caseId: dto.caseId,
+                    caseId: primaryCaseId,
+                    caseIds,
                     tenantId,
                     uploadedById: userId,
                     code: docCode.code,

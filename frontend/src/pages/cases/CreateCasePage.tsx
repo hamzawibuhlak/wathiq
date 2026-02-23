@@ -17,7 +17,14 @@ export function CreateCasePage() {
     const lawyers = lawyersData?.data?.map((l: any) => ({ id: l.id, name: l.name })) || [];
 
     const handleSubmit = (data: CaseFormData) => {
-        createMutation.mutate(data);
+        // Remove empty optional fields so backend validators don't reject empty strings
+        const cleaned = { ...data };
+        if (!cleaned.filingDate) delete cleaned.filingDate;
+        if (!cleaned.assignedToId) delete cleaned.assignedToId;
+        if (!cleaned.courtName) delete cleaned.courtName;
+        if (!cleaned.opposingParty) delete cleaned.opposingParty;
+        if (!cleaned.description) delete cleaned.description;
+        createMutation.mutate(cleaned);
     };
 
     const isLoading = clientsLoading || lawyersLoading;

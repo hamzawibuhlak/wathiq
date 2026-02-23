@@ -87,6 +87,7 @@ export interface Client {
     email: string | null;
     phone: string | null;
     nationalId: string | null;
+    nationalIdDoc: string | null;
     companyName: string | null;
     commercialReg: string | null;
     commercialRegDoc: string | null;
@@ -97,6 +98,7 @@ export interface Client {
     repPhone: string | null;
     repEmail: string | null;
     repIdentity: string | null;
+    repIdentityDoc: string | null;
     repDocType: string | null;
     repDoc: string | null;
     address: string | null;
@@ -131,6 +133,8 @@ export interface CreateClientRequest {
     repPhone?: string;
     repEmail?: string;
     repIdentity?: string;
+    repIdentityDoc?: string;
+    nationalIdDoc?: string;
     repDocType?: string;
     repDoc?: string;
 }

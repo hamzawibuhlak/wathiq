@@ -6,6 +6,7 @@ import {
     ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { EmailService } from '../email/email.service';
 import { UserRole, InvitationStatus } from '@prisma/client';
 import { randomBytes } from 'crypto';
 import * as bcrypt from 'bcrypt';
@@ -24,7 +25,10 @@ export interface AcceptInvitationDto {
 
 @Injectable()
 export class UserInvitationsService {
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly emailService: EmailService,
+    ) { }
 
     /**
      * Create and send invitation
@@ -93,6 +97,21 @@ export class UserInvitationsService {
             },
         });
 
+        // Send invitation email
+        try {
+            await this.emailService.sendInvitation({
+                to: email,
+                inviterName: invitation.inviter.name,
+                tenantName: invitation.tenant.name,
+                role: invitation.role,
+                token,
+                tenantId,
+            });
+        } catch (error) {
+            // Log but don't fail the invitation creation
+            console.error('Failed to send invitation email:', error);
+        }
+
         return {
             data: invitation,
             message: 'تم إرسال الدعوة بنجاح',
@@ -104,7 +123,7 @@ export class UserInvitationsService {
      */
     async findAll(tenantId: string, status?: InvitationStatus) {
         const where: any = { tenantId };
-        
+
         if (status) {
             where.status = status;
         }
@@ -197,8 +216,8 @@ export class UserInvitationsService {
                 invitation.status === InvitationStatus.ACCEPTED
                     ? 'تم قبول هذه الدعوة مسبقاً'
                     : invitation.status === InvitationStatus.EXPIRED
-                    ? 'انتهت صلاحية هذه الدعوة'
-                    : 'تم إلغاء هذه الدعوة'
+                        ? 'انتهت صلاحية هذه الدعوة'
+                        : 'تم إلغاء هذه الدعوة'
             );
         }
 
@@ -336,6 +355,20 @@ export class UserInvitationsService {
                 },
             },
         });
+
+        // Resend invitation email
+        try {
+            await this.emailService.sendInvitation({
+                to: updated.email,
+                inviterName: updated.inviter.name,
+                tenantName: updated.tenant.name,
+                role: updated.role,
+                token,
+                tenantId,
+            });
+        } catch (error) {
+            console.error('Failed to resend invitation email:', error);
+        }
 
         return {
             data: updated,

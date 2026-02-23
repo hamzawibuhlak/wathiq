@@ -314,6 +314,14 @@ model Tenant {
   forms         Form[]
   formTemplates FormTemplate[]
 
+  // Phase 42: Module Control
+  moduleSettings   TenantModuleSettings?
+  moduleChangeLogs ModuleChangeLog[]
+
+  // Phase 43: Email Verification
+  registrationStatus String    @default("ACTIVE") // PENDING_EMAIL | ACTIVE | SUSPENDED
+  emailVerifiedAt    DateTime?
+
   @@map("tenants")
 }
 
@@ -451,8 +459,9 @@ model Client {
   id            String  @id @default(uuid())
   name          String // اسم العميل
   email         String?
-  phone         String
+  phone         String?
   nationalId    String? // رقم الهوية
+  nationalIdDoc String? // مستند الهوية
   companyName   String? // اسم الشركة (للعملاء التجاريين)
   commercialReg String? // السجل التجاري
   address       String?
@@ -470,7 +479,8 @@ model Client {
   repName      String? // اسم الممثل
   repPhone     String? // رقم الممثل
   repEmail     String? // إيميل الممثل
-  repIdentity  String? // هوية الممثل (National ID)
+  repIdentity    String? // هوية الممثل (National ID)
+  repIdentityDoc String? // مستند هوية الممثل
   repDocType   String? // نوع مستند التمثيل: COMMERCIAL_REG, ARTICLES_OF_ASSOC, AUTH_LETTER, POWER_OF_ATTORNEY
   repDoc       String? // مستند التمثيل
 
@@ -548,6 +558,9 @@ model Case {
 
   assignedToId String?
   assignedTo   User?   @relation("AssignedLawyer", fields: [assignedToId], references: [id])
+
+  // Multi-lawyer support: case can be assigned to multiple lawyers
+  assignedToIds String[] @default([])
 
   createdById String
   createdBy   User   @relation("CaseCreator", fields: [createdById], references: [id])
@@ -671,6 +684,9 @@ model Document {
   // Relations
   caseId String?
   case   Case?   @relation(fields: [caseId], references: [id], onDelete: SetNull)
+
+  // Multi-case support: document can be shared across multiple cases
+  caseIds String[] @default([])
 
   uploadedById String
   uploadedBy   User   @relation(fields: [uploadedById], references: [id])
@@ -3630,6 +3646,10 @@ model SuperAdminUser {
   chatMessages SuperAdminChatMessage[]
   auditLogs    SuperAdminAuditLog[]
 
+  // Phase 42: Module Control
+  moduleSettingsUpdated TenantModuleSettings[]
+  moduleChangeLogs      ModuleChangeLog[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -4171,4 +4191,59 @@ model SystemConfig {
 
   @@index([category])
   @@map("system_configs")
+}
+
+// ═══════════════════════════════════════════════
+// Phase 42: Module Control
+// ═══════════════════════════════════════════════
+
+model TenantModuleSettings {
+  id        String   @id @default(uuid())
+  tenantId  String   @unique
+  modules   Json     @default("{}")
+  updatedBy String
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  tenant  Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  updater SuperAdminUser @relation(fields: [updatedBy], references: [id])
+
+  @@map("tenant_module_settings")
+}
+
+model ModuleChangeLog {
+  id            String   @id @default(uuid())
+  tenantId      String
+  changedBy     String
+  moduleKey     String
+  action        String   // ENABLE or DISABLE
+  previousValue Boolean
+  newValue      Boolean
+  reason        String?  @db.Text
+  createdAt     DateTime @default(now())
+
+  tenant  Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  changer SuperAdminUser @relation(fields: [changedBy], references: [id])
+
+  @@index([tenantId])
+  @@index([createdAt])
+  @@map("module_change_logs")
+}
+
+// =====================================================
+// Phase 43: Email Verification Tokens
+// =====================================================
+
+model EmailVerificationToken {
+  id         String   @id @default(uuid())
+  email      String
+  tenantId   String?
+  token      String   // bcrypt-hashed OTP
+  expiresAt  DateTime // +15 min from creation
+  isUsed     Boolean  @default(false)
+  attempts   Int      @default(0) // max 5 wrong attempts
+  createdAt  DateTime @default(now())
+
+  @@index([email])
+  @@map("email_verification_tokens")
 }

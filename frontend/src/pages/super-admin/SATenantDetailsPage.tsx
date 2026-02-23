@@ -71,6 +71,13 @@ export default function SATenantDetailsPage() {
                 </div>
 
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {/* Module Control */}
+                    <button onClick={() => navigate(`/super-admin/tenants/${id}/modules`)}
+                        style={{
+                            padding: '8px 16px', background: '#4f46e5', border: 'none',
+                            borderRadius: '10px', color: '#fff', fontSize: '13px', fontWeight: 500, cursor: 'pointer',
+                        }}>🔧 إدارة الأقسام</button>
+
                     {/* Plan Selector */}
                     <select value={t.planType} onChange={e => changePlan.mutate(e.target.value)}
                         style={{

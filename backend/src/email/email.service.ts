@@ -463,4 +463,95 @@ ${formattedAmount} ر.س
             return { success: false, error: error.message };
         }
     }
+
+    /**
+     * Send user invitation email
+     */
+    async sendInvitation(data: {
+        to: string;
+        inviterName: string;
+        tenantName: string;
+        role: string;
+        token: string;
+        tenantId?: string;
+    }): Promise<{ success: boolean; error?: string }> {
+        try {
+            const transporter = await this.getTransporter(data.tenantId);
+            const from = await this.getFromAddress(data.tenantId);
+
+            const roleLabels: Record<string, string> = {
+                OWNER: 'مالك',
+                ADMIN: 'مدير',
+                LAWYER: 'محامي',
+                SECRETARY: 'سكرتير',
+            };
+
+            const roleLabel = roleLabels[data.role] || data.role;
+            const invitationLink = `${this.configService.get('FRONTEND_URL', 'https://bewathiq.com')}/invitation/${data.token}`;
+
+            const htmlContent = `
+            <div dir="rtl" style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb;">
+                <!-- Header -->
+                <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); padding: 32px; text-align: center;">
+                    <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700;">وثيق</h1>
+                    <p style="color: #bfdbfe; margin: 8px 0 0 0; font-size: 14px;">منصة إدارة المكاتب القانونية</p>
+                </div>
+
+                <!-- Body -->
+                <div style="padding: 32px;">
+                    <h2 style="color: #1f2937; font-size: 20px; margin: 0 0 16px 0;">مرحباً،</h2>
+                    
+                    <p style="color: #4b5563; font-size: 16px; line-height: 1.8; margin: 0 0 16px 0;">
+                        تمت دعوتك من قبل <strong style="color: #1f2937;">${data.inviterName}</strong> 
+                        للانضمام إلى <strong style="color: #1e40af;">${data.tenantName}</strong> 
+                        كـ<strong style="color: #1f2937;">${roleLabel}</strong> على منصة وثيق.
+                    </p>
+
+                    <p style="color: #4b5563; font-size: 16px; line-height: 1.8; margin: 0 0 24px 0;">
+                        اضغط على الزر أدناه لإنشاء حسابك وتعيين كلمة المرور:
+                    </p>
+
+                    <!-- CTA Button -->
+                    <div style="text-align: center; margin: 32px 0;">
+                        <a href="${invitationLink}" 
+                           style="display: inline-block; padding: 14px 40px; background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 6px rgba(30, 64, 175, 0.25);">
+                            إنشاء حسابي
+                        </a>
+                    </div>
+
+                    <div style="background-color: #f8fafc; border-radius: 8px; padding: 16px; margin: 24px 0; border: 1px solid #e2e8f0;">
+                        <p style="color: #64748b; font-size: 13px; margin: 0; line-height: 1.6;">
+                            ⏰ هذه الدعوة صالحة لمدة <strong>7 أيام</strong> من تاريخ الإرسال.
+                        </p>
+                    </div>
+
+                    <p style="color: #9ca3af; font-size: 13px; margin: 24px 0 0 0;">
+                        إذا لم تكن تتوقع هذه الدعوة، يمكنك تجاهل هذه الرسالة.
+                    </p>
+                </div>
+
+                <!-- Footer -->
+                <div style="background-color: #f8fafc; padding: 20px 32px; text-align: center; border-top: 1px solid #e5e7eb;">
+                    <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+                        © ${new Date().getFullYear()} وثيق - جميع الحقوق محفوظة
+                    </p>
+                </div>
+            </div>
+            `;
+
+            const mailOptions = {
+                from,
+                to: data.to,
+                subject: `دعوة للانضمام إلى ${data.tenantName} على منصة وثيق`,
+                html: htmlContent,
+            };
+
+            await transporter.sendMail(mailOptions);
+            this.logger.log(`Invitation email sent to ${data.to}`);
+            return { success: true };
+        } catch (error) {
+            this.logger.error('Failed to send invitation email:', error);
+            return { success: false, error: error.message };
+        }
+    }
 }

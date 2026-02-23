@@ -5,8 +5,10 @@ import { UserInvitationsService } from './user-invitations.service';
 import { SessionsService } from './sessions.service';
 import { InvitationsController } from './invitations.controller';
 import { SessionsController } from './sessions.controller';
+import { EmailModule } from '../email/email.module';
 
 @Module({
+    imports: [EmailModule],
     controllers: [
         UsersController,
         InvitationsController,
@@ -23,4 +25,4 @@ import { SessionsController } from './sessions.controller';
         SessionsService,
     ],
 })
-export class UsersModule {}
+export class UsersModule { }

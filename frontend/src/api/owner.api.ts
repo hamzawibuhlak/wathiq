@@ -18,6 +18,8 @@ export const ownerApi = {
         apiPatch<any>(`/owner/users/${userId}/toggle`, {}),
     deleteUser: (userId: string) =>
         apiDelete<any>(`/owner/users/${userId}`),
+    updateUser: (userId: string, data: any) =>
+        apiPatch<any>(`/users/${userId}`, data),
 
     // Integrations
     getIntegrations: () => apiGet<any[]>('/owner/integrations'),

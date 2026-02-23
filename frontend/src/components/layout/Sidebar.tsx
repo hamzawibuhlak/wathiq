@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth.store';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useModuleStore } from '@/hooks/useModules';
 import {
     LayoutDashboard,
     Calendar,
@@ -56,6 +57,7 @@ interface NavItem {
     path: string;
     icon: typeof LayoutDashboard;
     label: string;
+    moduleKey?: string;
     roles?: ('SUPER_ADMIN' | 'OWNER' | 'ADMIN' | 'LAWYER' | 'SECRETARY' | 'ACCOUNTANT')[];
     permission?: { resource: string; action: string };
 }
@@ -66,6 +68,7 @@ interface NavGroup {
     icon: typeof LayoutDashboard;
     items: NavItem[];
     collapsible: boolean;
+    moduleKey?: string;
     roles?: ('SUPER_ADMIN' | 'OWNER' | 'ADMIN' | 'LAWYER' | 'SECRETARY' | 'ACCOUNTANT')[];
     permission?: { resource: string; action: string };
 }
@@ -85,16 +88,16 @@ const navGroups: NavGroup[] = [
         icon: Briefcase,
         collapsible: true,
         items: [
-            { path: 'clients', icon: Users, label: 'العملاء', permission: { resource: 'clients', action: 'view_list' } },
-            { path: 'cases', icon: Briefcase, label: 'القضايا', permission: { resource: 'cases', action: 'view_list' } },
-            { path: 'hearings', icon: Calendar, label: 'الجلسات', permission: { resource: 'hearings', action: 'view_list' } },
-            { path: 'documents', icon: FileText, label: 'المستندات', permission: { resource: 'documents', action: 'view_list' } },
-            { path: 'tasks', icon: CheckSquare, label: 'المهام', permission: { resource: 'tasks', action: 'view_list' } },
-            { path: 'legal-documents', icon: FileEdit, label: 'محرر الوثائق', permission: { resource: 'documents', action: 'manage_templates' } },
+            { path: 'clients', icon: Users, label: 'العملاء', moduleKey: 'clients', permission: { resource: 'clients', action: 'view_list' } },
+            { path: 'cases', icon: Briefcase, label: 'القضايا', moduleKey: 'cases', permission: { resource: 'cases', action: 'view_list' } },
+            { path: 'hearings', icon: Calendar, label: 'الجلسات', moduleKey: 'hearings', permission: { resource: 'hearings', action: 'view_list' } },
+            { path: 'documents', icon: FileText, label: 'المستندات', moduleKey: 'documents', permission: { resource: 'documents', action: 'view_list' } },
+            { path: 'tasks', icon: CheckSquare, label: 'المهام', moduleKey: 'tasks', permission: { resource: 'tasks', action: 'view_list' } },
+            { path: 'legal-documents', icon: FileEdit, label: 'محرر الوثائق', moduleKey: 'legal_documents', permission: { resource: 'documents', action: 'manage_templates' } },
             { path: 'activity-logs', icon: History, label: 'التايم لاين', permission: { resource: 'settings', action: 'view_activity_log' } },
-            { path: 'legal-library', icon: BookOpen, label: 'المكتبة القانونية', permission: { resource: 'cases', action: 'view_list' } },
-            { path: 'legal-search', icon: Sparkles, label: 'البحث الذكي', permission: { resource: 'cases', action: 'view_list' } },
-            { path: 'forms', icon: ClipboardList, label: 'النماذج', permission: { resource: 'cases', action: 'view_list' } },
+            { path: 'legal-library', icon: BookOpen, label: 'المكتبة القانونية', moduleKey: 'legal_library', permission: { resource: 'cases', action: 'view_list' } },
+            { path: 'legal-search', icon: Sparkles, label: 'البحث الذكي', moduleKey: 'legal_ai', permission: { resource: 'cases', action: 'view_list' } },
+            { path: 'forms', icon: ClipboardList, label: 'النماذج', moduleKey: 'forms', permission: { resource: 'cases', action: 'view_list' } },
         ],
     },
     {
@@ -103,10 +106,10 @@ const navGroups: NavGroup[] = [
         icon: MessageSquare,
         collapsible: true,
         items: [
-            { path: 'messages', icon: Mail, label: 'الرسائل الداخلية' },
-            { path: 'chat', icon: MessageSquare, label: 'الدردشة الداخلية' },
-            { path: 'whatsapp', icon: Share2, label: 'التواصل الاجتماعي', roles: ['OWNER', 'ADMIN'] },
-            { path: 'calls', icon: PhoneCall, label: 'مركز الاتصالات', roles: ['OWNER', 'ADMIN'] },
+            { path: 'messages', icon: Mail, label: 'الرسائل الداخلية', moduleKey: 'messages' },
+            { path: 'chat', icon: MessageSquare, label: 'الدردشة الداخلية', moduleKey: 'messages' },
+            { path: 'whatsapp', icon: Share2, label: 'التواصل الاجتماعي', moduleKey: 'whatsapp', roles: ['OWNER', 'ADMIN'] },
+            { path: 'calls', icon: PhoneCall, label: 'مركز الاتصالات', moduleKey: 'call_center', roles: ['OWNER', 'ADMIN'] },
         ],
     },
     {
@@ -114,16 +117,17 @@ const navGroups: NavGroup[] = [
         title: 'التسويق',
         icon: Megaphone,
         collapsible: true,
+        moduleKey: 'marketing',
         roles: ['OWNER', 'ADMIN'],
         items: [
-            { path: 'marketing', icon: PieChart, label: 'لوحة التحكم' },
-            { path: 'marketing/leads', icon: Target, label: 'العملاء المحتملون' },
-            { path: 'marketing/telemarketing', icon: Phone, label: 'التسويق عبر الهاتف' },
-            { path: 'marketing/affiliate', icon: Handshake, label: 'التسويق بالعمولة' },
-            { path: 'marketing/campaigns', icon: Megaphone, label: 'الحملات التسويقية' },
-            { path: 'marketing/ads-analytics', icon: TrendingUp, label: 'نتائج الإعلانات' },
-            { path: 'marketing/messages', icon: Send, label: 'الرسائل الجماعية' },
-            { path: 'marketing/calendar', icon: CalendarDays, label: 'تقويم المحتوى' },
+            { path: 'marketing', icon: PieChart, label: 'لوحة التحكم', moduleKey: 'marketing' },
+            { path: 'marketing/leads', icon: Target, label: 'العملاء المحتملون', moduleKey: 'marketing' },
+            { path: 'marketing/telemarketing', icon: Phone, label: 'التسويق عبر الهاتف', moduleKey: 'marketing' },
+            { path: 'marketing/affiliate', icon: Handshake, label: 'التسويق بالعمولة', moduleKey: 'marketing' },
+            { path: 'marketing/campaigns', icon: Megaphone, label: 'الحملات التسويقية', moduleKey: 'marketing' },
+            { path: 'marketing/ads-analytics', icon: TrendingUp, label: 'نتائج الإعلانات', moduleKey: 'marketing' },
+            { path: 'marketing/messages', icon: Send, label: 'الرسائل الجماعية', moduleKey: 'marketing' },
+            { path: 'marketing/calendar', icon: CalendarDays, label: 'تقويم المحتوى', moduleKey: 'marketing' },
         ],
     },
     {
@@ -131,12 +135,13 @@ const navGroups: NavGroup[] = [
         title: 'التحليلات',
         icon: BarChart3,
         collapsible: true,
+        moduleKey: 'reports',
         roles: ['OWNER', 'ADMIN', 'LAWYER'],
         permission: { resource: 'reports', action: 'view_dashboard' },
         items: [
-            { path: 'analytics', icon: BarChart3, label: 'التقارير والإحصائيات', permission: { resource: 'reports', action: 'view_dashboard' } },
-            { path: 'analytics/performance', icon: Target, label: 'تقرير الأداء', roles: ['OWNER', 'ADMIN'], permission: { resource: 'reports', action: 'view_performance' } },
-            { path: 'reports', icon: Download, label: 'تصدير البيانات', roles: ['OWNER', 'ADMIN', 'LAWYER'], permission: { resource: 'reports', action: 'export' } },
+            { path: 'analytics', icon: BarChart3, label: 'التقارير والإحصائيات', moduleKey: 'reports', permission: { resource: 'reports', action: 'view_dashboard' } },
+            { path: 'analytics/performance', icon: Target, label: 'تقرير الأداء', moduleKey: 'reports', roles: ['OWNER', 'ADMIN'], permission: { resource: 'reports', action: 'view_performance' } },
+            { path: 'reports', icon: Download, label: 'تصدير البيانات', moduleKey: 'reports', roles: ['OWNER', 'ADMIN', 'LAWYER'], permission: { resource: 'reports', action: 'export' } },
         ],
     },
     {
@@ -144,13 +149,14 @@ const navGroups: NavGroup[] = [
         title: 'الموارد البشرية',
         icon: UsersRound,
         collapsible: true,
+        moduleKey: 'hr',
         roles: ['OWNER', 'ADMIN'],
         permission: { resource: 'hr', action: 'view_employees' },
         items: [
-            { path: 'hr/employees', icon: Users, label: 'الموظفون', permission: { resource: 'hr', action: 'view_employees' } },
-            { path: 'hr/attendance', icon: Clock, label: 'الحضور والانصراف', permission: { resource: 'hr', action: 'view_attendance' } },
-            { path: 'hr/leaves', icon: Palmtree, label: 'الإجازات', permission: { resource: 'hr', action: 'view_leaves' } },
-            { path: 'hr/payroll', icon: Banknote, label: 'الرواتب', permission: { resource: 'hr', action: 'view_payroll' } },
+            { path: 'hr/employees', icon: Users, label: 'الموظفون', moduleKey: 'hr', permission: { resource: 'hr', action: 'view_employees' } },
+            { path: 'hr/attendance', icon: Clock, label: 'الحضور والانصراف', moduleKey: 'hr', permission: { resource: 'hr', action: 'view_attendance' } },
+            { path: 'hr/leaves', icon: Palmtree, label: 'الإجازات', moduleKey: 'hr', permission: { resource: 'hr', action: 'view_leaves' } },
+            { path: 'hr/payroll', icon: Banknote, label: 'الرواتب', moduleKey: 'hr', permission: { resource: 'hr', action: 'view_payroll' } },
         ],
     },
     {
@@ -161,9 +167,9 @@ const navGroups: NavGroup[] = [
         roles: ['OWNER', 'ADMIN'],
         permission: { resource: 'invoices', action: 'view_list' },
         items: [
-            { path: 'invoices', icon: Receipt, label: 'الفواتير', permission: { resource: 'invoices', action: 'view_list' } },
-            { path: 'accounting/expenses', icon: CreditCard, label: 'المصروفات', permission: { resource: 'accounting', action: 'manage_expenses' } },
-            { path: 'accounting', icon: Calculator, label: 'المحاسبة', permission: { resource: 'accounting', action: 'view_accounts' } },
+            { path: 'invoices', icon: Receipt, label: 'الفواتير', moduleKey: 'invoices', permission: { resource: 'invoices', action: 'view_list' } },
+            { path: 'accounting/expenses', icon: CreditCard, label: 'المصروفات', moduleKey: 'accounting', permission: { resource: 'accounting', action: 'manage_expenses' } },
+            { path: 'accounting', icon: Calculator, label: 'المحاسبة', moduleKey: 'accounting', permission: { resource: 'accounting', action: 'view_accounts' } },
         ],
     },
     {
@@ -174,7 +180,6 @@ const navGroups: NavGroup[] = [
         items: [
             { path: 'settings/profile', icon: User, label: 'الملف الشخصي' },
             { path: 'settings/notifications', icon: Bell, label: 'الإشعارات' },
-            { path: 'settings/call-center', icon: Phone, label: 'السنترال', roles: ['OWNER', 'ADMIN'] },
         ],
     },
 ];
@@ -185,6 +190,10 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
     const user = useAuthStore((state) => state.user);
     const userRole = user?.role;
     const { can } = usePermissions();
+    const { isModuleEnabled, fetchModules } = useModuleStore();
+
+    // Fetch modules on mount
+    useEffect(() => { fetchModules(); }, [fetchModules]);
 
     // Build slug prefix for all paths
     const slugPrefix = slug ? `/${slug}` : '';
@@ -219,9 +228,11 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         });
     };
 
-    // Filter nav items based on user role AND tenant permissions
+    // Filter nav items based on user role, permissions, AND module access
     const filterItems = (items: NavItem[]) => {
         return items.filter((item) => {
+            // Module access check
+            if (item.moduleKey && !isModuleEnabled(item.moduleKey)) return false;
             // System role check
             if (item.roles && (!userRole || !item.roles.includes(userRole))) return false;
             // Tenant permission check
@@ -230,8 +241,9 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         });
     };
 
-    // Check if group is visible based on role AND permissions
+    // Check if group is visible based on role, permissions, AND module access
     const isGroupVisible = (group: NavGroup) => {
+        if (group.moduleKey && !isModuleEnabled(group.moduleKey)) return false;
         if (group.roles && userRole && !group.roles.includes(userRole)) return false;
         if (group.permission && !can(group.permission.resource, group.permission.action)) return false;
         return filterItems(group.items).length > 0;

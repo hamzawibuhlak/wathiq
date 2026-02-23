@@ -57,15 +57,42 @@ export class CasesService {
         } = filterDto;
 
         // Build where clause - ALWAYS filter by tenantId for multi-tenancy
-        const where: Prisma.CaseWhereInput = { tenantId };
+        const andConditions: Prisma.CaseWhereInput[] = [];
 
-        // LAWYER can only see their own cases
+        // LAWYER can only see their own cases (assigned via assignedToId or assignedToIds)
         if (userRole === UserRole.LAWYER && userId) {
-            where.assignedToId = userId;
+            andConditions.push({
+                OR: [
+                    { assignedToId: userId },
+                    { assignedToIds: { has: userId } },
+                ],
+            });
         } else if (assignedToId) {
             // For OWNER/ADMIN, allow filter by assignedToId
-            where.assignedToId = assignedToId;
+            andConditions.push({
+                OR: [
+                    { assignedToId: assignedToId },
+                    { assignedToIds: { has: assignedToId } },
+                ],
+            });
         }
+
+        // Search in title, description, and caseNumber
+        if (search) {
+            andConditions.push({
+                OR: [
+                    { title: { contains: search, mode: 'insensitive' } },
+                    { description: { contains: search, mode: 'insensitive' } },
+                    { caseNumber: { contains: search, mode: 'insensitive' } },
+                    { courtCaseNumber: { contains: search, mode: 'insensitive' } },
+                ],
+            });
+        }
+
+        const where: Prisma.CaseWhereInput = {
+            tenantId,
+            ...(andConditions.length > 0 && { AND: andConditions }),
+        };
 
         // Status filter
         if (status) {
@@ -85,16 +112,6 @@ export class CasesService {
         // Priority filter
         if ((filterDto as any).priority) {
             (where as any).priority = (filterDto as any).priority;
-        }
-
-        // Search in title, description, and caseNumber
-        if (search) {
-            where.OR = [
-                { title: { contains: search, mode: 'insensitive' } },
-                { description: { contains: search, mode: 'insensitive' } },
-                { caseNumber: { contains: search, mode: 'insensitive' } },
-                { courtCaseNumber: { contains: search, mode: 'insensitive' } },
-            ];
         }
 
         // Calculate skip for pagination
@@ -166,7 +183,7 @@ export class CasesService {
         }
 
         // LAWYER can only view their assigned cases
-        if (userRole === UserRole.LAWYER && userId && caseData.assignedToId !== userId) {
+        if (userRole === UserRole.LAWYER && userId && caseData.assignedToId !== userId && !(caseData as any).assignedToIds?.includes(userId)) {
             throw new ForbiddenException('لا تملك صلاحية الوصول لهذه القضية');
         }
 
@@ -213,14 +230,23 @@ export class CasesService {
             },
         });
 
-        // Send notification to assigned lawyer (if assigned and different from creator)
+        // Send notification to assigned lawyers (if different from creator)
+        const lawyerIdsToNotify = new Set<string>();
         if (dto.assignedToId && dto.assignedToId !== userId) {
+            lawyerIdsToNotify.add(dto.assignedToId);
+        }
+        if (dto.assignedToIds) {
+            for (const lid of dto.assignedToIds) {
+                if (lid !== userId) lawyerIdsToNotify.add(lid);
+            }
+        }
+        for (const lawyerId of lawyerIdsToNotify) {
             await this.notificationsService.create({
                 title: 'قضية جديدة مسندة إليك',
                 message: `تم إسناد القضية "${caseData.title}" (${caseNumber}) إليك`,
                 type: 'INFO',
                 link: `/cases/${caseData.id}`,
-                userId: dto.assignedToId,
+                userId: lawyerId,
                 tenantId,
             });
         }
@@ -252,7 +278,7 @@ export class CasesService {
         }
 
         // LAWYER can only update their own cases
-        if (userRole === UserRole.LAWYER && userId && existingCase.assignedToId !== userId) {
+        if (userRole === UserRole.LAWYER && userId && existingCase.assignedToId !== userId && !(existingCase as any).assignedToIds?.includes(userId)) {
             throw new ForbiddenException('لا تملك صلاحية تعديل هذه القضية');
         }
 
@@ -303,7 +329,10 @@ export class CasesService {
 
         // LAWYER only sees their own case stats
         if (userRole === UserRole.LAWYER && userId) {
-            baseWhere.assignedToId = userId;
+            baseWhere.OR = [
+                { assignedToId: userId },
+                { assignedToIds: { has: userId } },
+            ];
         }
 
         // Get all counts in parallel for performance

@@ -80,11 +80,31 @@ export interface Client {
     email?: string;
     phone?: string;
     nationalId?: string;
+    nationalIdDoc?: string;
     clientType: ClientType;
     address?: string;
+    city?: string;
     notes?: string;
+    // Company fields
+    companyName?: string;
+    brandName?: string;
+    unifiedNumber?: string;
+    commercialReg?: string;
+    commercialRegDoc?: string;
+    nationalAddressDoc?: string;
+    // Representative fields
+    repName?: string;
+    repIdentity?: string;
+    repIdentityDoc?: string;
+    repPhone?: string;
+    repEmail?: string;
+    repDocType?: string;
+    repDoc?: string;
+    // Stats
     activeCases?: number;
     totalCases?: number;
+    _count?: { cases: number; invoices?: number; documents?: number };
+    cases?: any[];
     createdAt: string;
 }
 

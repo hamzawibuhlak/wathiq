@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { EntityCodeService } from '../common/services/entity-code.service';
+import { EmailService } from '../email/email.service';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -8,6 +9,7 @@ export class OwnerService {
     constructor(
         private prisma: PrismaService,
         private readonly entityCodeService: EntityCodeService,
+        private readonly emailService: EmailService,
     ) { }
 
     // =============================================
@@ -111,7 +113,73 @@ export class OwnerService {
             },
         });
 
+        // Send welcome email with credentials
+        const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } });
+        this.sendWelcomeEmail(user.email, user.name, tempPassword, tenant?.name || 'وثيق', data.role, tenantId);
+
         return { ...user, tempPassword };
+    }
+
+    /**
+     * Send welcome email with credentials to newly created user
+     */
+    private async sendWelcomeEmail(
+        userEmail: string,
+        userName: string,
+        tempPassword: string,
+        tenantName: string,
+        role: string,
+        tenantId?: string,
+    ) {
+        try {
+            const roleLabels: Record<string, string> = {
+                OWNER: 'مالك',
+                ADMIN: 'مدير',
+                LAWYER: 'محامي',
+                SECRETARY: 'سكرتير',
+                ACCOUNTANT: 'محاسب',
+            };
+            const roleLabel = roleLabels[role] || role;
+            const loginUrl = 'https://bewathiq.com/login';
+
+            await this.emailService.sendEmail({
+                to: userEmail,
+                subject: `تم إنشاء حسابك في ${tenantName} على منصة وثيق`,
+                body: `
+                <div dir="rtl" style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb;">
+                    <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); padding: 32px; text-align: center;">
+                        <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700;">وثيق</h1>
+                        <p style="color: #bfdbfe; margin: 8px 0 0 0; font-size: 14px;">منصة إدارة المكاتب القانونية</p>
+                    </div>
+                    <div style="padding: 32px;">
+                        <h2 style="color: #1f2937; font-size: 20px; margin: 0 0 16px 0;">مرحباً ${userName}،</h2>
+                        <p style="color: #4b5563; font-size: 16px; line-height: 1.8; margin: 0 0 16px 0;">
+                            تم إنشاء حسابك في <strong style="color: #1e40af;">${tenantName}</strong>
+                            كـ<strong style="color: #1f2937;">${roleLabel}</strong> على منصة وثيق.
+                        </p>
+                        <div style="background-color: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 20px; margin: 24px 0;">
+                            <p style="color: #166534; font-size: 14px; margin: 0 0 12px 0; font-weight: 600;">بيانات تسجيل الدخول:</p>
+                            <p style="color: #166534; font-size: 15px; margin: 0 0 8px 0;">📧 البريد الإلكتروني: <strong>${userEmail}</strong></p>
+                            <p style="color: #166534; font-size: 15px; margin: 0;">🔑 كلمة المرور المؤقتة: <strong style="direction: ltr; display: inline-block;">${tempPassword}</strong></p>
+                        </div>
+                        <p style="color: #dc2626; font-size: 13px; margin: 0 0 24px 0;">⚠️ يُنصح بتغيير كلمة المرور بعد تسجيل الدخول الأول.</p>
+                        <div style="text-align: center; margin: 32px 0;">
+                            <a href="${loginUrl}"
+                               style="display: inline-block; padding: 14px 40px; background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 6px rgba(30, 64, 175, 0.25);">
+                                تسجيل الدخول
+                            </a>
+                        </div>
+                    </div>
+                    <div style="background-color: #f8fafc; padding: 20px 32px; text-align: center; border-top: 1px solid #e5e7eb;">
+                        <p style="color: #9ca3af; font-size: 12px; margin: 0;">© ${new Date().getFullYear()} وثيق - جميع الحقوق محفوظة</p>
+                    </div>
+                </div>
+                `,
+                tenantId,
+            });
+        } catch (error) {
+            console.error('Failed to send welcome email:', error);
+        }
     }
 
     async changeUserRole(

@@ -1,8 +1,10 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useState } from 'react';
 import { Button, Input, Label } from '@/components/ui';
 import { useAuthStore } from '@/stores/auth.store';
+import { ChevronDown, Check } from 'lucide-react';
 import type { Case } from '@/types';
 
 // Validation schema
@@ -19,7 +21,7 @@ const caseSchema = z.object({
     filingDate: z.string().optional(),
 });
 
-export type CaseFormData = z.infer<typeof caseSchema>;
+export type CaseFormData = z.infer<typeof caseSchema> & { assignedToIds?: string[] };
 
 interface CaseFormProps {
     initialData?: Case;
@@ -56,6 +58,28 @@ export function CaseForm({ initialData, onSubmit, isLoading, clients = [], lawye
     const user = useAuthStore((state) => state.user);
     const isLawyer = user?.role === 'LAWYER';
 
+    // Multi-lawyer selection state
+    const [selectedLawyers, setSelectedLawyers] = useState<string[]>(() => {
+        if (initialData?.assignedToId) {
+            const ids = [...((initialData as any).assignedToIds || [])];
+            if (!ids.includes(initialData.assignedToId)) {
+                ids.unshift(initialData.assignedToId);
+            }
+            return ids.length > 0 ? ids : [initialData.assignedToId];
+        }
+        if (isLawyer && user?.id) return [user.id];
+        return [];
+    });
+    const [showLawyerList, setShowLawyerList] = useState(false);
+
+    const toggleLawyer = (lawyerId: string) => {
+        setSelectedLawyers(prev =>
+            prev.includes(lawyerId)
+                ? prev.filter(id => id !== lawyerId)
+                : [...prev, lawyerId]
+        );
+    };
+
     const {
         register,
         handleSubmit,
@@ -76,8 +100,16 @@ export function CaseForm({ initialData, onSubmit, isLoading, clients = [], lawye
         },
     });
 
+    const handleFormSubmit = (data: CaseFormData) => {
+        onSubmit({
+            ...data,
+            assignedToId: selectedLawyers[0] || undefined,
+            assignedToIds: selectedLawyers,
+        });
+    };
+
     return (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
             {/* Case Number (Read Only for Edit) */}
             {initialData?.caseNumber && (
                 <div className="space-y-2">
@@ -186,21 +218,50 @@ export function CaseForm({ initialData, onSubmit, isLoading, clients = [], lawye
                     )}
                 </div>
 
-                {/* Assigned Lawyer */}
+                {/* Assigned Lawyers (Multi-select) */}
                 <div className="space-y-2">
-                    <Label htmlFor="assignedToId">المحامي المسؤول</Label>
-                    <select
-                        id="assignedToId"
-                        className="w-full h-10 px-3 rounded-md border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                        {...register('assignedToId')}
+                    <Label>
+                        المحامون المسؤولون
+                        {selectedLawyers.length > 0 && (
+                            <span className="mr-2 px-2 py-0.5 bg-primary/10 text-primary rounded-full text-xs">
+                                {selectedLawyers.length} محامي
+                            </span>
+                        )}
+                    </Label>
+                    <button
+                        type="button"
+                        onClick={() => setShowLawyerList(!showLawyerList)}
+                        className="w-full h-10 px-3 rounded-md border bg-background text-sm text-right flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-primary"
                     >
-                        <option value="">اختر المحامي</option>
-                        {lawyers.map((lawyer) => (
-                            <option key={lawyer.id} value={lawyer.id}>
-                                {lawyer.name}
-                            </option>
-                        ))}
-                    </select>
+                        <span className="text-muted-foreground">
+                            {selectedLawyers.length === 0
+                                ? 'اختر المحامين'
+                                : `${selectedLawyers.length} محامي محدد`}
+                        </span>
+                        <ChevronDown className={`w-4 h-4 transition-transform ${showLawyerList ? 'rotate-180' : ''}`} />
+                    </button>
+                    {showLawyerList && (
+                        <div className="border rounded-lg bg-background max-h-40 overflow-y-auto">
+                            {lawyers.map((lawyer) => (
+                                <label
+                                    key={lawyer.id}
+                                    className="flex items-center gap-3 px-3 py-2 hover:bg-muted/50 cursor-pointer border-b last:border-b-0"
+                                    onClick={() => toggleLawyer(lawyer.id)}
+                                >
+                                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${selectedLawyers.includes(lawyer.id)
+                                            ? 'bg-primary border-primary text-white'
+                                            : 'border-gray-300'
+                                        }`}>
+                                        {selectedLawyers.includes(lawyer.id) && <Check className="w-3 h-3" />}
+                                    </div>
+                                    <span className="text-sm flex-1">{lawyer.name}</span>
+                                </label>
+                            ))}
+                            {lawyers.length === 0 && (
+                                <p className="text-sm text-muted-foreground text-center py-3">لا يوجد محامون</p>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {/* Court Name */}

@@ -49,6 +49,13 @@ export class CreateDocumentDto {
 
     @ApiPropertyOptional({
         type: [String],
+        description: 'معرفات القضايا المرتبطة (لربط المستند بأكثر من قضية)',
+    })
+    @IsOptional()
+    caseIds?: string[] | string;
+
+    @ApiPropertyOptional({
+        type: [String],
         description: 'الوسوم',
     })
     @IsOptional()

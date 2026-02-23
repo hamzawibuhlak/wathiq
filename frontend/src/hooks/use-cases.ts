@@ -3,6 +3,12 @@ import { casesApi, CasesFilters, CreateCaseData, UpdateCaseData } from '@/api/ca
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 
+// Extract tenant slug from current URL path
+function getTenantSlug() {
+    const parts = window.location.pathname.split('/');
+    return parts[1] || '';
+}
+
 // List of cases
 export function useCases(filters?: CasesFilters) {
     return useQuery({
@@ -32,7 +38,7 @@ export function useCreateCase() {
             queryClient.invalidateQueries({ queryKey: ['cases'] });
             queryClient.invalidateQueries({ queryKey: ['dashboard'] });
             toast.success('تم إنشاء القضية بنجاح');
-            navigate(`/cases/${response.data.id}`);
+            navigate(`/${getTenantSlug()}/cases/${response.data.id}`);
         },
         onError: () => {
             toast.error('حدث خطأ أثناء إنشاء القضية');
@@ -68,7 +74,7 @@ export function useDeleteCase() {
             queryClient.invalidateQueries({ queryKey: ['cases'] });
             queryClient.invalidateQueries({ queryKey: ['dashboard'] });
             toast.success('تم حذف القضية بنجاح');
-            navigate('/cases');
+            navigate(`/${getTenantSlug()}/cases`);
         },
         onError: () => {
             toast.error('حدث خطأ أثناء حذف القضية');

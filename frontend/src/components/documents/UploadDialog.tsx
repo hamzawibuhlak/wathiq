@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { documentsApi } from '@/api/documents.api';
 import { casesApi } from '@/api/cases.api';
-import { X, Upload, FileText, Loader2 } from 'lucide-react';
+import { X, Upload, FileText, Loader2, ChevronDown, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface UploadDialogProps {
@@ -32,14 +32,15 @@ export function UploadDialog({ isOpen, onClose, defaultCaseId }: UploadDialogPro
         title: '',
         description: '',
         documentType: 'OTHER',
-        caseId: defaultCaseId || '',
+        caseIds: defaultCaseId ? [defaultCaseId] : [] as string[],
         tags: '',
     });
+    const [showCaseList, setShowCaseList] = useState(false);
 
     const { data: casesData } = useQuery({
         queryKey: ['cases-list'],
         queryFn: () => casesApi.getAll({ limit: 100 }),
-        enabled: isOpen && !defaultCaseId,
+        enabled: isOpen,
     });
 
     const uploadMutation = useMutation({
@@ -61,9 +62,19 @@ export function UploadDialog({ isOpen, onClose, defaultCaseId }: UploadDialogPro
             title: '',
             description: '',
             documentType: 'OTHER',
-            caseId: defaultCaseId || '',
+            caseIds: defaultCaseId ? [defaultCaseId] : [],
             tags: '',
         });
+        setShowCaseList(false);
+    };
+
+    const toggleCase = (caseId: string) => {
+        setFormData(prev => ({
+            ...prev,
+            caseIds: prev.caseIds.includes(caseId)
+                ? prev.caseIds.filter(id => id !== caseId)
+                : [...prev.caseIds, caseId],
+        }));
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -82,7 +93,7 @@ export function UploadDialog({ isOpen, onClose, defaultCaseId }: UploadDialogPro
             title: formData.title || file.name,
             description: formData.description,
             documentType: formData.documentType,
-            caseId: formData.caseId || undefined,
+            caseIds: formData.caseIds.length > 0 ? formData.caseIds : undefined,
             tags,
         });
     };
@@ -184,24 +195,58 @@ export function UploadDialog({ isOpen, onClose, defaultCaseId }: UploadDialogPro
                         </select>
                     </div>
 
-                    {/* Case (optional) */}
-                    {!defaultCaseId && (
-                        <div>
-                            <label className="block text-sm font-medium mb-2">القضية (اختياري)</label>
-                            <select
-                                value={formData.caseId}
-                                onChange={(e) => setFormData(prev => ({ ...prev, caseId: e.target.value }))}
-                                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background"
-                            >
-                                <option value="">بدون قضية</option>
+                    {/* Cases (multi-select) */}
+                    <div>
+                        <label className="block text-sm font-medium mb-2">
+                            القضايا (اختياري)
+                            {formData.caseIds.length > 0 && (
+                                <span className="mr-2 px-2 py-0.5 bg-primary/10 text-primary rounded-full text-xs">
+                                    {formData.caseIds.length} قضية
+                                </span>
+                            )}
+                        </label>
+                        <button
+                            type="button"
+                            onClick={() => setShowCaseList(!showCaseList)}
+                            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background text-right flex items-center justify-between"
+                        >
+                            <span className="text-sm text-muted-foreground">
+                                {formData.caseIds.length === 0
+                                    ? 'بدون قضية'
+                                    : `${formData.caseIds.length} قضية محددة`}
+                            </span>
+                            <ChevronDown className={`w-4 h-4 transition-transform ${showCaseList ? 'rotate-180' : ''}`} />
+                        </button>
+                        {showCaseList && (
+                            <div className="mt-1 border rounded-lg bg-background max-h-40 overflow-y-auto">
                                 {casesData?.data?.map((c: any) => (
-                                    <option key={c.id} value={c.id}>
-                                        {c.caseNumber} - {c.title}
-                                    </option>
+                                    <label
+                                        key={c.id}
+                                        className="flex items-center gap-3 px-3 py-2 hover:bg-muted/50 cursor-pointer border-b last:border-b-0"
+                                    >
+                                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${formData.caseIds.includes(c.id)
+                                                ? 'bg-primary border-primary text-white'
+                                                : 'border-gray-300'
+                                            }`}>
+                                            {formData.caseIds.includes(c.id) && <Check className="w-3 h-3" />}
+                                        </div>
+                                        <span className="text-sm flex-1">
+                                            {c.caseNumber} - {c.title}
+                                        </span>
+                                        <input
+                                            type="checkbox"
+                                            className="hidden"
+                                            checked={formData.caseIds.includes(c.id)}
+                                            onChange={() => toggleCase(c.id)}
+                                        />
+                                    </label>
                                 ))}
-                            </select>
-                        </div>
-                    )}
+                                {(!casesData?.data || casesData.data.length === 0) && (
+                                    <p className="text-sm text-muted-foreground text-center py-3">لا توجد قضايا</p>
+                                )}
+                            </div>
+                        )}
+                    </div>
 
                     {/* Description */}
                     <div>

@@ -59,6 +59,10 @@ export class CreateCaseDto {
     @IsUUID('4', { message: 'معرف المحامي غير صالح' })
     assignedToId?: string;
 
+    @ApiProperty({ required: false, type: [String], description: 'معرفات المحامين المسؤولين' })
+    @IsOptional()
+    assignedToIds?: string[];
+
     @ApiProperty({ required: false })
     @IsOptional()
     @IsString()

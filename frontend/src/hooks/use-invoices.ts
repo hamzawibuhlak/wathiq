@@ -3,6 +3,12 @@ import { invoicesApi, InvoicesFilters, CreateInvoiceData, UpdateInvoiceData } fr
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 
+// Extract tenant slug from current URL path
+function getTenantSlug() {
+    const parts = window.location.pathname.split('/');
+    return parts[1] || '';
+}
+
 // List of invoices
 export function useInvoices(filters?: InvoicesFilters) {
     return useQuery({
@@ -41,7 +47,7 @@ export function useCreateInvoice() {
             queryClient.invalidateQueries({ queryKey: ['invoices'] });
             queryClient.invalidateQueries({ queryKey: ['dashboard'] });
             toast.success('تم إنشاء الفاتورة بنجاح');
-            navigate(`/invoices/${response.data.id}`);
+            navigate(`/${getTenantSlug()}/invoices/${response.data.id}`);
         },
         onError: () => {
             toast.error('حدث خطأ أثناء إنشاء الفاتورة');
@@ -77,7 +83,7 @@ export function useDeleteInvoice() {
             queryClient.invalidateQueries({ queryKey: ['invoices'] });
             queryClient.invalidateQueries({ queryKey: ['dashboard'] });
             toast.success('تم حذف الفاتورة بنجاح');
-            navigate('/invoices');
+            navigate(`/${getTenantSlug()}/invoices`);
         },
         onError: () => {
             toast.error('حدث خطأ أثناء حذف الفاتورة');

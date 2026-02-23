@@ -90,4 +90,17 @@ export const superAdminApi = {
     assignCustomRole: (staffId: string, customRoleId: string) =>
         patch<any>(`/super-admin/staff/${staffId}/assign-custom-role`, { customRoleId }),
     getMyPermissions: () => get<any>('/super-admin/my-permissions'),
+
+    // Module Control — Phase 42
+    getTenantModules: (tenantId: string) => get<any>(`/super-admin/tenants/${tenantId}/modules`),
+    updateTenantModule: (tenantId: string, moduleKey: string, enabled: boolean, reason?: string) =>
+        patch<any>(`/super-admin/tenants/${tenantId}/modules/${moduleKey}`, { enabled, reason }),
+    updateTenantFeature: (tenantId: string, moduleKey: string, featureKey: string, enabled: boolean, reason?: string) =>
+        patch<any>(`/super-admin/tenants/${tenantId}/modules/${moduleKey}/features/${featureKey}`, { enabled, reason }),
+    bulkUpdateModules: (tenantId: string, updates: Array<{ moduleKey: string; enabled: boolean }>, reason?: string) =>
+        patch<any>(`/super-admin/tenants/${tenantId}/modules-bulk`, { updates, reason }),
+    applyPlanModules: (tenantId: string, plan: string) =>
+        post<any>(`/super-admin/tenants/${tenantId}/modules-apply-plan`, { plan }),
+    getTenantModuleChangelog: (tenantId: string) =>
+        get<any>(`/super-admin/tenants/${tenantId}/modules-changelog`),
 };

@@ -8,6 +8,7 @@ import { StaffService } from './staff.service';
 import { SuperAdminChatService } from './chat.service';
 import { CustomRolesService } from './roles.service';
 import { PermissionService } from './permission.service';
+import { ModuleSettingsService } from './module-settings.service';
 import { SuperAdminDashboardGuard } from './guards/super-admin-dashboard.guard';
 import { PermissionGuard } from './guards/permission.guard';
 import { RequirePermission } from './decorators/require-permission.decorator';
@@ -45,6 +46,7 @@ export class SuperAdminDashboardController {
         private chatService: SuperAdminChatService,
         private rolesService: CustomRolesService,
         private permissionService: PermissionService,
+        private moduleSettingsService: ModuleSettingsService,
     ) { }
 
     // ─── Auth ───
@@ -283,5 +285,62 @@ export class SuperAdminDashboardController {
     @Post('config/test-smtp')
     testSmtpConnection(@Body('testEmail') testEmail: string) {
         return this.svc.testSmtpConnection(testEmail);
+    }
+
+    // ─── Phase 42: Module Control ───
+
+    @Get('tenants/:id/modules')
+    getTenantModules(@Param('id') id: string) {
+        return this.moduleSettingsService.getTenantModules(id);
+    }
+
+    @Patch('tenants/:id/modules/:moduleKey')
+    updateTenantModule(
+        @Param('id') id: string,
+        @Param('moduleKey') moduleKey: string,
+        @Body() body: { enabled: boolean; reason?: string },
+        @Req() req: any,
+    ) {
+        return this.moduleSettingsService.updateModule(
+            id, moduleKey, body.enabled, req.superAdmin.sub, body.reason,
+        );
+    }
+
+    @Patch('tenants/:id/modules/:moduleKey/features/:featureKey')
+    updateTenantFeature(
+        @Param('id') id: string,
+        @Param('moduleKey') moduleKey: string,
+        @Param('featureKey') featureKey: string,
+        @Body() body: { enabled: boolean; reason?: string },
+        @Req() req: any,
+    ) {
+        return this.moduleSettingsService.updateFeature(
+            id, moduleKey, featureKey, body.enabled, req.superAdmin.sub, body.reason,
+        );
+    }
+
+    @Patch('tenants/:id/modules-bulk')
+    bulkUpdateTenantModules(
+        @Param('id') id: string,
+        @Body() body: { updates: Array<{ moduleKey: string; enabled: boolean }>; reason?: string },
+        @Req() req: any,
+    ) {
+        return this.moduleSettingsService.bulkUpdate(
+            id, body.updates, req.superAdmin.sub, body.reason,
+        );
+    }
+
+    @Post('tenants/:id/modules-apply-plan')
+    applyPlanToTenant(
+        @Param('id') id: string,
+        @Body() body: { plan: string },
+        @Req() req: any,
+    ) {
+        return this.moduleSettingsService.applyPlan(id, body.plan, req.superAdmin.sub);
+    }
+
+    @Get('tenants/:id/modules-changelog')
+    getTenantModuleChangelog(@Param('id') id: string) {
+        return this.moduleSettingsService.getChangeLog(id);
     }
 }

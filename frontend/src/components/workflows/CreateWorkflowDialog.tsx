@@ -59,9 +59,9 @@ const priorityOptions = [
     { value: 'URGENT', label: 'عاجلة' },
 ];
 
-export function CreateWorkflowDialog({ 
-    isOpen, 
-    onClose, 
+export function CreateWorkflowDialog({
+    isOpen,
+    onClose,
     initialTrigger,
     initialName = '',
     initialDescription = ''
@@ -158,24 +158,24 @@ export function CreateWorkflowDialog({
                 {/* Steps indicator */}
                 <div className="px-4 py-3 border-b bg-muted/30">
                     <div className="flex items-center justify-center gap-4">
-                        <StepIndicator 
-                            step={1} 
-                            label="المحفز" 
-                            active={step === 'trigger'} 
+                        <StepIndicator
+                            step={1}
+                            label="المحفز"
+                            active={step === 'trigger'}
                             completed={selectedTrigger !== null}
                         />
                         <div className="w-12 h-px bg-border" />
-                        <StepIndicator 
-                            step={2} 
-                            label="الإجراءات" 
-                            active={step === 'actions'} 
+                        <StepIndicator
+                            step={2}
+                            label="الإجراءات"
+                            active={step === 'actions'}
                             completed={actions.length > 0}
                         />
                         <div className="w-12 h-px bg-border" />
-                        <StepIndicator 
-                            step={3} 
-                            label="المراجعة" 
-                            active={step === 'review'} 
+                        <StepIndicator
+                            step={3}
+                            label="المراجعة"
+                            active={step === 'review'}
                             completed={false}
                         />
                     </div>
@@ -317,7 +317,7 @@ export function CreateWorkflowDialog({
                             {/* Add New Action */}
                             <div className="space-y-3">
                                 <Label>إضافة إجراء جديد</Label>
-                                
+
                                 {/* Action Type Selection */}
                                 {!currentActionType ? (
                                     <div className="grid grid-cols-2 gap-2">
@@ -529,7 +529,13 @@ export function CreateWorkflowDialog({
 
                                         <Button
                                             onClick={handleAddAction}
-                                            disabled={!actionConfig.title && currentActionType !== 'UPDATE_STATUS'}
+                                            disabled={
+                                                (currentActionType === 'CREATE_TASK' && !actionConfig.title) ||
+                                                (currentActionType === 'SEND_NOTIFICATION' && !actionConfig.title) ||
+                                                (currentActionType === 'SEND_EMAIL' && !actionConfig.subject) ||
+                                                (currentActionType === 'SEND_WHATSAPP' && !actionConfig.message) ||
+                                                false
+                                            }
                                             className="w-full"
                                         >
                                             <Plus className="w-4 h-4 ml-2" />
@@ -547,7 +553,7 @@ export function CreateWorkflowDialog({
                             <div className="bg-card rounded-lg border p-4">
                                 <h3 className="font-semibold text-lg mb-2">{name}</h3>
                                 {description && <p className="text-muted-foreground text-sm mb-4">{description}</p>}
-                                
+
                                 <div className="space-y-3">
                                     <div className="flex items-center gap-2">
                                         <Zap className="w-4 h-4 text-primary" />
@@ -600,7 +606,7 @@ export function CreateWorkflowDialog({
                             </Button>
                         )}
                         {step === 'review' && (
-                            <Button 
+                            <Button
                                 onClick={handleSubmit}
                                 disabled={createMutation.isPending}
                             >
@@ -620,8 +626,8 @@ function StepIndicator({ step, label, active, completed }: { step: number; label
             <div className={cn(
                 "w-7 h-7 rounded-full flex items-center justify-center text-sm font-medium border-2",
                 active ? "border-primary bg-primary text-primary-foreground" :
-                completed ? "border-green-500 bg-green-500 text-white" :
-                "border-muted-foreground/30 text-muted-foreground"
+                    completed ? "border-green-500 bg-green-500 text-white" :
+                        "border-muted-foreground/30 text-muted-foreground"
             )}>
                 {completed ? '✓' : step}
             </div>

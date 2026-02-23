@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsEnum, IsBoolean, IsObject } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsBoolean, IsObject, IsArray } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { WorkflowTrigger } from '@prisma/client';
 
@@ -22,7 +22,7 @@ export class CreateWorkflowDto {
     triggerConfig?: Record<string, any>;
 
     @ApiProperty({ description: 'الإجراءات', type: 'array' })
-    @IsObject({ each: true })
+    @IsArray()
     actions: Record<string, any>[];
 
     @ApiPropertyOptional({ description: 'مفعل', default: true })

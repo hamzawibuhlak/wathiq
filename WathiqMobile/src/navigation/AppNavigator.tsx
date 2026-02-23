@@ -77,7 +77,7 @@ function CasesStackNavigator() {
                 component={CasesListScreen}
                 options={{
                     title: 'القضايا',
-                    headerLeft: () => <HamburgerButton />,
+                    headerRight: () => <HamburgerButton />,
                 }}
             />
             <CasesStack.Screen
@@ -121,7 +121,7 @@ function MainTabNavigator() {
                 headerStyle: { backgroundColor: colors.white },
                 headerTitleStyle: { fontSize: 17, fontWeight: '600', color: colors.text },
                 headerTintColor: colors.primary,
-                headerLeft: () => <HamburgerButton />,
+                headerRight: () => <HamburgerButton />,
             })}
         >
             <Tab.Screen name="HomeTab" component={HomeScreen} options={{ title: 'الرئيسية', headerTitle: 'وثيق' }} />

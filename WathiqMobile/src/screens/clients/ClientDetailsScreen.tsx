@@ -10,6 +10,13 @@ import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { colors } from '../../theme/colors';
 import { getInitials } from '../../utils/formatters';
 
+const REP_DOC_LABELS: Record<string, string> = {
+    COMMERCIAL_REG: 'السجل التجاري',
+    ARTICLES_OF_ASSOC: 'عقد التأسيس',
+    AUTH_LETTER: 'خطاب تفويض',
+    POWER_OF_ATTORNEY: 'وكالة',
+};
+
 export function ClientDetailsScreen({ route, navigation }: any) {
     const { id } = route.params;
 
@@ -26,13 +33,70 @@ export function ClientDetailsScreen({ route, navigation }: any) {
         </View>
     );
 
-    const infoRows = [
-        { icon: 'mail', label: 'البريد الإلكتروني', value: client.email },
-        { icon: 'phone', label: 'الهاتف', value: client.phone },
-        { icon: 'credit-card', label: 'رقم الهوية', value: client.nationalId || client.idNumber },
-        { icon: 'map-pin', label: 'العنوان', value: client.address },
-        { icon: 'briefcase', label: 'نوع العميل', value: client.clientType === 'COMPANY' ? 'شركة' : 'فرد' },
-    ].filter(r => r.value);
+    const isCompany = client.clientType === 'COMPANY' || client.clientType === 'company';
+
+    // Build info rows based on type
+    const basicInfo = [];
+    if (!isCompany) {
+        if (client.nationalId) basicInfo.push({ icon: 'credit-card', label: 'رقم الهوية', value: client.nationalId });
+        if (client.phone) basicInfo.push({ icon: 'phone', label: 'رقم الجوال', value: client.phone });
+        if (client.email) basicInfo.push({ icon: 'mail', label: 'البريد الإلكتروني', value: client.email });
+    }
+
+    const companyInfo = [];
+    if (isCompany) {
+        if (client.brandName) companyInfo.push({ icon: 'tag', label: 'العلامة التجارية', value: client.brandName });
+        if (client.unifiedNumber) companyInfo.push({ icon: 'hash', label: 'الرقم الموحد', value: client.unifiedNumber });
+        if (client.commercialReg) companyInfo.push({ icon: 'file-text', label: 'رقم السجل التجاري', value: client.commercialReg });
+    }
+
+    const repInfo = [];
+    if (isCompany) {
+        if (client.repName) repInfo.push({ icon: 'user', label: 'اسم الممثل', value: client.repName });
+        if (client.repIdentity) repInfo.push({ icon: 'credit-card', label: 'رقم هوية الممثل', value: client.repIdentity });
+        if (client.repPhone) repInfo.push({ icon: 'phone', label: 'جوال الممثل', value: client.repPhone });
+        if (client.repEmail) repInfo.push({ icon: 'mail', label: 'إيميل الممثل', value: client.repEmail });
+        if (client.repDocType) repInfo.push({ icon: 'file', label: 'نوع مستند التمثيل', value: REP_DOC_LABELS[client.repDocType] || client.repDocType });
+    }
+
+    const documents = [];
+    if (!isCompany && client.nationalIdDoc) documents.push({ label: 'مستند الهوية', url: client.nationalIdDoc });
+    if (isCompany) {
+        if (client.commercialRegDoc) documents.push({ label: 'مستند السجل التجاري', url: client.commercialRegDoc });
+        if (client.nationalAddressDoc) documents.push({ label: 'العنوان الوطني', url: client.nationalAddressDoc });
+        if (client.repIdentityDoc) documents.push({ label: 'مستند هوية الممثل', url: client.repIdentityDoc });
+        if (client.repDoc) documents.push({ label: 'مستند التمثيل', url: client.repDoc });
+    }
+
+    const contactPhone = isCompany ? client.repPhone : client.phone;
+    const contactEmail = isCompany ? client.repEmail : client.email;
+
+    const InfoSection = ({ title, icon, rows }: { title: string; icon: string; rows: any[] }) => {
+        if (rows.length === 0) return null;
+        return (
+            <Surface style={styles.section} elevation={1}>
+                <View style={styles.sectionHeader}>
+                    <Icon name={icon} size={16} color={colors.primary} />
+                    <Text style={styles.sectionTitle}>{title}</Text>
+                </View>
+                <Divider style={styles.divider} />
+                {rows.map((row, i) => (
+                    <View key={row.label}>
+                        <View style={styles.infoRow}>
+                            <View style={styles.infoIcon}>
+                                <Icon name={row.icon} size={16} color={colors.primary} />
+                            </View>
+                            <View style={styles.infoContent}>
+                                <Text style={styles.infoLabel}>{row.label}</Text>
+                                <Text style={styles.infoValue}>{row.value}</Text>
+                            </View>
+                        </View>
+                        {i < rows.length - 1 && <Divider style={styles.divider} />}
+                    </View>
+                ))}
+            </Surface>
+        );
+    };
 
     return (
         <ScrollView
@@ -45,41 +109,41 @@ export function ClientDetailsScreen({ route, navigation }: any) {
                 <Avatar.Text
                     size={72}
                     label={getInitials(client.name)}
-                    style={{ backgroundColor: client.clientType === 'COMPANY' ? '#8B5CF6' : colors.primary }}
+                    style={{ backgroundColor: isCompany ? '#8B5CF6' : colors.primary }}
                 />
                 <Text style={styles.name}>{client.name}</Text>
                 <Chip
-                    icon={() => <Icon name={client.clientType === 'COMPANY' ? 'briefcase' : 'user'} size={14} color={colors.primary} />}
+                    icon={() => <Icon name={isCompany ? 'briefcase' : 'user'} size={14} color={colors.primary} />}
                     style={styles.typeBadge}
                     textStyle={styles.typeBadgeText}
                 >
-                    {client.clientType === 'COMPANY' ? 'شركة' : 'فرد'}
+                    {isCompany ? 'شركة' : 'فرد'}
                 </Chip>
 
                 {/* Quick Actions */}
                 <View style={styles.actions}>
-                    {client.phone && (
+                    {contactPhone && (
                         <TouchableOpacity
                             style={styles.actionBtn}
-                            onPress={() => Linking.openURL(`tel:${client.phone}`)}
+                            onPress={() => Linking.openURL(`tel:${contactPhone}`)}
                         >
                             <Icon name="phone" size={18} color={colors.white} />
                             <Text style={styles.actionText}>اتصال</Text>
                         </TouchableOpacity>
                     )}
-                    {client.email && (
+                    {contactEmail && (
                         <TouchableOpacity
                             style={[styles.actionBtn, { backgroundColor: '#10B981' }]}
-                            onPress={() => Linking.openURL(`mailto:${client.email}`)}
+                            onPress={() => Linking.openURL(`mailto:${contactEmail}`)}
                         >
                             <Icon name="mail" size={18} color={colors.white} />
                             <Text style={styles.actionText}>بريد</Text>
                         </TouchableOpacity>
                     )}
-                    {client.phone && (
+                    {contactPhone && (
                         <TouchableOpacity
                             style={[styles.actionBtn, { backgroundColor: '#25D366' }]}
-                            onPress={() => Linking.openURL(`https://wa.me/${client.phone.replace(/[^0-9]/g, '')}`)}
+                            onPress={() => Linking.openURL(`https://wa.me/${contactPhone.replace(/[^0-9]/g, '')}`)}
                         >
                             <Icon name="message-circle" size={18} color={colors.white} />
                             <Text style={styles.actionText}>واتساب</Text>
@@ -88,25 +152,44 @@ export function ClientDetailsScreen({ route, navigation }: any) {
                 </View>
             </Surface>
 
-            {/* Info Section */}
-            <Surface style={styles.section} elevation={1}>
-                <Text style={styles.sectionTitle}>معلومات العميل</Text>
-                <Divider style={styles.divider} />
-                {infoRows.map((row, i) => (
-                    <View key={row.label}>
-                        <View style={styles.infoRow}>
-                            <View style={styles.infoIcon}>
-                                <Icon name={row.icon} size={16} color={colors.primary} />
-                            </View>
-                            <View style={styles.infoContent}>
-                                <Text style={styles.infoLabel}>{row.label}</Text>
-                                <Text style={styles.infoValue}>{row.value}</Text>
-                            </View>
-                        </View>
-                        {i < infoRows.length - 1 && <Divider style={styles.divider} />}
+            {/* Individual Info */}
+            {!isCompany && (
+                <InfoSection title="معلومات العميل" icon="user" rows={basicInfo} />
+            )}
+
+            {/* Company Info */}
+            {isCompany && (
+                <>
+                    <InfoSection title="بيانات المنشأة" icon="briefcase" rows={companyInfo} />
+                    <InfoSection title="معلومات ممثل الشركة" icon="user" rows={repInfo} />
+                </>
+            )}
+
+            {/* Documents */}
+            {documents.length > 0 && (
+                <Surface style={styles.section} elevation={1}>
+                    <View style={styles.sectionHeader}>
+                        <Icon name="paperclip" size={16} color={colors.primary} />
+                        <Text style={styles.sectionTitle}>المستندات</Text>
                     </View>
-                ))}
-            </Surface>
+                    <Divider style={styles.divider} />
+                    {documents.map((doc, i) => (
+                        <View key={doc.label}>
+                            <TouchableOpacity
+                                style={styles.docItem}
+                                onPress={() => Linking.openURL(doc.url)}
+                            >
+                                <View style={styles.docIcon}>
+                                    <Icon name="file" size={16} color="#4F46E5" />
+                                </View>
+                                <Text style={styles.docText}>{doc.label}</Text>
+                                <Icon name="external-link" size={14} color={colors.textMuted} />
+                            </TouchableOpacity>
+                            {i < documents.length - 1 && <Divider style={styles.divider} />}
+                        </View>
+                    ))}
+                </Surface>
+            )}
 
             {/* Stats Cards */}
             <View style={styles.statsRow}>
@@ -181,6 +264,9 @@ const styles = StyleSheet.create({
         borderRadius: 16, padding: 16,
         backgroundColor: colors.white, marginBottom: 16,
     },
+    sectionHeader: {
+        flexDirection: 'row', alignItems: 'center', gap: 8,
+    },
     sectionTitle: { fontSize: 15, fontWeight: '700', color: colors.text, marginBottom: 8 },
     divider: { marginVertical: 8 },
     infoRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6 },
@@ -192,6 +278,15 @@ const styles = StyleSheet.create({
     infoContent: { flex: 1 },
     infoLabel: { fontSize: 11, color: colors.textSecondary },
     infoValue: { fontSize: 14, color: colors.text, fontWeight: '500', marginTop: 1 },
+    docItem: {
+        flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8,
+    },
+    docIcon: {
+        width: 36, height: 36, borderRadius: 10,
+        backgroundColor: '#EEF2FF',
+        alignItems: 'center', justifyContent: 'center',
+    },
+    docText: { flex: 1, fontSize: 14, color: colors.text, fontWeight: '500' },
     statsRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
     statCard: {
         flex: 1, borderRadius: 14, padding: 14,

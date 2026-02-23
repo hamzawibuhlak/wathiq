@@ -16,6 +16,7 @@ import {
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { TwoFactorService } from './two-factor.service';
+import { EmailVerificationService } from './email-verification.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -27,6 +28,7 @@ export class AuthController {
     constructor(
         private readonly authService: AuthService,
         private readonly twoFactorService: TwoFactorService,
+        private readonly emailVerificationService: EmailVerificationService,
     ) { }
 
     @Get('check-slug/:slug')
@@ -43,6 +45,23 @@ export class AuthController {
     @ApiResponse({ status: 409, description: 'البريد الإلكتروني مستخدم' })
     async register(@Body() registerDto: RegisterDto) {
         return this.authService.register(registerDto);
+    }
+
+    @Post('verify-email')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'التحقق من البريد الإلكتروني بالرمز' })
+    @ApiResponse({ status: 200, description: 'تم التحقق بنجاح' })
+    @ApiResponse({ status: 400, description: 'رمز غير صحيح أو منتهي' })
+    async verifyEmail(@Body() body: { email: string; code: string }) {
+        return this.authService.verifyEmail(body.email, body.code);
+    }
+
+    @Post('resend-otp')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'إعادة إرسال رمز التحقق' })
+    @ApiResponse({ status: 200, description: 'تم الإرسال' })
+    async resendOTP(@Body() body: { email: string }) {
+        return this.emailVerificationService.resendOTP(body.email);
     }
 
     @Post('login')

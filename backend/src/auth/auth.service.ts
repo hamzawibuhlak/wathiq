@@ -13,6 +13,7 @@ import { RegisterDto } from './dto/register.dto';
 import { UserRole } from '@prisma/client';
 import { EmailService } from '../email/email.service';
 import { EntityCodeService } from '../common/services/entity-code.service';
+import { EmailVerificationService } from './email-verification.service';
 
 // JWT Payload structure
 export interface JwtPayload {
@@ -40,6 +41,7 @@ export class AuthService {
         private readonly jwtService: JwtService,
         private readonly emailService: EmailService,
         private readonly entityCodeService: EntityCodeService,
+        private readonly emailVerificationService: EmailVerificationService,
     ) { }
 
     /**
@@ -103,7 +105,7 @@ export class AuthService {
 
         // 5. Create tenant and owner user in a transaction
         const result = await this.prisma.$transaction(async (tx) => {
-            // Create tenant (law office)
+            // Create tenant — PENDING_EMAIL until verified
             const tenant = await tx.tenant.create({
                 data: {
                     name: officeName,
@@ -114,13 +116,15 @@ export class AuthService {
                     licenseNumber,
                     planType: (planType as any) || 'BASIC',
                     planStartDate: new Date(),
-                    planEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days trial
+                    planEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
                     code: tenantCode.code,
                     codePrefix: tenantCode.codePrefix,
+                    registrationStatus: 'PENDING_EMAIL',
+                    isActive: false,
                 },
             });
 
-            // Create owner user
+            // Create owner user — inactive until verified
             const user = await tx.user.create({
                 data: {
                     email,
@@ -129,36 +133,100 @@ export class AuthService {
                     phone,
                     role: UserRole.OWNER,
                     tenantId: tenant.id,
+                    isActive: false,
                     code: `${tenantCode.codePrefix}_US0001`,
                     codeNumber: 1,
-                },
-                include: {
-                    tenant: {
-                        select: {
-                            id: true,
-                            name: true,
-                            slug: true,
-                            isActive: true,
-                            planType: true,
-                        },
-                    },
                 },
             });
 
             return { tenant, user };
         });
 
-        // 5. Generate JWT token
-        const accessToken = this.generateToken(result.user);
+        // 6. Send OTP verification email
+        await this.emailVerificationService.generateAndSendOTP(email, result.tenant.id);
 
-        // Return user data without password
-        const { password: _, ...userWithoutPassword } = result.user;
+        // 7. Notify admin about the new registration
+        this.emailService.sendEmail({
+            to: 'hamzabuhlak@gmail.com',
+            subject: `🆕 عميل جديد: ${officeName}`,
+            body: `
+                <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <div style="background: linear-gradient(135deg, #1e293b, #334155); border-radius: 12px; padding: 30px; color: #fff;">
+                        <h2 style="margin: 0 0 20px; color: #818cf8;">🔔 تسجيل عميل جديد في وثيق</h2>
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <tr><td style="padding: 8px 0; color: #94a3b8;">اسم المكتب:</td><td style="padding: 8px 0; color: #fff; font-weight: bold;">${officeName}</td></tr>
+                            <tr><td style="padding: 8px 0; color: #94a3b8;">اسم المالك:</td><td style="padding: 8px 0; color: #fff; font-weight: bold;">${name}</td></tr>
+                            <tr><td style="padding: 8px 0; color: #94a3b8;">البريد الإلكتروني:</td><td style="padding: 8px 0; color: #fff; font-weight: bold;">${email}</td></tr>
+                            <tr><td style="padding: 8px 0; color: #94a3b8;">الرابط:</td><td style="padding: 8px 0; color: #818cf8; font-weight: bold;">${slug}</td></tr>
+                            <tr><td style="padding: 8px 0; color: #94a3b8;">الخطة:</td><td style="padding: 8px 0; color: #fff; font-weight: bold;">${planType || 'BASIC'}</td></tr>
+                            <tr><td style="padding: 8px 0; color: #94a3b8;">التاريخ:</td><td style="padding: 8px 0; color: #fff; font-weight: bold;">${new Date().toLocaleString('ar-SA', { timeZone: 'Asia/Riyadh' })}</td></tr>
+                        </table>
+                        <p style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #475569; color: #94a3b8; font-size: 12px;">
+                            حالة التسجيل: في انتظار التحقق من البريد الإلكتروني
+                        </p>
+                    </div>
+                </div>
+            `,
+        }).catch(() => { /* silent — admin notification should not block registration */ });
+
+        // Do NOT return JWT — user must verify email first
+        return {
+            success: true,
+            email,
+            requiresVerification: true,
+            message: 'تم إنشاء الحساب. يرجى التحقق من بريدك الإلكتروني.',
+        };
+    }
+
+    /**
+     * Verify email with OTP code
+     */
+    async verifyEmail(email: string, code: string) {
+        // 1. Verify the OTP (also activates the tenant)
+        await this.emailVerificationService.verifyOTP(email, code);
+
+        // 2. Activate the user
+        const user = await this.prisma.user.findUnique({
+            where: { email },
+            include: {
+                tenant: {
+                    select: {
+                        id: true,
+                        name: true,
+                        slug: true,
+                        isActive: true,
+                        planType: true,
+                    },
+                },
+            },
+        });
+
+        if (!user) {
+            throw new NotFoundException('المستخدم غير موجود');
+        }
+
+        await this.prisma.user.update({
+            where: { id: user.id },
+            data: { isActive: true, lastLoginAt: new Date() },
+        });
+
+        // 3. Generate JWT token for auto-login
+        const accessToken = this.generateToken(user);
+        const { password: _, ...userWithoutPassword } = user;
+
+        const tenantSlug = user.tenant?.slug;
+        let redirectTo = '/dashboard';
+        if (tenantSlug) {
+            redirectTo = user.role === 'OWNER'
+                ? `/${tenantSlug}/owner`
+                : `/${tenantSlug}/dashboard`;
+        }
 
         return {
             accessToken,
             user: userWithoutPassword,
-            redirectTo: `/${result.tenant.slug}/dashboard`,
-            message: 'تم إنشاء الحساب بنجاح',
+            redirectTo,
+            message: 'تم التحقق بنجاح! مرحباً بك في وثيق.',
         };
     }
 
@@ -183,6 +251,7 @@ export class AuthService {
                         slug: true,
                         isActive: true,
                         planType: true,
+                        registrationStatus: true,
                     },
                 },
             },
@@ -197,6 +266,15 @@ export class AuthService {
             // For now, we won't block login, but we could. 
             // Or maybe the user meant "Office Name" which maps to Tenant Name
             // Let's just proceed as the requirement was to ADD the field.
+        }
+
+        // Check if tenant is pending email verification
+        if (user.tenant && user.tenant.registrationStatus === 'PENDING_EMAIL') {
+            return {
+                requiresVerification: true,
+                email: user.email,
+                message: 'يرجى التحقق من بريدك الإلكتروني أولاً.',
+            };
         }
 
         // Check if user is active

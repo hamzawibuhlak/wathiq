@@ -15,10 +15,16 @@ export function useLogin() {
     return useMutation({
         mutationFn: (data: LoginRequest) => authApi.login(data),
         onSuccess: (response: any) => {
+            // Handle pending email verification
+            if (response.requiresVerification) {
+                toast('يرجى التحقق من بريدك الإلكتروني أولاً', { icon: '📧' });
+                navigate('/verify-email', { state: { email: response.email }, replace: true });
+                return;
+            }
+
             login(response.user, response.accessToken);
             toast.success('تم تسجيل الدخول بنجاح');
 
-            // Navigate using server-provided redirect or build from slug
             if (response.redirectTo) {
                 navigate(response.redirectTo);
             } else {
@@ -40,25 +46,20 @@ export function useLogin() {
  */
 export function useRegister() {
     const navigate = useNavigate();
-    const { login } = useAuthStore();
 
     return useMutation({
         mutationFn: (data: RegisterRequest) => authApi.register(data),
         onSuccess: (response: any) => {
-            login(response.user, response.accessToken);
-            toast.success('تم إنشاء الحساب بنجاح');
-
-            // Navigate using server-provided redirect or build from slug
-            if (response.redirectTo) {
-                navigate(response.redirectTo);
-            } else {
-                const slug = response.user?.tenant?.slug;
-                if (slug) {
-                    navigate(`/${slug}/dashboard`);
-                } else {
-                    navigate('/dashboard');
-                }
+            // New flow: redirect to email verification
+            if (response.requiresVerification) {
+                toast.success('تم إنشاء الحساب. تحقق من بريدك الإلكتروني');
+                navigate('/verify-email', { state: { email: response.email }, replace: true });
+                return;
             }
+
+            // Fallback for old flow (shouldn't happen anymore)
+            toast.success('تم إنشاء الحساب بنجاح');
+            navigate('/login');
         },
     });
 }

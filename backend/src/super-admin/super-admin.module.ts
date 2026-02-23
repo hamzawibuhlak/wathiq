@@ -6,6 +6,7 @@ import { StaffService } from './staff.service';
 import { SuperAdminChatService } from './chat.service';
 import { CustomRolesService } from './roles.service';
 import { PermissionService } from './permission.service';
+import { ModuleSettingsService } from './module-settings.service';
 import { SuperAdminAuthController, SuperAdminDashboardController } from './super-admin.controller';
 import { SuperAdminDashboardGuard } from './guards/super-admin-dashboard.guard';
 import { PermissionGuard } from './guards/permission.guard';
@@ -26,6 +27,7 @@ import { PrismaModule } from '../common/prisma/prisma.module';
         SuperAdminChatService,
         CustomRolesService,
         PermissionService,
+        ModuleSettingsService,
         SuperAdminDashboardGuard,
         PermissionGuard,
     ],
@@ -33,6 +35,6 @@ import { PrismaModule } from '../common/prisma/prisma.module';
         SuperAdminAuthController,
         SuperAdminDashboardController,
     ],
-    exports: [SuperAdminChatService],
+    exports: [SuperAdminChatService, ModuleSettingsService],
 })
 export class SuperAdminModule { }

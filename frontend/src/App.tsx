@@ -152,6 +152,7 @@ const SALayout = lazy(() => import('@/pages/super-admin/SALayout'));
 const SAOverviewPage = lazy(() => import('@/pages/super-admin/SAOverviewPage'));
 const SATenantsPage = lazy(() => import('@/pages/super-admin/SATenantsPage'));
 const SATenantDetailsPage = lazy(() => import('@/pages/super-admin/SATenantDetailsPage'));
+const SAModuleControlPage = lazy(() => import('@/pages/super-admin/SAModuleControlPage'));
 const SAChatPage = lazy(() => import('@/pages/super-admin/SAChatPage'));
 const SAStaffPage = lazy(() => import('@/pages/super-admin/SAStaffPage'));
 const SAAuditLogPage = lazy(() => import('@/pages/super-admin/SAAuditLogPage'));
@@ -165,6 +166,9 @@ const WhatsAppIntegrationPage = lazy(() => import('@/pages/super-admin/integrati
 const CallCenterIntegrationPage = lazy(() => import('@/pages/super-admin/integrations/CallCenterIntegrationPage'));
 const CalendarIntegrationPage = lazy(() => import('@/pages/super-admin/integrations/CalendarIntegrationPage'));
 const SendGridIntegrationPage = lazy(() => import('@/pages/super-admin/integrations/SendGridIntegrationPage'));
+
+// Email Verification
+const VerifyEmailPage = lazy(() => import('@/pages/auth/VerifyEmailPage'));
 
 // Accept Invitation (Public)
 const AcceptInvitationPage = lazy(() => import('@/pages/invitations/AcceptInvitationPage'));
@@ -254,12 +258,16 @@ function App() {
                         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                     </Route>
 
+                    {/* Email Verification (standalone, no AuthLayout) */}
+                    <Route path="/verify-email" element={<VerifyEmailPage />} />
+
                     {/* Super Admin — Phase 33 (must be before /:slug) */}
                     <Route path="/super-admin/login" element={<SuperAdminLoginPage />} />
                     <Route path="/super-admin" element={<SALayout />}>
                         <Route index element={<SAOverviewPage />} />
                         <Route path="tenants" element={<SATenantsPage />} />
                         <Route path="tenants/:id" element={<SATenantDetailsPage />} />
+                        <Route path="tenants/:id/modules" element={<SAModuleControlPage />} />
                         <Route path="chat" element={<SAChatPage />} />
                         <Route path="staff" element={<SAStaffPage />} />
                         <Route path="roles" element={<RolesListPage />} />
