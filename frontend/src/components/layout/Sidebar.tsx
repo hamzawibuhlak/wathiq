@@ -480,6 +480,14 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                     <p className="text-[10px] text-muted-foreground/50 text-center">
                         وثيق © 2026
                     </p>
+                    <a
+                        href="/privacy"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block text-[10px] text-muted-foreground/40 text-center mt-1 hover:text-primary transition-colors"
+                    >
+                        الخصوصية والشروط
+                    </a>
                 </div>
             )}
         </aside>

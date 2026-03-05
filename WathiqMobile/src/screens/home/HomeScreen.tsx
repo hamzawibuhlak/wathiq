@@ -91,11 +91,11 @@ export function HomeScreen({ navigation }: any) {
                     <QuickAction icon="plus-circle" label="قضية جديدة" color="#4F46E5"
                         onPress={() => navigation.navigate('CasesTab', { screen: 'CreateCase' })} />
                     <QuickAction icon="user-plus" label="عميل جديد" color="#10B981"
-                        onPress={() => navigation.navigate('ClientsScreen')} />
+                        onPress={() => navigation.navigate('CreateClient')} />
                     <QuickAction icon="search" label="بحث قانوني" color="#8B5CF6"
                         onPress={() => navigation.navigate('LegalSearch')} />
                     <QuickAction icon="file-text" label="النماذج" color="#F59E0B"
-                        onPress={() => navigation.navigate('FormsList')} />
+                        onPress={() => navigation.navigate('Forms')} />
                 </View>
             </Surface>
 

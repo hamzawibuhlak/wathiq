@@ -47,23 +47,23 @@ export function ProfileScreen({ navigation }: any) {
 
             {/* Menu Items */}
             <Surface style={styles.menuCard} elevation={1}>
-                <MenuItem icon="user" label="تعديل الملف الشخصي" onPress={() => { }} />
+                <MenuItem icon="user" label="تعديل الملف الشخصي" onPress={() => navigation.navigate('EditProfile')} />
                 <Divider />
-                <MenuItem icon="lock" label="تغيير كلمة المرور" onPress={() => { }} />
+                <MenuItem icon="lock" label="تغيير كلمة المرور" onPress={() => navigation.navigate('ChangePassword')} />
                 <Divider />
-                <MenuItem icon="bell" label="إعدادات الإشعارات" onPress={() => { }} />
+                <MenuItem icon="bell" label="إعدادات الإشعارات" onPress={() => navigation.navigate('Notifications')} />
             </Surface>
 
             <Surface style={styles.menuCard} elevation={1}>
-                <MenuItem icon="folder" label="المستندات" onPress={() => navigation.navigate('DocumentsList')} />
+                <MenuItem icon="folder" label="المستندات" onPress={() => navigation.navigate('Documents')} />
                 <Divider />
-                <MenuItem icon="file-text" label="النماذج" onPress={() => navigation.navigate('FormsList')} />
+                <MenuItem icon="file-text" label="النماذج" onPress={() => navigation.navigate('Forms')} />
                 <Divider />
                 <MenuItem icon="search" label="البحث القانوني" onPress={() => navigation.navigate('LegalSearch')} />
             </Surface>
 
             <Surface style={styles.menuCard} elevation={1}>
-                <MenuItem icon="info" label="عن التطبيق" onPress={() => { }} color={colors.textSecondary} />
+                <MenuItem icon="shield" label="الشروط والخصوصية" onPress={() => navigation.navigate('PrivacyTerms')} color={colors.textSecondary} />
                 <Divider />
                 <MenuItem icon="log-out" label="تسجيل الخروج" onPress={handleLogout} color={colors.error} />
             </Surface>

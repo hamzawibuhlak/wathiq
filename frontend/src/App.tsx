@@ -169,6 +169,7 @@ const SendGridIntegrationPage = lazy(() => import('@/pages/super-admin/integrati
 
 // Email Verification
 const VerifyEmailPage = lazy(() => import('@/pages/auth/VerifyEmailPage'));
+const PrivacyPolicyPage = lazy(() => import('@/pages/legal/PrivacyPolicyPage').then(m => ({ default: m.PrivacyPolicyPage })));
 
 // Accept Invitation (Public)
 const AcceptInvitationPage = lazy(() => import('@/pages/invitations/AcceptInvitationPage'));
@@ -260,6 +261,7 @@ function App() {
 
                     {/* Email Verification (standalone, no AuthLayout) */}
                     <Route path="/verify-email" element={<VerifyEmailPage />} />
+                    <Route path="/privacy" element={<PrivacyPolicyPage />} />
 
                     {/* Super Admin — Phase 33 (must be before /:slug) */}
                     <Route path="/super-admin/login" element={<SuperAdminLoginPage />} />

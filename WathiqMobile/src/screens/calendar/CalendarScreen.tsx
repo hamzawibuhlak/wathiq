@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, FlatList, StyleSheet, TouchableOpacity, RefreshControl } from 'react-native';
-import { Text, Surface, Chip } from 'react-native-paper';
+import { Text, Surface, Chip, FAB } from 'react-native-paper';
 import { useQuery } from '@tanstack/react-query';
 import Icon from 'react-native-vector-icons/Feather';
 import { hearingsApi } from '../../api/hearings';
@@ -18,7 +18,11 @@ const STATUS_COLORS: Record<string, string> = {
     CANCELLED: '#EF4444',
 };
 
-export function CalendarScreen({ navigation }: any) {
+export function CalendarScreen(props: any) {
+    return <CalendarScreenWrapper {...props} />;
+}
+
+function CalendarScreenInner({ navigation }: any) {
     const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
 
     const { data: hearings, isLoading, refetch, isRefetching } = useQuery({
@@ -108,10 +112,34 @@ export function CalendarScreen({ navigation }: any) {
     );
 }
 
-function groupByDate(hearings: Hearing[]): { date: string; hearings: Hearing[] }[] {
+// Add hearing FAB overlay
+function CalendarScreenWrapper(props: any) {
+    return (
+        <View style={{ flex: 1 }}>
+            <CalendarScreenInner {...props} />
+            <FAB
+                icon="plus"
+                style={{
+                    position: 'absolute', bottom: 20, left: 20,
+                    backgroundColor: colors.primary,
+                }}
+                color="#fff"
+                onPress={() => props.navigation.navigate('CreateHearing')}
+                label="إضافة جلسة"
+            />
+        </View>
+    );
+}
+
+function groupByDate(hearings: any): { date: string; hearings: Hearing[] }[] {
+    // Handle API response that might be { data: [...] } or just [...]
+    const list: Hearing[] = Array.isArray(hearings) ? hearings : (hearings?.data || []);
+    if (!Array.isArray(list)) return [];
+
     const map = new Map<string, Hearing[]>();
-    for (const h of hearings) {
-        const date = h.date.split('T')[0];
+    for (const h of list) {
+        const date = (h.date || '').split('T')[0];
+        if (!date) continue;
         if (!map.has(date)) map.set(date, []);
         map.get(date)!.push(h);
     }

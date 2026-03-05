@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
     View, StyleSheet, ScrollView, FlatList, TouchableOpacity, RefreshControl,
 } from 'react-native';
-import { Text, Surface, Divider, Avatar, Chip, Searchbar } from 'react-native-paper';
+import { Text, Surface, Divider, Avatar, Chip, Searchbar, FAB } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/Feather';
 import { useQuery } from '@tanstack/react-query';
 import { apiService } from '../../services/api.service';
@@ -225,6 +225,14 @@ export function HRScreen({ navigation }: any) {
                     }
                 />
             )}
+
+            <FAB
+                icon="plus"
+                label="إضافة موظف"
+                style={styles.fab}
+                color="#fff"
+                onPress={() => navigation.navigate('CreateEmployee')}
+            />
         </View>
     );
 }
@@ -268,4 +276,8 @@ const styles = StyleSheet.create({
     payrollAmount: { fontSize: 18, fontWeight: '700', color: colors.primary },
     empty: { alignItems: 'center', marginTop: 80 },
     emptyText: { fontSize: 14, color: colors.textMuted, marginTop: 12 },
+    fab: {
+        position: 'absolute', bottom: 20, left: 20,
+        backgroundColor: colors.primary,
+    },
 });

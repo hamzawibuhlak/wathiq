@@ -37,6 +37,7 @@ const step2Schema = z.object({
 
 const step3Schema = z.object({
     planType: z.enum(['BASIC', 'PROFESSIONAL', 'ENTERPRISE']),
+    acceptTerms: z.literal(true, { errorMap: () => ({ message: 'يجب الموافقة على الشروط والخصوصية' }) }),
 });
 
 type Step1 = z.infer<typeof step1Schema>;
@@ -114,7 +115,7 @@ export function RegisterPage() {
     // ── Step 3 form ──────────────────────────────────
     const form3 = useForm<Step3>({
         resolver: zodResolver(step3Schema),
-        defaultValues: { planType: 'BASIC' },
+        defaultValues: { planType: 'BASIC', acceptTerms: undefined as any },
     });
 
     // ── Slug availability check ──────────────────────
@@ -485,6 +486,42 @@ export function RegisterPage() {
                                 </label>
                             );
                         })}
+                    </div>
+
+                    {/* Terms Checkbox */}
+                    <div className="rounded-xl border border-border p-4">
+                        <label className="flex items-start gap-3 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                className="mt-1 rounded border-muted-foreground/30 text-primary focus:ring-primary"
+                                {...form3.register('acceptTerms')}
+                            />
+                            <span className="text-sm text-muted-foreground leading-relaxed">
+                                أوافق على{' '}
+                                <a
+                                    href="/privacy?tab=terms"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-primary font-medium underline hover:text-primary/80"
+                                >
+                                    شروط الاستخدام
+                                </a>
+                                {' '}و{' '}
+                                <a
+                                    href="/privacy?tab=privacy"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-primary font-medium underline hover:text-primary/80"
+                                >
+                                    سياسة الخصوصية
+                                </a>
+                            </span>
+                        </label>
+                        {form3.formState.errors.acceptTerms && (
+                            <p className="text-xs text-destructive mt-2">
+                                {form3.formState.errors.acceptTerms.message}
+                            </p>
+                        )}
                     </div>
 
                     <div className="flex gap-3">

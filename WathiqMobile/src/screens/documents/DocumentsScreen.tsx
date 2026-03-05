@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import {
-    View, StyleSheet, FlatList, TouchableOpacity, RefreshControl,
+    View, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Linking, Alert,
 } from 'react-native';
 import { Text, Searchbar, FAB, Chip, Surface } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/Feather';
@@ -8,18 +8,24 @@ import { colors } from '../../theme/colors';
 import { apiService } from '../../services/api.service';
 import { useQuery } from '@tanstack/react-query';
 
+const BASE_URL = 'https://bewathiq.com/api';
+
 export function DocumentsScreen({ navigation }: any) {
     const [search, setSearch] = useState('');
 
     const { data: documents = [], isLoading, refetch } = useQuery({
         queryKey: ['documents'],
-        queryFn: () => apiService.get('/documents').then(r => r.data || []),
+        queryFn: () => apiService.get('/documents').then((r: any) => r.data || []),
     });
 
     const filtered = documents.filter((d: any) =>
         d.name?.toLowerCase().includes(search.toLowerCase()) ||
         d.title?.toLowerCase().includes(search.toLowerCase())
     );
+
+    const handleOpenDocument = useCallback((item: any) => {
+        navigation.navigate('DocumentViewer', { document: item });
+    }, [navigation]);
 
     const getTypeIcon = (type: string) => {
         switch (type?.toLowerCase()) {
@@ -32,7 +38,7 @@ export function DocumentsScreen({ navigation }: any) {
 
     const renderItem = ({ item }: any) => (
         <Surface style={styles.card} elevation={1}>
-            <TouchableOpacity style={styles.cardContent}>
+            <TouchableOpacity style={styles.cardContent} onPress={() => handleOpenDocument(item)}>
                 <View style={styles.iconBox}>
                     <Icon name={getTypeIcon(item.type)} size={20} color={colors.primary} />
                 </View>

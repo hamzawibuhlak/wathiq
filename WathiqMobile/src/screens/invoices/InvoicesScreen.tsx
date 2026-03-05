@@ -2,7 +2,7 @@ import React from 'react';
 import {
     View, StyleSheet, FlatList, RefreshControl, TouchableOpacity,
 } from 'react-native';
-import { Text, Searchbar, Surface, Chip } from 'react-native-paper';
+import { Text, Searchbar, Surface, Chip, FAB } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/Feather';
 import { colors } from '../../theme/colors';
 import { apiService } from '../../services/api.service';
@@ -16,12 +16,12 @@ const STATUS_CONFIG: Record<string, { color: string; label: string; icon: string
     CANCELLED: { color: '#9E9E9E', label: 'ملغاة', icon: 'x-circle' },
 };
 
-export function InvoicesScreen() {
+export function InvoicesScreen({ navigation }: any) {
     const [search, setSearch] = React.useState('');
 
     const { data: invoices = [], isLoading, refetch } = useQuery({
         queryKey: ['invoices'],
-        queryFn: () => apiService.get('/invoices').then(r => r.data?.data || r.data || []),
+        queryFn: () => apiService.get('/invoices').then((r: any) => r.data?.data || r.data || []),
     });
 
     const filtered = invoices.filter((inv: any) =>
@@ -83,6 +83,13 @@ export function InvoicesScreen() {
                     </View>
                 }
             />
+            <FAB
+                icon="plus"
+                label="فاتورة جديدة"
+                style={styles.fab}
+                color="#fff"
+                onPress={() => navigation.navigate('CreateInvoice')}
+            />
         </View>
     );
 }
@@ -107,4 +114,8 @@ const styles = StyleSheet.create({
     chipText: { fontSize: 10 },
     empty: { alignItems: 'center', marginTop: 80 },
     emptyText: { fontSize: 14, color: colors.textMuted, marginTop: 12 },
+    fab: {
+        position: 'absolute', bottom: 20, left: 20,
+        backgroundColor: colors.primary,
+    },
 });

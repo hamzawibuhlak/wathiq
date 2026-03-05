@@ -11,15 +11,22 @@ import { colors } from '../theme/colors';
 import { HomeScreen } from '../screens/home/HomeScreen';
 import { CasesListScreen } from '../screens/cases/CasesListScreen';
 import { CaseDetailsScreen } from '../screens/cases/CaseDetailsScreen';
+import { CreateCaseScreen } from '../screens/cases/CreateCaseScreen';
 import { ClientsListScreen } from '../screens/clients/ClientsListScreen';
 import { CalendarScreen } from '../screens/calendar/CalendarScreen';
 import { LegalSearchScreen } from '../screens/legal/LegalSearchScreen';
 import { ProfileScreen } from '../screens/profile/ProfileScreen';
+import { EditProfileScreen } from '../screens/profile/EditProfileScreen';
+import { ChangePasswordScreen } from '../screens/profile/ChangePasswordScreen';
 import { DocumentsScreen } from '../screens/documents/DocumentsScreen';
+import { DocumentViewerScreen } from '../screens/documents/DocumentViewerScreen';
 import { TasksScreen } from '../screens/tasks/TasksScreen';
 import { InvoicesScreen } from '../screens/invoices/InvoicesScreen';
+import { CreateInvoiceScreen } from '../screens/invoices/CreateInvoiceScreen';
 import { FormsScreen } from '../screens/forms/FormsScreen';
+import { CreateFormScreen } from '../screens/forms/CreateFormScreen';
 import { LegalLibraryScreen } from '../screens/legal/LegalLibraryScreen';
+import { PrivacyTermsScreen } from '../screens/legal/PrivacyTermsScreen';
 import { SettingsScreen } from '../screens/settings/SettingsScreen';
 
 // ── New Detail Screens ──
@@ -36,9 +43,11 @@ import { LegalDocumentsScreen } from '../screens/legal-documents/LegalDocumentsS
 
 // ── Phase 2 Sections ──
 import { ChatScreen } from '../screens/chat/ChatScreen';
+import { ChatConversationScreen } from '../screens/chat/ChatConversationScreen';
 import { MarketingScreen } from '../screens/marketing/MarketingScreen';
 import { AnalyticsScreen } from '../screens/analytics/AnalyticsScreen';
 import { HRScreen } from '../screens/hr/HRScreen';
+import { CreateEmployeeScreen } from '../screens/hr/CreateEmployeeScreen';
 import { CompanyScreen } from '../screens/company/CompanyScreen';
 
 // ── Drawer ──
@@ -84,6 +93,11 @@ function CasesStackNavigator() {
                 name="CaseDetails"
                 component={CaseDetailsScreen}
                 options={{ title: 'تفاصيل القضية' }}
+            />
+            <CasesStack.Screen
+                name="CreateCase"
+                component={CreateCaseScreen}
+                options={{ title: 'قضية جديدة' }}
             />
         </CasesStack.Navigator>
     );
@@ -150,12 +164,18 @@ function DrawerScreensStack() {
         >
             <ScreenStack.Screen name="TabsHome" component={MainTabNavigator} options={{ headerShown: false }} />
             <ScreenStack.Screen name="Documents" component={DocumentsScreen} options={{ title: 'المستندات' }} />
+            <ScreenStack.Screen name="DocumentViewer" component={DocumentViewerScreen} options={{ title: 'معاينة المستند' }} />
             <ScreenStack.Screen name="Tasks" component={TasksScreen} options={{ title: 'المهام' }} />
             <ScreenStack.Screen name="Invoices" component={InvoicesScreen} options={{ title: 'الفواتير' }} />
+            <ScreenStack.Screen name="CreateInvoice" component={CreateInvoiceScreen} options={{ title: 'فاتورة جديدة' }} />
             <ScreenStack.Screen name="Forms" component={FormsScreen} options={{ title: 'النماذج' }} />
+            <ScreenStack.Screen name="CreateForm" component={CreateFormScreen} options={{ title: 'نموذج جديد' }} />
             <ScreenStack.Screen name="LegalLibrary" component={LegalLibraryScreen} options={{ title: 'المكتبة القانونية' }} />
+            <ScreenStack.Screen name="PrivacyTerms" component={PrivacyTermsScreen} options={{ title: 'الشروط والخصوصية' }} />
             <ScreenStack.Screen name="LegalSearch" component={LegalSearchScreen} options={{ title: 'البحث الذكي' }} />
             <ScreenStack.Screen name="Settings" component={SettingsScreen} options={{ title: 'الإعدادات' }} />
+            <ScreenStack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: 'تعديل الملف الشخصي' }} />
+            <ScreenStack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ title: 'تغيير كلمة المرور' }} />
 
             {/* Detail Screens */}
             <ScreenStack.Screen name="ClientDetails" component={ClientDetailsScreen} options={{ title: 'تفاصيل العميل' }} />
@@ -171,9 +191,11 @@ function DrawerScreensStack() {
 
             {/* Phase 2 Sections */}
             <ScreenStack.Screen name="Chat" component={ChatScreen} options={{ title: 'التواصل' }} />
+            <ScreenStack.Screen name="ChatConversation" component={ChatConversationScreen} options={({ route }: any) => ({ title: route.params?.name || 'محادثة' })} />
             <ScreenStack.Screen name="Marketing" component={MarketingScreen} options={{ title: 'التسويق' }} />
             <ScreenStack.Screen name="Analytics" component={AnalyticsScreen} options={{ title: 'التحليلات' }} />
             <ScreenStack.Screen name="HR" component={HRScreen} options={{ title: 'الموارد البشرية' }} />
+            <ScreenStack.Screen name="CreateEmployee" component={CreateEmployeeScreen} options={{ title: 'إضافة موظف' }} />
             <ScreenStack.Screen name="Company" component={CompanyScreen} options={{ title: 'الشركة' }} />
         </ScreenStack.Navigator>
     );

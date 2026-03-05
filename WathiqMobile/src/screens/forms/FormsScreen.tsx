@@ -2,18 +2,18 @@ import React from 'react';
 import {
     View, StyleSheet, FlatList, RefreshControl, TouchableOpacity,
 } from 'react-native';
-import { Text, Searchbar, Surface, Chip } from 'react-native-paper';
+import { Text, Searchbar, Surface, Chip, FAB } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/Feather';
 import { colors } from '../../theme/colors';
 import { apiService } from '../../services/api.service';
 import { useQuery } from '@tanstack/react-query';
 
-export function FormsScreen() {
+export function FormsScreen({ navigation }: any) {
     const [search, setSearch] = React.useState('');
 
     const { data: forms = [], isLoading, refetch } = useQuery({
         queryKey: ['forms'],
-        queryFn: () => apiService.get('/forms').then(r => r.data?.data || r.data || []),
+        queryFn: () => apiService.get('/forms').then((r: any) => r.data?.data || r.data || []),
     });
 
     const filtered = forms.filter((f: any) =>
@@ -64,6 +64,13 @@ export function FormsScreen() {
                     </View>
                 }
             />
+            <FAB
+                icon="plus"
+                label="نموذج جديد"
+                style={styles.fab}
+                color="#fff"
+                onPress={() => navigation.navigate('CreateForm')}
+            />
         </View>
     );
 }
@@ -86,4 +93,8 @@ const styles = StyleSheet.create({
     chip: { height: 22 },
     empty: { alignItems: 'center', marginTop: 80 },
     emptyText: { fontSize: 14, color: colors.textMuted, marginTop: 12 },
+    fab: {
+        position: 'absolute', bottom: 20, left: 20,
+        backgroundColor: colors.primary,
+    },
 });

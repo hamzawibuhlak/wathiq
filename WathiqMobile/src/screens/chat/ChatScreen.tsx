@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import {
-    View, StyleSheet, FlatList, TouchableOpacity, RefreshControl, TextInput as RNTextInput,
+    View, StyleSheet, FlatList, TouchableOpacity, RefreshControl, TextInput as RNTextInput, Alert,
 } from 'react-native';
-import { Text, Surface, Avatar, Searchbar } from 'react-native-paper';
+import { Text, Surface, Avatar, Searchbar, FAB } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/Feather';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiService } from '../../services/api.service';
 import { colors } from '../../theme/colors';
 import { getInitials } from '../../utils/formatters';
@@ -22,11 +22,39 @@ function timeAgo(dateStr: string): string {
 
 export function ChatScreen({ navigation }: any) {
     const [search, setSearch] = useState('');
+    const queryClient = useQueryClient();
 
     const { data, isLoading, refetch, isRefetching } = useQuery({
         queryKey: ['chat-conversations'],
         queryFn: () => apiService.get('/chat/conversations').then((r: any) => r.data || []),
     });
+
+    const createConvMutation = useMutation({
+        mutationFn: (name: string) =>
+            apiService.post('/chat/conversations', { name, type: 'DIRECT' }),
+        onSuccess: (res: any) => {
+            queryClient.invalidateQueries({ queryKey: ['chat-conversations'] });
+            const conv = res?.data || res;
+            if (conv?.id) {
+                navigation.navigate('ChatConversation', { id: conv.id, name: conv.name });
+            }
+        },
+        onError: () => Alert.alert('خطأ', 'لا يمكن إنشاء المحادثة'),
+    });
+
+    const handleNewConversation = () => {
+        Alert.prompt(
+            'محادثة جديدة',
+            'أدخل اسم المحادثة أو الشخص',
+            [
+                { text: 'إلغاء', style: 'cancel' },
+                { text: 'إنشاء', onPress: (name) => { if (name?.trim()) createConvMutation.mutate(name.trim()); } },
+            ],
+            'plain-text',
+            '',
+            'default'
+        );
+    };
 
     const conversations = Array.isArray(data) ? data : [];
     const filtered = conversations.filter((c: any) =>
@@ -107,6 +135,13 @@ export function ChatScreen({ navigation }: any) {
                     </View>
                 }
             />
+
+            <FAB
+                icon="plus"
+                style={styles.fab}
+                color="#fff"
+                onPress={handleNewConversation}
+            />
         </View>
     );
 }
@@ -151,4 +186,8 @@ const styles = StyleSheet.create({
     empty: { alignItems: 'center', marginTop: 80 },
     emptyText: { fontSize: 16, fontWeight: '600', color: colors.textMuted, marginTop: 16 },
     emptySubText: { fontSize: 13, color: colors.textMuted, marginTop: 4 },
+    fab: {
+        position: 'absolute', bottom: 20, left: 20,
+        backgroundColor: colors.primary,
+    },
 });

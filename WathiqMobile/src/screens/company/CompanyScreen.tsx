@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-    View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Linking,
+    View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Linking, Alert,
 } from 'react-native';
-import { Text, Surface, Divider, Avatar } from 'react-native-paper';
+import { Text, Surface, Divider, Avatar, TextInput, Button } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/Feather';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiService } from '../../services/api.service';
 import { useAuthStore } from '../../store/authStore';
 import { colors } from '../../theme/colors';
@@ -12,33 +12,61 @@ import { getInitials } from '../../utils/formatters';
 
 export function CompanyScreen() {
     const { user } = useAuthStore();
+    const queryClient = useQueryClient();
     const tenantSlug = user?.tenantSlug || '';
+    const [editing, setEditing] = useState(false);
+    const [form, setForm] = useState<any>({});
 
     const { data: tenantData, isLoading, refetch, isRefetching } = useQuery({
         queryKey: ['tenant-info'],
         queryFn: async () => {
             try {
                 const res = await apiService.get('/settings');
-                return res.data || res;
+                return (res as any).data || res;
             } catch {
-                // fallback — use user object
                 return null;
             }
         },
     });
 
     const tenant = tenantData || {};
-    const companyName = tenant.companyName || tenant.name || user?.tenantName || tenantSlug;
+
+    useEffect(() => {
+        if (tenant) {
+            setForm({
+                companyName: tenant.companyName || tenant.name || '',
+                website: tenant.website || '',
+                email: tenant.email || user?.email || '',
+                phone: tenant.phone || '',
+                address: tenant.address || '',
+                commercialRegistration: tenant.commercialRegistration || tenant.crNumber || '',
+                taxNumber: tenant.taxNumber || tenant.vatNumber || '',
+            });
+        }
+    }, [tenantData]);
+
+    const saveMutation = useMutation({
+        mutationFn: (data: any) => apiService.patch('/settings', data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['tenant-info'] });
+            setEditing(false);
+            Alert.alert('تم', 'تم حفظ التغييرات بنجاح');
+        },
+        onError: () => Alert.alert('خطأ', 'حدث خطأ في حفظ التغييرات'),
+    });
+
+    const handleSave = () => saveMutation.mutate(form);
+
+    const companyName = form.companyName || tenant.companyName || tenant.name || user?.tenantName || tenantSlug;
 
     const infoRows = [
-        { icon: 'globe', label: 'الموقع الإلكتروني', value: tenant.website },
-        { icon: 'mail', label: 'البريد الإلكتروني', value: tenant.email || user?.email },
-        { icon: 'phone', label: 'الهاتف', value: tenant.phone },
-        { icon: 'map-pin', label: 'العنوان', value: tenant.address },
-        { icon: 'hash', label: 'السجل التجاري', value: tenant.commercialRegistration || tenant.crNumber },
-        { icon: 'file-text', label: 'الرقم الضريبي', value: tenant.taxNumber || tenant.vatNumber },
-        { icon: 'link', label: 'رابط الشركة', value: `bewathiq.com/${tenantSlug}` },
-    ].filter(r => r.value);
+        { icon: 'globe', label: 'الموقع الإلكتروني', value: form.website, key: 'website' },
+        { icon: 'mail', label: 'البريد الإلكتروني', value: form.email, key: 'email' },
+        { icon: 'phone', label: 'الهاتف', value: form.phone, key: 'phone' },
+        { icon: 'map-pin', label: 'العنوان', value: form.address, key: 'address' },
+        { icon: 'hash', label: 'السجل التجاري', value: form.commercialRegistration, key: 'commercialRegistration' },
+        { icon: 'file-text', label: 'الرقم الضريبي', value: form.taxNumber, key: 'taxNumber' },
+    ];
 
     const statsItems = [
         { icon: 'users', label: 'المستخدمين', value: tenant.usersCount || tenant.totalUsers || '—', color: '#4F46E5' },
@@ -91,28 +119,53 @@ export function CompanyScreen() {
 
             {/* Company Info */}
             <Surface style={styles.section} elevation={1}>
-                <Text style={styles.sectionTitle}>معلومات الشركة</Text>
+                <View style={styles.sectionHeader}>
+                    <Text style={styles.sectionTitle}>معلومات الشركة</Text>
+                    <TouchableOpacity onPress={() => setEditing(!editing)}>
+                        <Icon name={editing ? 'x' : 'edit-2'} size={18} color={colors.primary} />
+                    </TouchableOpacity>
+                </View>
                 <Divider style={styles.divider} />
-                {infoRows.length === 0 ? (
-                    <View style={styles.emptySection}>
-                        <Icon name="info" size={24} color={colors.textMuted} />
-                        <Text style={styles.emptyText}>لا توجد معلومات إضافية</Text>
+
+                {editing ? (
+                    <View>
+                        <TextInput label="اسم الشركة" value={form.companyName} mode="outlined"
+                            onChangeText={(v: string) => setForm({ ...form, companyName: v })}
+                            style={styles.editInput} outlineColor={colors.border} activeOutlineColor={colors.primary} />
+                        {infoRows.map(row => (
+                            <TextInput key={row.key} label={row.label} value={row.value || ''} mode="outlined"
+                                onChangeText={(v: string) => setForm({ ...form, [row.key]: v })}
+                                style={styles.editInput} outlineColor={colors.border} activeOutlineColor={colors.primary} />
+                        ))}
+                        <Button mode="contained" onPress={handleSave} loading={saveMutation.isPending}
+                            disabled={saveMutation.isPending} style={styles.saveBtn} buttonColor={colors.primary}
+                            contentStyle={{ paddingVertical: 4 }}>
+                            حفظ التغييرات
+                        </Button>
                     </View>
                 ) : (
-                    infoRows.map((row, i) => (
-                        <View key={row.label}>
-                            <View style={styles.infoRow}>
-                                <View style={styles.infoIcon}>
-                                    <Icon name={row.icon} size={16} color={colors.primary} />
-                                </View>
-                                <View style={styles.infoContent}>
-                                    <Text style={styles.infoLabel}>{row.label}</Text>
-                                    <Text style={styles.infoValue}>{row.value}</Text>
-                                </View>
-                            </View>
-                            {i < infoRows.length - 1 && <Divider style={styles.divider} />}
+                    infoRows.filter(r => r.value).length === 0 ? (
+                        <View style={styles.emptySection}>
+                            <Icon name="info" size={24} color={colors.textMuted} />
+                            <Text style={styles.emptyText}>لا توجد معلومات إضافية</Text>
+                            <Text style={styles.emptySubText}>اضغط على أيقونة التعديل لإضافة معلومات</Text>
                         </View>
-                    ))
+                    ) : (
+                        infoRows.filter(r => r.value).map((row, i, arr) => (
+                            <View key={row.label}>
+                                <View style={styles.infoRow}>
+                                    <View style={styles.infoIcon}>
+                                        <Icon name={row.icon} size={16} color={colors.primary} />
+                                    </View>
+                                    <View style={styles.infoContent}>
+                                        <Text style={styles.infoLabel}>{row.label}</Text>
+                                        <Text style={styles.infoValue}>{row.value}</Text>
+                                    </View>
+                                </View>
+                                {i < arr.length - 1 && <Divider style={styles.divider} />}
+                            </View>
+                        ))
+                    )
                 )}
             </Surface>
 
@@ -173,10 +226,12 @@ const styles = StyleSheet.create({
     statNumber: { fontSize: 18, fontWeight: '700', color: colors.text, marginTop: 4 },
     statLabel: { fontSize: 10, color: colors.textSecondary, marginTop: 2 },
     section: { borderRadius: 16, padding: 16, backgroundColor: colors.white, marginBottom: 16 },
+    sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     sectionTitle: { fontSize: 15, fontWeight: '700', color: colors.text, marginBottom: 4 },
     divider: { marginVertical: 8 },
     emptySection: { alignItems: 'center', paddingVertical: 20 },
     emptyText: { fontSize: 13, color: colors.textMuted, marginTop: 8 },
+    emptySubText: { fontSize: 11, color: colors.textMuted, marginTop: 4 },
     infoRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6 },
     infoIcon: {
         width: 36, height: 36, borderRadius: 10,
@@ -186,6 +241,8 @@ const styles = StyleSheet.create({
     infoContent: { flex: 1 },
     infoLabel: { fontSize: 11, color: colors.textSecondary },
     infoValue: { fontSize: 14, color: colors.text, fontWeight: '500', marginTop: 1 },
+    editInput: { marginBottom: 10, backgroundColor: colors.white },
+    saveBtn: { marginTop: 8, borderRadius: 10 },
     subRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 },
     subLabel: { fontSize: 13, color: colors.textSecondary },
     subValue: { fontSize: 13, fontWeight: '600', color: colors.text },
