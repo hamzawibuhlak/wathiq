@@ -203,7 +203,11 @@ const NotFoundPage = () => (
 
 // Protected Route wrapper
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-    const { isAuthenticated } = useAuthStore();
+    const { isAuthenticated, _hasHydrated } = useAuthStore();
+
+    if (!_hasHydrated) {
+        return <PageLoader />;
+    }
 
     if (!isAuthenticated) {
         return <Navigate to="/login" replace />;
@@ -214,7 +218,11 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 // Public Route wrapper (redirect if authenticated)
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
-    const { isAuthenticated, user } = useAuthStore();
+    const { isAuthenticated, user, _hasHydrated } = useAuthStore();
+
+    if (!_hasHydrated) {
+        return <PageLoader />;
+    }
 
     if (isAuthenticated) {
         const slug = user?.tenant?.slug;
@@ -229,7 +237,8 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
 
 // Redirect legacy /dashboard → /:slug/dashboard
 const SlugRedirect = () => {
-    const { user, isAuthenticated } = useAuthStore();
+    const { user, isAuthenticated, _hasHydrated } = useAuthStore();
+    if (!_hasHydrated) return <PageLoader />;
     if (!isAuthenticated) return <Navigate to="/login" replace />;
     const slug = user?.tenant?.slug;
     if (slug) return <Navigate to={`/${slug}/dashboard`} replace />;

@@ -31,6 +31,7 @@ interface AuthState {
     token: string | null;
     isAuthenticated: boolean;
     isLoading: boolean;
+    _hasHydrated: boolean;
 
     // Actions
     setUser: (user: User) => void;
@@ -38,6 +39,7 @@ interface AuthState {
     login: (user: User, token: string) => void;
     logout: () => void;
     setLoading: (loading: boolean) => void;
+    setHasHydrated: (state: boolean) => void;
 
     // Slug helpers
     getTenantSlug: () => string | null;
@@ -67,6 +69,7 @@ export const useAuthStore = create<AuthState>()(
             token: null,
             isAuthenticated: false,
             isLoading: true,
+            _hasHydrated: false,
 
             // Actions
             setUser: (user) => set({ user, isAuthenticated: true }),
@@ -90,6 +93,8 @@ export const useAuthStore = create<AuthState>()(
                 }),
 
             setLoading: (isLoading) => set({ isLoading }),
+
+            setHasHydrated: (state) => set({ _hasHydrated: state }),
 
             // Slug helpers
             getTenantSlug: () => get().user?.tenant?.slug || null,
@@ -173,6 +178,9 @@ export const useAuthStore = create<AuthState>()(
                 token: state.token,
                 isAuthenticated: state.isAuthenticated,
             }),
+            onRehydrateStorage: () => (state) => {
+                state?.setHasHydrated(true);
+            },
         }
     )
 );
