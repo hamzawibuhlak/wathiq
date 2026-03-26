@@ -19,7 +19,7 @@ export const ownerApi = {
     deleteUser: (userId: string) =>
         apiDelete<any>(`/owner/users/${userId}`),
     updateUser: (userId: string, data: any) =>
-        apiPatch<any>(`/users/${userId}`, data),
+        apiPatch<any>(`/owner/users/${userId}`, data),
 
     // Integrations
     getIntegrations: () => apiGet<any[]>('/owner/integrations'),

@@ -182,7 +182,37 @@ export class OwnerService {
         }
     }
 
+    async updateUser(
+        userId: string,
+        tenantId: string,
+        data: { name?: string; role?: string; tenantRoleId?: string | null },
+    ) {
+        const user = await this.prisma.user.findUnique({ where: { id: userId } });
+
+        if (!user || user.tenantId !== tenantId) {
+            throw new BadRequestException('المستخدم غير موجود');
+        }
+
+        if (user.role === 'OWNER') {
+            throw new ForbiddenException('لا يمكن تعديل حساب المالك');
+        }
+
+        const updateData: any = {};
+        if (data.name) updateData.name = data.name;
+        if (data.role && data.role !== 'OWNER') updateData.role = data.role;
+        if (data.tenantRoleId !== undefined) {
+            updateData.tenantRoleId = data.tenantRoleId || null;
+        }
+
+        return this.prisma.user.update({
+            where: { id: userId },
+            data: updateData,
+            select: { id: true, name: true, email: true, role: true, tenantRoleId: true },
+        });
+    }
+
     async changeUserRole(
+
         userId: string,
         tenantId: string,
         newRole: 'ADMIN' | 'LAWYER' | 'SECRETARY' | 'ACCOUNTANT',

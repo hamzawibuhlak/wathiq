@@ -70,6 +70,15 @@ export class OwnerController {
         return this.ownerService.deleteUser(id, tenantId, user.id);
     }
 
+    @Patch('users/:id')
+    updateUser(
+        @Param('id') id: string,
+        @TenantId() tenantId: string,
+        @Body() data: { name?: string; role?: string; tenantRoleId?: string | null },
+    ) {
+        return this.ownerService.updateUser(id, tenantId, data);
+    }
+
     // ── Integrations ───────────────────────────
     @Get('integrations')
     getIntegrations(@TenantId() tenantId: string) {
