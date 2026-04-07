@@ -1,0 +1,63 @@
+{
+  "common": {
+    "welcome": "مرحباً",
+    "logout": "تسجيل الخروج",
+    "loading": "جاري التحميل...",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "view": "عرض",
+    "search": "بحث"
+  },
+  "nav": {
+    "dashboard": "لوحة التحكم",
+    "cases": "القضايا",
+    "clients": "العملاء",
+    "chat": "الدردشة",
+    "users": "المستخدمون"
+  },
+  "auth": {
+    "login": "تسجيل الدخول",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "loginButton": "تسجيل الدخول",
+    "loginError": "فشل تسجيل الدخول. يرجى التحقق من البيانات."
+  },
+  "dashboard": {
+    "title": "لوحة التحكم",
+    "totalCases": "إجمالي القضايا",
+    "activeCases": "القضايا النشطة",
+    "closedCases": "القضايا المغلقة",
+    "recentCases": "القضايا الأخيرة"
+  },
+  "cases": {
+    "title": "القضايا",
+    "newCase": "قضية جديدة",
+    "caseTitle": "العنوان",
+    "client": "العميل",
+    "status": "الحالة",
+    "createdAt": "تاريخ الإنشاء",
+    "actions": "إجراءات",
+    "noCases": "لا توجد قضايا حالياً"
+  },
+  "clients": {
+    "title": "العملاء",
+    "newClient": "عميل جديد",
+    "name": "الاسم",
+    "email": "البريد الإلكتروني",
+    "phone": "الهاتف",
+    "createdAt": "تاريخ الإنشاء",
+    "actions": "إجراءات",
+    "noClients": "لا يوجد عملاء حالياً"
+  },
+  "chat": {
+    "title": "الدردشة",
+    "conversations": "المحادثات",
+    "noConversations": "لا توجد محادثات",
+    "selectConversation": "اختر محادثة لبدء المراسلة",
+    "typeMessage": "اكتب رسالتك...",
+    "send": "إرسال",
+    "sending": "جاري الإرسال..."
+  }
+}

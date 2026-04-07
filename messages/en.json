@@ -1,0 +1,63 @@
+{
+  "common": {
+    "welcome": "Welcome",
+    "logout": "Logout",
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "view": "View",
+    "search": "Search"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "cases": "Cases",
+    "clients": "Clients",
+    "chat": "Chat",
+    "users": "Users"
+  },
+  "auth": {
+    "login": "Login",
+    "email": "Email",
+    "password": "Password",
+    "loginButton": "Login",
+    "loginError": "Login failed. Please check your credentials."
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "totalCases": "Total Cases",
+    "activeCases": "Active Cases",
+    "closedCases": "Closed Cases",
+    "recentCases": "Recent Cases"
+  },
+  "cases": {
+    "title": "Cases",
+    "newCase": "New Case",
+    "caseTitle": "Title",
+    "client": "Client",
+    "status": "Status",
+    "createdAt": "Created At",
+    "actions": "Actions",
+    "noCases": "No cases available"
+  },
+  "clients": {
+    "title": "Clients",
+    "newClient": "New Client",
+    "name": "Name",
+    "email": "Email",
+    "phone": "Phone",
+    "createdAt": "Created At",
+    "actions": "Actions",
+    "noClients": "No clients available"
+  },
+  "chat": {
+    "title": "Chat",
+    "conversations": "Conversations",
+    "noConversations": "No conversations",
+    "selectConversation": "Select a conversation to start messaging",
+    "typeMessage": "Type your message...",
+    "send": "Send",
+    "sending": "Sending..."
+  }
+}
