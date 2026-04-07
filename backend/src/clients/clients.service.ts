@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { EntityCodeService } from '../common/services/entity-code.service';
+import { DocumentFoldersService } from '../document-folders/document-folders.service';
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
 import { FilterClientsDto } from './dto/filter-clients.dto';
@@ -22,6 +23,7 @@ export class ClientsService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly entityCodeService: EntityCodeService,
+        private readonly documentFoldersService: DocumentFoldersService,
     ) { }
 
     /**
@@ -218,7 +220,7 @@ export class ClientsService {
     /**
      * Create new client
      */
-    async create(dto: CreateClientDto, tenantId: string) {
+    async create(dto: CreateClientDto, tenantId: string, userId?: string) {
         const { visibleToUserIds, ...clientData } = dto;
 
         // Phase 37: Generate client code
@@ -233,12 +235,74 @@ export class ClientsService {
                 visibleToUsers: visibleToUserIds?.length
                     ? { connect: visibleToUserIds.map((id) => ({ id })) }
                     : undefined,
-            },
+            } as any,
             include: {
                 _count: { select: { cases: true } },
                 visibleToUsers: { select: { id: true, name: true } },
             },
         });
+
+        // ─── إنشاء مجلد باسم العميل تلقائياً ────────────
+        try {
+            await this.documentFoldersService.createClientFolder(
+                dto.name,
+                client.id,
+                tenantId,
+                userId,
+            );
+        } catch {
+            // لا نوقف إنشاء العميل إذا فشل إنشاء المجلد
+        }
+
+        // ─── إنشاء سجلات Document لكل مستند مرفق مع العميل ────────────
+        if (userId) {
+            const docFields: Array<{ url: string | undefined; title: string; docType: string }> = [
+                { url: dto.nationalIdDoc, title: 'مستند الهوية الوطنية', docType: 'IDENTITY' },
+                { url: dto.commercialRegDoc, title: 'مستند السجل التجاري', docType: 'CONTRACT' },
+                { url: dto.nationalAddressDoc, title: 'العنوان الوطني', docType: 'OTHER' },
+                { url: dto.repIdentityDoc, title: 'هوية ممثل الشركة', docType: 'IDENTITY' },
+                { url: dto.repDoc, title: 'مستند تمثيل الشركة', docType: 'CONTRACT' },
+            ];
+
+            for (const docField of docFields) {
+                if (!docField.url) continue;
+
+                // Extract file path from URL: /uploads/filename.ext -> ./uploads/filename.ext
+                const filePath = `.${docField.url}`;
+                const fileName = docField.url.split('/').pop() || 'document';
+                const ext = fileName.split('.').pop()?.toLowerCase() || '';
+                const mimeMap: Record<string, string> = {
+                    pdf: 'application/pdf',
+                    jpg: 'image/jpeg',
+                    jpeg: 'image/jpeg',
+                    png: 'image/png',
+                    webp: 'image/webp',
+                };
+                const mimeType = mimeMap[ext] || 'application/octet-stream';
+
+                try {
+                    const docCode = await this.entityCodeService.generateFlatCode(tenantId, 'document');
+                    await (this.prisma as any).document.create({
+                        data: {
+                            title: `${docField.title} — ${dto.name}`,
+                            fileName,
+                            filePath,
+                            fileSize: 0,
+                            mimeType,
+                            documentType: docField.docType,
+                            tags: ['عميل', dto.name],
+                            ocrStatus: mimeType === 'application/pdf' || mimeType.startsWith('image/') ? 'PENDING' : 'NOT_APPLICABLE',
+                            tenantId,
+                            uploadedById: userId,
+                            code: docCode.code,
+                            codeNumber: docCode.codeNumber,
+                        },
+                    });
+                } catch {
+                    // لا نوقف إنشاء العميل إذا فشل إنشاء سجل المستند
+                }
+            }
+        }
 
         return {
             data: client,

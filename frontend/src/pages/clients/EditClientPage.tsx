@@ -25,13 +25,31 @@ export function EditClientPage() {
                 name: data.name,
                 email: data.email || undefined,
                 phone: data.phone || undefined,
-                nationalId: data.clientType === 'individual' ? data.nationalId : undefined,
-                companyName: data.clientType === 'company' ? data.companyName : undefined,
-                commercialReg: data.clientType === 'company' ? data.commercialReg : undefined,
-                address: data.address || undefined,
-                city: data.city || undefined,
                 notes: data.notes || undefined,
                 visibleToUserIds: data.visibleToUserIds || [],
+
+                // Individual fields
+                nationalId: data.clientType === 'individual' ? (data.nationalId || undefined) : undefined,
+                nationalIdDoc: data.clientType === 'individual' ? (data.nationalIdDoc || undefined) : undefined,
+
+                // Company fields
+                companyName: data.clientType === 'company' ? (data.companyName || undefined) : undefined,
+                brandName: data.clientType === 'company' ? (data.brandName || undefined) : undefined,
+                unifiedNumber: data.clientType === 'company' ? (data.unifiedNumber || undefined) : undefined,
+                commercialReg: data.clientType === 'company' ? (data.commercialReg || undefined) : undefined,
+                commercialRegDoc: data.clientType === 'company' ? (data.commercialRegDoc || undefined) : undefined,
+                nationalAddressDoc: data.clientType === 'company' ? (data.nationalAddressDoc || undefined) : undefined,
+                address: data.address || undefined,
+                city: data.city || undefined,
+
+                // Company representative fields
+                repName: data.clientType === 'company' ? (data.repName || undefined) : undefined,
+                repPhone: data.clientType === 'company' ? (data.repPhone || undefined) : undefined,
+                repEmail: data.clientType === 'company' ? (data.repEmail || undefined) : undefined,
+                repIdentity: data.clientType === 'company' ? (data.repIdentity || undefined) : undefined,
+                repIdentityDoc: data.clientType === 'company' ? (data.repIdentityDoc || undefined) : undefined,
+                repDocType: data.clientType === 'company' ? (data.repDocType || undefined) : undefined,
+                repDoc: data.clientType === 'company' ? (data.repDoc || undefined) : undefined,
             },
             {
                 onSuccess: () => {

@@ -98,8 +98,8 @@ services:
   # ═══════════════════════════════════════════════════════════════════
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: frontend/Dockerfile
       args:
         VITE_API_URL: /api
         VITE_APP_NAME: Watheeq

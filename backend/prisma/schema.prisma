@@ -208,6 +208,7 @@ model Tenant {
   hearings          Hearing[]
   documents         Document[]
   documentTemplates DocumentTemplate[]
+  documentFolders   DocumentFolder[]
   invoices          Invoice[]
   emailTemplates    EmailTemplate[]
   emailLogs         EmailLog[]
@@ -322,6 +323,9 @@ model Tenant {
   registrationStatus String    @default("ACTIVE") // PENDING_EMAIL | ACTIVE | SUSPENDED
   emailVerifiedAt    DateTime?
 
+  // Job Titles
+  jobTitles          JobTitle[]
+
   @@map("tenants")
 }
 
@@ -377,6 +381,7 @@ model User {
   assignedTasks    Task[]            @relation("AssignedTasks")
   createdTasks     Task[]            @relation("CreatedTasks")
   taskComments     TaskComment[]
+  taskAssignees    TaskAssignee[]    @relation("TaskAssignees")
   createdReports   Report[]          @relation("ReportCreator")
   executedReports  ReportExecution[] @relation("ReportExecutor")
   sentMessages     Message[]         @relation("SentMessages")
@@ -691,12 +696,84 @@ model Document {
   uploadedById String
   uploadedBy   User   @relation(fields: [uploadedById], references: [id])
 
+  // Folder links (document can be in multiple folders via shortcuts)
+  folderLinks DocumentFolderLink[]
+
+  // Primary folder (when document is "moved" to a folder)
+  folderId String?
+  folder   DocumentFolder? @relation("DocumentPrimaryFolder", fields: [folderId], references: [id], onDelete: SetNull)
+
   @@index([tenantId])
   @@index([caseId])
   @@index([documentType])
   @@index([parentId])
   @@index([isLatest])
+  @@index([folderId])
   @@map("documents")
+}
+
+// =====================================================
+// DOCUMENT FOLDER (مجلد المستندات)
+// =====================================================
+
+model DocumentFolder {
+  id    String  @id @default(uuid())
+  name  String
+  color String? @default("#6366f1") // لون المجلد
+  icon  String? @default("folder")  // أيقونة المجلد
+
+  // Nested folders (self-relation)
+  parentId String?
+  parent   DocumentFolder?  @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children DocumentFolder[] @relation("FolderHierarchy")
+
+  // Optional: linked to a client (auto-created)
+  clientId String?
+
+  // Multi-tenancy
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Creator
+  createdById String?
+
+  // Document links (shortcuts)
+  documentLinks DocumentFolderLink[]
+
+  // Documents moved directly to this folder
+  documents Document[] @relation("DocumentPrimaryFolder")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([parentId])
+  @@index([clientId])
+  @@map("document_folders")
+}
+
+// =====================================================
+// DOCUMENT FOLDER LINK (ربط مستند بمجلد)
+// =====================================================
+
+model DocumentFolderLink {
+  id String @id @default(uuid())
+
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  folderId String
+  folder   DocumentFolder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+
+  tenantId String
+
+  createdAt DateTime @default(now())
+
+  @@unique([documentId, folderId])
+  @@index([folderId])
+  @@index([documentId])
+  @@index([tenantId])
+  @@map("document_folder_links")
 }
 
 // =====================================================
@@ -1053,6 +1130,7 @@ model Task {
   status      TaskStatus   @default(TODO)
   priority    TaskPriority @default(MEDIUM)
   dueDate     DateTime?
+  dueTime     String?      // e.g. "14:30" (optional delivery time)
 
   // Phase 37: Entity Codes
   code       String? @unique // e.g. "test_TK00001"
@@ -1067,6 +1145,9 @@ model Task {
 
   assignedToId String
   assignedTo   User   @relation("AssignedTasks", fields: [assignedToId], references: [id])
+
+  // Multi-assignee support
+  assignees TaskAssignee[]
 
   createdById String
   createdBy   User   @relation("CreatedTasks", fields: [createdById], references: [id])
@@ -1097,9 +1178,26 @@ model Task {
   @@map("tasks")
 }
 
+model TaskAssignee {
+  id       String @id @default(uuid())
+  taskId   String
+  task     Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User   @relation("TaskAssignees", fields: [userId], references: [id], onDelete: Cascade)
+  tenantId String
+
+  createdAt DateTime @default(now())
+
+  @@unique([taskId, userId])
+  @@index([taskId])
+  @@index([userId])
+  @@map("task_assignees")
+}
+
 model TaskComment {
-  id      String @id @default(uuid())
-  content String @db.Text
+  id       String @id @default(uuid())
+  content  String @db.Text
+  mentions Json?  // Array of {type, id, name} for @mentions
 
   taskId String
   task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
@@ -4246,4 +4344,25 @@ model EmailVerificationToken {
 
   @@index([email])
   @@map("email_verification_tokens")
+}
+
+// =====================================================
+// JOB TITLE (المسمى الوظيفي)
+// =====================================================
+
+model JobTitle {
+  id        String   @id @default(uuid())
+  name      String   // اسم المسمى بالعربي
+  nameEn    String?  // English name (optional)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Tenant isolation
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@map("job_titles")
 }

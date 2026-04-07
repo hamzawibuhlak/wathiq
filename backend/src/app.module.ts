@@ -56,6 +56,7 @@ import { LegalLibraryModule } from './legal-library/legal-library.module';
 import { CallCenterModule } from './call-center/call-center.module';
 import { TenantRolesModule } from './tenant-roles/tenant-roles.module';
 import { FormsModule } from './forms/forms.module';
+import { DocumentFoldersModule } from './document-folders/document-folders.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -156,6 +157,9 @@ import { AppController } from './app.controller';
 
         // Phase 38: Dynamic Forms
         FormsModule,
+
+        // Document Folders (nested folder organization)
+        DocumentFoldersModule,
     ],
     controllers: [AppController],
     providers: [

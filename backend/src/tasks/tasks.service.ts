@@ -132,6 +132,9 @@ export class TasksService {
                 where,
                 include: {
                     assignedTo: { select: { id: true, name: true, avatar: true } },
+                    assignees: {
+                        include: { user: { select: { id: true, name: true, avatar: true } } },
+                    },
                     createdBy: { select: { id: true, name: true } },
                     case: { select: { id: true, title: true, caseNumber: true } },
                     hearing: { select: { id: true, hearingDate: true, courtName: true } },
@@ -166,6 +169,9 @@ export class TasksService {
             where: { id, tenantId },
             include: {
                 assignedTo: { select: { id: true, name: true, email: true, phone: true, avatar: true } },
+                assignees: {
+                    include: { user: { select: { id: true, name: true, avatar: true } } },
+                },
                 createdBy: { select: { id: true, name: true } },
                 case: { select: { id: true, title: true, caseNumber: true } },
                 hearing: { select: { id: true, hearingDate: true, courtName: true } },
@@ -180,7 +186,7 @@ export class TasksService {
                     include: {
                         user: { select: { id: true, name: true, avatar: true } },
                     },
-                    orderBy: { createdAt: 'desc' },
+                    orderBy: { createdAt: 'asc' },
                 },
             },
         });
@@ -215,6 +221,7 @@ export class TasksService {
             status: dto.status || TaskStatus.TODO,
             priority: dto.priority,
             dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
+            dueTime: dto.dueTime,
             tags: dto.tags || [],
             tenant: { connect: { id: tenantId } },
             assignedTo: { connect: { id: dto.assignedToId } },
@@ -244,16 +251,37 @@ export class TasksService {
             },
         });
 
-        // Send notification to assigned user (if different from creator)
-        if (dto.assignedToId !== userId) {
-            await this.notificationsService.create({
-                title: 'مهمة جديدة مسندة إليك',
-                message: `تم إسناد مهمة "${task.title}" إليك`,
-                type: 'INFO',
-                link: `/tasks/${task.id}`,
-                userId: dto.assignedToId,
-                tenantId,
+        // Create additional assignees (multi-assignee)
+        const additionalIds = (dto.assignedToIds || []).filter(id => id !== dto.assignedToId);
+        if (additionalIds.length > 0) {
+            await this.prisma.taskAssignee.createMany({
+                data: [
+                    // Always include the primary assignee
+                    { taskId: task.id, userId: dto.assignedToId, tenantId },
+                    ...additionalIds.map(uid => ({ taskId: task.id, userId: uid, tenantId })),
+                ],
+                skipDuplicates: true,
             });
+        } else {
+            // At minimum, add the primary assignee to TaskAssignee table
+            await this.prisma.taskAssignee.create({
+                data: { taskId: task.id, userId: dto.assignedToId, tenantId },
+            }).catch(() => { /* ignore duplicate */ });
+        }
+
+        // Send notification to assigned users (if different from creator)
+        const allAssigneeIds = [dto.assignedToId, ...additionalIds];
+        for (const assigneeId of allAssigneeIds) {
+            if (assigneeId !== userId) {
+                await this.notificationsService.create({
+                    title: 'مهمة جديدة مسندة إليك',
+                    message: `تم إسناد مهمة "${task.title}" إليك`,
+                    type: 'INFO',
+                    link: `/tasks/${task.id}`,
+                    userId: assigneeId,
+                    tenantId,
+                });
+            }
         }
 
         return {
@@ -306,9 +334,24 @@ export class TasksService {
         }
         if (dto.priority !== undefined) updateData.priority = dto.priority;
         if (dto.dueDate !== undefined) updateData.dueDate = dto.dueDate ? new Date(dto.dueDate) : null;
+        if (dto.dueTime !== undefined) updateData.dueTime = dto.dueTime || null;
         if (dto.tags !== undefined) updateData.tags = dto.tags;
         if (dto.assignedToId !== undefined) {
             updateData.assignedTo = { connect: { id: dto.assignedToId } };
+        }
+        // Handle multi-assignee update
+        if (dto.assignedToIds !== undefined) {
+            // Delete existing assignees and recreate
+            await this.prisma.taskAssignee.deleteMany({ where: { taskId: id } });
+            const allIds = dto.assignedToId
+                ? [dto.assignedToId, ...dto.assignedToIds.filter(uid => uid !== dto.assignedToId)]
+                : dto.assignedToIds;
+            if (allIds.length > 0) {
+                await this.prisma.taskAssignee.createMany({
+                    data: allIds.map(uid => ({ taskId: id, userId: uid, tenantId })),
+                    skipDuplicates: true,
+                });
+            }
         }
         if (dto.caseId !== undefined) {
             if (dto.caseId) {
@@ -364,6 +407,20 @@ export class TasksService {
     }
 
     /**
+     * Remove assignee from task
+     */
+    async removeAssignee(taskId: string, userId: string, tenantId: string) {
+        const task = await this.prisma.task.findFirst({ where: { id: taskId, tenantId } });
+        if (!task) throw new NotFoundException('المهمة غير موجودة');
+
+        await this.prisma.taskAssignee.deleteMany({
+            where: { taskId, userId },
+        });
+
+        return { message: 'تم إزالة الشخص من المهمة' };
+    }
+
+    /**
      * Add comment to task
      */
     async addComment(taskId: string, dto: CreateCommentDto, tenantId: string, userId: string) {
@@ -378,6 +435,7 @@ export class TasksService {
         const comment = await this.prisma.taskComment.create({
             data: {
                 content: dto.content,
+                mentions: dto.mentions as any || [],
                 task: { connect: { id: taskId } },
                 user: { connect: { id: userId } },
             },
@@ -385,6 +443,24 @@ export class TasksService {
                 user: { select: { id: true, name: true, avatar: true } },
             },
         });
+
+        // Send notifications to mentioned users
+        if (dto.mentions && dto.mentions.length > 0) {
+            const mentionedUserIds = dto.mentions
+                .filter(m => m.type === 'user')
+                .map(m => m.id)
+                .filter(id => id !== userId);
+            for (const mentionedUserId of mentionedUserIds) {
+                await this.notificationsService.create({
+                    title: 'تم ذكرك في تعليق',
+                    message: `تم ذكرك في تعليق على مهمة "${task.title}"`,
+                    type: 'INFO',
+                    link: `/tasks/${taskId}`,
+                    userId: mentionedUserId,
+                    tenantId,
+                });
+            }
+        }
 
         return {
             data: comment,

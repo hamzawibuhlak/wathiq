@@ -39,4 +39,13 @@ export const ownerApi = {
     // Billing & Usage
     getBilling: () => apiGet<any>('/owner/billing'),
     getUsage: () => apiGet<any>('/owner/usage'),
+
+    // Job Titles (المسميات الوظيفية)
+    getJobTitles: () => apiGet<any[]>('/owner/job-titles'),
+    createJobTitle: (data: { name: string; nameEn?: string }) =>
+        apiPost<any>('/owner/job-titles', data),
+    updateJobTitle: (id: string, data: { name?: string; nameEn?: string }) =>
+        apiPatch<any>(`/owner/job-titles/${id}`, data),
+    deleteJobTitle: (id: string) =>
+        apiDelete<any>(`/owner/job-titles/${id}`),
 };

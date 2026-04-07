@@ -1,64 +1,70 @@
 # ═══════════════════════════════════════════════════════════════════
 # WATHEEQ FRONTEND - PRODUCTION DOCKERFILE
-# Multi-stage build with Nginx for static serving
+# Multi-stage: Marketing site + App SPA on Nginx
+# Context is root of the monorepo (.)
 # ═══════════════════════════════════════════════════════════════════
 
 # ═══════════════════════════════════════════════════════════════════
-# STAGE 1: Builder
+# STAGE 1: Build Marketing Site
 # ═══════════════════════════════════════════════════════════════════
-FROM node:20-alpine AS builder
+FROM node:20-alpine AS marketing-builder
+
+WORKDIR /marketing
+
+COPY marketing/package*.json ./
+RUN npm ci
+
+COPY marketing/ .
+RUN npm run build
+
+# ═══════════════════════════════════════════════════════════════════
+# STAGE 2: Build App (SPA)
+# ═══════════════════════════════════════════════════════════════════
+FROM node:20-alpine AS app-builder
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
-
-# Install dependencies
+COPY frontend/package*.json ./
 RUN npm ci
 
-# Copy source code
-COPY . .
+COPY frontend/ .
 
-# Set build-time environment variables
 ARG VITE_API_URL=/api
 ARG VITE_APP_NAME=Watheeq
 
 ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_APP_NAME=$VITE_APP_NAME
 
-# Build the application
 RUN npm run build
 
 # ═══════════════════════════════════════════════════════════════════
-# STAGE 2: Nginx Production Server
+# STAGE 3: Nginx Production Server
 # ═══════════════════════════════════════════════════════════════════
 FROM nginx:alpine AS production
 
 # Copy custom nginx config
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
 
-# Copy built assets from builder
-COPY --from=builder /app/dist /usr/share/nginx/html
+# Copy marketing site to /marketing
+COPY --from=marketing-builder /marketing/dist /usr/share/nginx/marketing
 
-# Add non-root user
-RUN chown -R nginx:nginx /usr/share/nginx/html && \
+# Copy app SPA to /app
+COPY --from=app-builder /app/dist /usr/share/nginx/app
+
+# Permissions
+RUN chown -R nginx:nginx /usr/share/nginx/marketing && \
+    chown -R nginx:nginx /usr/share/nginx/app && \
     chown -R nginx:nginx /var/cache/nginx && \
     chown -R nginx:nginx /var/log/nginx && \
     chown -R nginx:nginx /etc/nginx/conf.d
 
-# Create pid file location
 RUN touch /var/run/nginx.pid && \
     chown -R nginx:nginx /var/run/nginx.pid
 
-# Set environment
 ENV NODE_ENV=production
-
-# Expose port
 EXPOSE 80
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:80 || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:80/health || exit 1
 
-# Start Nginx
 CMD ["nginx", "-g", "daemon off;"]

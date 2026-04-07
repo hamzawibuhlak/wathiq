@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { documentsApi } from '@/api/documents.api';
+import { documentFoldersApi } from '@/api/documentFolders.api';
 import { casesApi } from '@/api/cases.api';
 import { X, Upload, FileText, Loader2, ChevronDown, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -9,6 +10,7 @@ interface UploadDialogProps {
     isOpen: boolean;
     onClose: () => void;
     defaultCaseId?: string;
+    defaultFolderId?: string; // If set, document will be moved to this folder after upload
 }
 
 const documentTypes = [
@@ -25,7 +27,7 @@ const documentTypes = [
     { value: 'OTHER', label: 'أخرى' },
 ];
 
-export function UploadDialog({ isOpen, onClose, defaultCaseId }: UploadDialogProps) {
+export function UploadDialog({ isOpen, onClose, defaultCaseId, defaultFolderId }: UploadDialogProps) {
     const queryClient = useQueryClient();
     const [file, setFile] = useState<File | null>(null);
     const [formData, setFormData] = useState({
@@ -45,8 +47,17 @@ export function UploadDialog({ isOpen, onClose, defaultCaseId }: UploadDialogPro
 
     const uploadMutation = useMutation({
         mutationFn: documentsApi.upload,
-        onSuccess: () => {
+        onSuccess: async (result) => {
+            // If inside a folder, move the new document to that folder
+            if (defaultFolderId && result?.data?.id) {
+                try {
+                    await documentFoldersApi.moveDocument(defaultFolderId, result.data.id);
+                } catch {
+                    // non-critical error, document was uploaded successfully
+                }
+            }
             queryClient.invalidateQueries({ queryKey: ['documents'] });
+            queryClient.invalidateQueries({ queryKey: ['folder-documents'] });
             toast.success('تم رفع المستند بنجاح');
             onClose();
             reset();

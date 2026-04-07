@@ -42,7 +42,7 @@ export class OwnerController {
     inviteUser(
         @TenantId() tenantId: string,
         @CurrentUser() user: any,
-        @Body() data: { name: string; email: string; role: string },
+        @Body() data: { name: string; email: string; role: string; tenantRoleId?: string; title?: string },
     ) {
         return this.ownerService.inviteUser(tenantId, user.id, data as any);
     }
@@ -74,7 +74,7 @@ export class OwnerController {
     updateUser(
         @Param('id') id: string,
         @TenantId() tenantId: string,
-        @Body() data: { name?: string; role?: string; tenantRoleId?: string | null },
+        @Body() data: { name?: string; role?: string; tenantRoleId?: string | null; title?: string | null },
     ) {
         return this.ownerService.updateUser(id, tenantId, data);
     }
@@ -137,5 +137,36 @@ export class OwnerController {
     @Get('usage')
     getUsage(@TenantId() tenantId: string) {
         return this.ownerService.getUsageStats(tenantId);
+    }
+
+    // ── Job Titles (المسميات الوظيفية) ─────────
+    @Get('job-titles')
+    getJobTitles(@TenantId() tenantId: string) {
+        return this.ownerService.getJobTitles(tenantId);
+    }
+
+    @Post('job-titles')
+    createJobTitle(
+        @TenantId() tenantId: string,
+        @Body() data: { name: string; nameEn?: string },
+    ) {
+        return this.ownerService.createJobTitle(tenantId, data);
+    }
+
+    @Patch('job-titles/:id')
+    updateJobTitle(
+        @Param('id') id: string,
+        @TenantId() tenantId: string,
+        @Body() data: { name?: string; nameEn?: string },
+    ) {
+        return this.ownerService.updateJobTitle(id, tenantId, data);
+    }
+
+    @Delete('job-titles/:id')
+    deleteJobTitle(
+        @Param('id') id: string,
+        @TenantId() tenantId: string,
+    ) {
+        return this.ownerService.deleteJobTitle(id, tenantId);
     }
 }

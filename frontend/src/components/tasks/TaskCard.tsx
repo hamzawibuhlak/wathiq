@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { useSlugPath } from '@/hooks/useSlugPath';
 import {
     Clock,
-    User,
     Calendar,
     Briefcase,
     MessageSquare,
@@ -41,10 +40,10 @@ const statusConfig: Record<TaskStatus, { label: string; color: string; icon: Rea
 };
 
 const priorityConfig = {
-    LOW: { label: 'منخفضة', color: 'bg-gray-100 text-gray-600' },
-    MEDIUM: { label: 'متوسطة', color: 'bg-yellow-100 text-yellow-700' },
-    HIGH: { label: 'عالية', color: 'bg-orange-100 text-orange-700' },
-    URGENT: { label: 'عاجلة', color: 'bg-red-100 text-red-700' },
+    LOW: { label: 'منخفضة', color: 'bg-gray-100 text-gray-600', shadow: 'shadow-[0_4px_20px_rgba(156,163,175,0.4)]' },
+    MEDIUM: { label: 'متوسطة', color: 'bg-yellow-100 text-yellow-700', shadow: 'shadow-[0_4px_20px_rgba(234,179,8,0.35)]' },
+    HIGH: { label: 'عالية', color: 'bg-orange-100 text-orange-700', shadow: 'shadow-[0_4px_20px_rgba(249,115,22,0.4)]' },
+    URGENT: { label: 'عاجلة', color: 'bg-red-100 text-red-700', shadow: 'shadow-[0_4px_20px_rgba(239,68,68,0.45)]' },
 };
 
 export function TaskCard({ task, isSelected, onSelect, onDelete }: TaskCardProps) {
@@ -75,20 +74,22 @@ export function TaskCard({ task, isSelected, onSelect, onDelete }: TaskCardProps
         ? ['TODO', 'IN_PROGRESS']
         : ['COMPLETED'];
 
+    // Get all assignees for display
+    const allAssignees = task.assignees?.map(a => a.user) ||
+        (task.assignedTo ? [task.assignedTo] : []);
+
     return (
         <div className={cn(
-            "bg-card rounded-xl border p-4 transition-all hover:shadow-md relative",
+            "bg-card rounded-xl border p-4 transition-all hover:shadow-lg relative",
+            priorityInfo.shadow, // priority-colored shadow
             isSelected && "ring-2 ring-primary",
             isOverdue && "border-red-300"
         )}>
             {/* Selection & Actions */}
             <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                     {onSelect && (
-                        <Checkbox
-                            checked={isSelected}
-                            onChange={onSelect}
-                        />
+                        <Checkbox checked={isSelected} onChange={onSelect} />
                     )}
                     <span className={cn(
                         "text-xs px-2 py-1 rounded-full font-medium flex items-center gap-1",
@@ -97,20 +98,12 @@ export function TaskCard({ task, isSelected, onSelect, onDelete }: TaskCardProps
                         <StatusIcon className="w-3 h-3" />
                         {statusInfo.label}
                     </span>
-                    <span className={cn(
-                        "text-xs px-2 py-1 rounded-full",
-                        priorityInfo.color
-                    )}>
+                    <span className={cn("text-xs px-2 py-1 rounded-full", priorityInfo.color)}>
                         {priorityInfo.label}
                     </span>
                 </div>
                 <div className="relative">
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0"
-                        onClick={() => setShowMenu(!showMenu)}
-                    >
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setShowMenu(!showMenu)}>
                         <MoreVertical className="w-4 h-4" />
                     </Button>
                     {showMenu && (
@@ -121,7 +114,7 @@ export function TaskCard({ task, isSelected, onSelect, onDelete }: TaskCardProps
                                     className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent rounded-md"
                                 >
                                     <Edit className="w-4 h-4" />
-                                    تعديل
+                                    عرض وتعديل
                                 </Link>
                                 <div className="border-t my-1"></div>
                                 <div className="px-3 py-1 text-xs text-muted-foreground">تغيير الحالة</div>
@@ -132,25 +125,16 @@ export function TaskCard({ task, isSelected, onSelect, onDelete }: TaskCardProps
                                         className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-accent rounded-md"
                                     >
                                         {status === 'COMPLETED' ? (
-                                            <>
-                                                <CheckCircle2 className="w-4 h-4 text-green-600" />
-                                                إكمال المهمة
-                                            </>
+                                            <><CheckCircle2 className="w-4 h-4 text-green-600" />إكمال المهمة</>
                                         ) : (
-                                            <>
-                                                <Circle className="w-4 h-4" />
-                                                {statusConfig[status].label}
-                                            </>
+                                            <><Circle className="w-4 h-4" />{statusConfig[status].label}</>
                                         )}
                                     </button>
                                 ))}
                                 <div className="border-t my-1"></div>
                                 {onDelete && (
                                     <button
-                                        onClick={() => {
-                                            onDelete();
-                                            setShowMenu(false);
-                                        }}
+                                        onClick={() => { onDelete(); setShowMenu(false); }}
                                         className="flex items-center gap-2 w-full px-3 py-2 text-sm text-destructive hover:bg-destructive/10 rounded-md"
                                     >
                                         <Trash2 className="w-4 h-4" />
@@ -163,74 +147,74 @@ export function TaskCard({ task, isSelected, onSelect, onDelete }: TaskCardProps
                 </div>
             </div>
 
-            {/* Title & Description */}
+            {/* Title */}
             <Link to={p(`/tasks/${task.id}`)}>
                 <h3 className={cn(
-                    "font-semibold text-lg mb-2 hover:text-primary transition-colors",
+                    "font-semibold text-base mb-2 hover:text-primary transition-colors line-clamp-2",
                     task.status === 'COMPLETED' && "line-through text-muted-foreground"
                 )}>
                     {task.title}
                 </h3>
             </Link>
             {task.description && (
-                <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                    {task.description}
-                </p>
+                <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{task.description}</p>
             )}
 
             {/* Meta Info */}
-            <div className="flex flex-wrap gap-3 text-sm text-muted-foreground mb-3">
+            <div className="flex flex-wrap gap-2 text-xs text-muted-foreground mb-3">
                 {task.dueDate && (
-                    <div className={cn(
-                        "flex items-center gap-1",
-                        isOverdue && "text-red-600 font-medium"
-                    )}>
-                        <Calendar className="w-4 h-4" />
+                    <div className={cn("flex items-center gap-1", isOverdue && "text-red-600 font-medium")}>
+                        <Calendar className="w-3.5 h-3.5" />
                         {formatDueDate(task.dueDate)}
-                        {isOverdue && <span className="text-xs">(متأخرة)</span>}
-                    </div>
-                )}
-                {task.assignedTo && (
-                    <div className="flex items-center gap-1">
-                        <User className="w-4 h-4" />
-                        {task.assignedTo.name}
+                        {task.dueTime && <span className="text-muted-foreground">في {task.dueTime}</span>}
+                        {isOverdue && <span>(متأخرة)</span>}
                     </div>
                 )}
                 {task._count?.comments && task._count.comments > 0 && (
                     <div className="flex items-center gap-1">
-                        <MessageSquare className="w-4 h-4" />
+                        <MessageSquare className="w-3.5 h-3.5" />
                         {task._count.comments}
                     </div>
                 )}
             </div>
 
-            {/* Created By */}
-            {task.createdBy && (
-                <div className="text-xs text-muted-foreground mb-3 flex items-center gap-1">
-                    <span>طلبها:</span>
-                    <span className="font-medium text-foreground">{task.createdBy.name}</span>
+            {/* Assignees avatars */}
+            <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                    {allAssignees.slice(0, 4).map((user, idx) => (
+                        <div
+                            key={user.id}
+                            title={user.name}
+                            className="w-7 h-7 rounded-full bg-primary/10 border-2 border-card flex items-center justify-center text-xs font-semibold text-primary"
+                            style={{ marginRight: idx > 0 ? '-8px' : 0, zIndex: allAssignees.length - idx }}
+                        >
+                            {user.name.charAt(0)}
+                        </div>
+                    ))}
+                    {allAssignees.length > 4 && (
+                        <div className="w-7 h-7 rounded-full bg-muted border-2 border-card flex items-center justify-center text-xs font-medium -mr-2">
+                            +{allAssignees.length - 4}
+                        </div>
+                    )}
+                    {allAssignees.length > 0 && (
+                        <span className="text-xs text-muted-foreground mr-3">
+                            {allAssignees.length === 1
+                                ? allAssignees[0].name
+                                : `${allAssignees.length} أشخاص`}
+                        </span>
+                    )}
                 </div>
-            )}
 
-            {/* Related Case/Hearing */}
-            {task.case && (
-                <Link
-                    to={p(`/cases/${task.case.id}`)}
-                    className="inline-flex items-center gap-1 text-xs bg-muted px-2 py-1 rounded-full hover:bg-muted/80"
-                >
-                    <Briefcase className="w-3 h-3" />
-                    {task.case.caseNumber}
-                </Link>
-            )}
-
-            {/* Subtasks Progress */}
-            {task._count?.subtasks && task._count.subtasks > 0 && (
-                <div className="mt-3 pt-3 border-t">
-                    <div className="text-xs text-muted-foreground">
-                        {task.subtasks?.filter(s => s.status === 'COMPLETED').length || 0} / {task._count.subtasks} مهام فرعية
-                    </div>
-                </div>
-            )}
+                {task.case && (
+                    <Link
+                        to={p(`/cases/${task.case.id}`)}
+                        className="inline-flex items-center gap-1 text-xs bg-muted px-2 py-0.5 rounded-full hover:bg-muted/80"
+                    >
+                        <Briefcase className="w-3 h-3" />
+                        {task.case.caseNumber}
+                    </Link>
+                )}
+            </div>
         </div>
     );
 }

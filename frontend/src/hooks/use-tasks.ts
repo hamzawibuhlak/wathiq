@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { tasksApi, TasksFilters, CreateTaskData, UpdateTaskData, TaskStatus } from '@/api/tasks.api';
+import { tasksApi, TasksFilters, CreateTaskData, UpdateTaskData, TaskStatus, MentionItem } from '@/api/tasks.api';
 import toast from 'react-hot-toast';
 
 // List of tasks
@@ -110,10 +110,10 @@ export function useAddTaskComment(taskId: string) {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (content: string) => tasksApi.addComment(taskId, content),
+        mutationFn: ({ content, mentions }: { content: string; mentions?: MentionItem[] }) =>
+            tasksApi.addComment(taskId, content, mentions),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['tasks', taskId] });
-            toast.success('تم إضافة التعليق بنجاح');
         },
         onError: () => {
             toast.error('حدث خطأ أثناء إضافة التعليق');
@@ -166,6 +166,22 @@ export function useBulkDeleteTasks() {
         },
         onError: () => {
             toast.error('حدث خطأ أثناء حذف المهام');
+        },
+    });
+}
+
+// Remove assignee from task
+export function useRemoveTaskAssignee(taskId: string) {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (userId: string) => tasksApi.removeAssignee(taskId, userId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['tasks', taskId] });
+            toast.success('تم إزالة الشخص من المهمة');
+        },
+        onError: () => {
+            toast.error('حدث خطأ أثناء إزالة الشخص');
         },
     });
 }

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>وثيق - منصة إدارة مكاتب المحاماة الأولى في السعودية</title>
+  <meta name="description"
+    content="نظام شامل لإدارة مكاتب المحاماة — من القضايا والجلسات إلى الفواتير والتواصل في منصة واحدة." />
+  <meta property="og:title" content="وثيق - منصة إدارة مكاتب المحاماة" />
+  <meta property="og:description" content="أتمتة كاملة لمكتبك القانوني" />
+  <meta property="og:type" content="website" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Tajawal:wght@300;400;500;700&display=swap"
+    rel="stylesheet" />
+</head>
+
+<body>
+  <!-- Unregister old app service workers so marketing pages load correctly -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function (registrations) {
+        registrations.forEach(function (registration) { registration.unregister(); });
+      });
+      caches.keys().then(function (names) {
+        names.forEach(function (name) { caches.delete(name); });
+      });
+    }
+  </script>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
+</html>

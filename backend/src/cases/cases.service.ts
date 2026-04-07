@@ -64,7 +64,7 @@ export class CasesService {
             andConditions.push({
                 OR: [
                     { assignedToId: userId },
-                    { assignedToIds: { has: userId } },
+                    { assignedToIds: { has: userId } } as any,
                 ],
             });
         } else if (assignedToId) {
@@ -72,7 +72,7 @@ export class CasesService {
             andConditions.push({
                 OR: [
                     { assignedToId: assignedToId },
-                    { assignedToIds: { has: assignedToId } },
+                    { assignedToIds: { has: assignedToId } } as any,
                 ],
             });
         }
@@ -282,9 +282,29 @@ export class CasesService {
             throw new ForbiddenException('لا تملك صلاحية تعديل هذه القضية');
         }
 
+        // Build update data carefully — handle date fields and assignments
+        const updateData: any = { ...dto };
+
+        // Convert filingDate string to DateTime if provided
+        if (dto.filingDate) {
+            updateData.filingDate = new Date(dto.filingDate);
+        } else if (dto.filingDate === '' || dto.filingDate === null) {
+            updateData.filingDate = null;
+        }
+
+        // Convert nextHearingDate string to DateTime if provided
+        if (dto.nextHearingDate) {
+            updateData.nextHearingDate = new Date(dto.nextHearingDate);
+        }
+
+        // Handle assignedToId — must be valid UUID or null (not empty string)
+        if (updateData.assignedToId === '') {
+            updateData.assignedToId = null;
+        }
+
         const caseData = await this.prisma.case.update({
             where: { id },
-            data: dto,
+            data: updateData,
             include: {
                 client: { select: { id: true, name: true, phone: true } },
                 assignedTo: { select: { id: true, name: true } },
@@ -331,7 +351,7 @@ export class CasesService {
         if (userRole === UserRole.LAWYER && userId) {
             baseWhere.OR = [
                 { assignedToId: userId },
-                { assignedToIds: { has: userId } },
+                { assignedToIds: { has: userId } } as any,
             ];
         }
 

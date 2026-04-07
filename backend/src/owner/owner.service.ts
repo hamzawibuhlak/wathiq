@@ -71,6 +71,7 @@ export class OwnerService {
             email: string;
             role: 'ADMIN' | 'LAWYER' | 'SECRETARY' | 'ACCOUNTANT';
             tenantRoleId?: string;
+            title?: string;
         },
     ) {
         if ((data.role as string) === 'OWNER') {
@@ -102,6 +103,7 @@ export class OwnerService {
                 code: userCode.code,
                 codeNumber: userCode.codeNumber,
                 ...(data.tenantRoleId && { tenantRoleId: data.tenantRoleId }),
+                ...(data.title && { title: data.title }),
             },
             select: {
                 id: true,
@@ -185,7 +187,7 @@ export class OwnerService {
     async updateUser(
         userId: string,
         tenantId: string,
-        data: { name?: string; role?: string; tenantRoleId?: string | null },
+        data: { name?: string; role?: string; tenantRoleId?: string | null; title?: string | null },
     ) {
         const user = await this.prisma.user.findUnique({ where: { id: userId } });
 
@@ -202,6 +204,9 @@ export class OwnerService {
         if (data.role && data.role !== 'OWNER') updateData.role = data.role;
         if (data.tenantRoleId !== undefined) {
             updateData.tenantRoleId = data.tenantRoleId || null;
+        }
+        if (data.title !== undefined) {
+            updateData.title = data.title || null;
         }
 
         return this.prisma.user.update({
@@ -356,14 +361,12 @@ export class OwnerService {
 
         const allTypes = [
             { type: 'EMAIL_SMTP', name: 'بريد إلكتروني (SMTP)', icon: '📧' },
-            { type: 'EMAIL_SENDGRID', name: 'SendGrid', icon: '📩' },
             { type: 'WHATSAPP', name: 'واتساب Business', icon: '💬' },
             { type: 'CALL_CENTER', name: 'مركز الاتصال', icon: '📞' },
             { type: 'NAFATH', name: 'نفاذ', icon: '🆔' },
             { type: 'ZATCA', name: 'زاتكا', icon: '🧾' },
             { type: 'ABSHER', name: 'أبشر', icon: '🏛️' },
             { type: 'GOOGLE_CALENDAR', name: 'جوجل كالندر', icon: '📅' },
-            { type: 'ZAPIER', name: 'زابير', icon: '⚡' },
         ];
 
         return allTypes.map(item => {
@@ -584,5 +587,66 @@ export class OwnerService {
             activeIntegrations,
             activeWorkflows,
         };
+    }
+
+    // =============================================
+    // JOB TITLES (المسميات الوظيفية)
+    // =============================================
+
+    async getJobTitles(tenantId: string) {
+        return (this.prisma as any).jobTitle.findMany({
+            where: { tenantId },
+            orderBy: { createdAt: 'asc' },
+        });
+    }
+
+    async createJobTitle(tenantId: string, data: { name: string; nameEn?: string }) {
+        if (!data.name?.trim()) {
+            throw new BadRequestException('اسم المسمى الوظيفي مطلوب');
+        }
+
+        const existing = await (this.prisma as any).jobTitle.findFirst({
+            where: { tenantId, name: data.name.trim() },
+        });
+
+        if (existing) {
+            throw new BadRequestException('المسمى الوظيفي موجود بالفعل');
+        }
+
+        return (this.prisma as any).jobTitle.create({
+            data: {
+                name: data.name.trim(),
+                nameEn: data.nameEn?.trim() || null,
+                tenantId,
+            },
+        });
+    }
+
+    async updateJobTitle(id: string, tenantId: string, data: { name?: string; nameEn?: string }) {
+        const jobTitle = await (this.prisma as any).jobTitle.findUnique({ where: { id } });
+
+        if (!jobTitle || jobTitle.tenantId !== tenantId) {
+            throw new BadRequestException('المسمى الوظيفي غير موجود');
+        }
+
+        const updateData: any = {};
+        if (data.name) updateData.name = data.name.trim();
+        if (data.nameEn !== undefined) updateData.nameEn = data.nameEn?.trim() || null;
+
+        return (this.prisma as any).jobTitle.update({
+            where: { id },
+            data: updateData,
+        });
+    }
+
+    async deleteJobTitle(id: string, tenantId: string) {
+        const jobTitle = await (this.prisma as any).jobTitle.findUnique({ where: { id } });
+
+        if (!jobTitle || jobTitle.tenantId !== tenantId) {
+            throw new BadRequestException('المسمى الوظيفي غير موجود');
+        }
+
+        await (this.prisma as any).jobTitle.delete({ where: { id } });
+        return { message: 'تم حذف المسمى الوظيفي بنجاح' };
     }
 }

@@ -1,5 +1,7 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
+import { AnimatePresence } from 'framer-motion';
+import { PageTransition } from '@/components/common/PageTransition';
 import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { Sidebar } from './Sidebar';
@@ -11,6 +13,7 @@ const Softphone = lazy(() => import('@/components/call-center/Softphone'));
 
 export function AppLayout() {
     const [isCollapsed, setIsCollapsed] = useState(false);
+    const location = useLocation();
     const { subscribe, isConnected } = useWebSocket();
     const queryClient = useQueryClient();
 
@@ -83,7 +86,11 @@ export function AppLayout() {
                 )}
             >
                 <div className="p-6">
-                    <Outlet />
+                    <AnimatePresence mode="wait">
+                        <PageTransition key={location.pathname}>
+                            <Outlet />
+                        </PageTransition>
+                    </AnimatePresence>
                 </div>
             </main>
 

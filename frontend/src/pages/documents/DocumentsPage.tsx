@@ -2,16 +2,19 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { 
     FileText, Plus, Grid3X3, List, AlertTriangle, Search, X, Check, 
-    Filter, Tag, Calendar, RefreshCw
+    Filter, Tag, Calendar, RefreshCw, FolderPlus, Home, ChevronLeft
 } from 'lucide-react';
 import { Button } from '@/components/ui';
-import { DocumentCard, DocumentViewer, BulkActionsBar } from '@/components/documents';
+import { DocumentCard, DocumentViewer, BulkActionsBar, FolderCard, CreateFolderDialog, MoveToFolderDialog } from '@/components/documents';
 import { UploadDialog } from '@/components/documents/UploadDialog';
 import { VersionHistoryDialog } from '@/components/documents/VersionHistoryDialog';
+import { EditDocumentDialog } from '@/components/documents/EditDocumentDialog';
 import { useDocuments, useDeleteDocument, useDownloadDocument } from '@/hooks/use-documents';
+import { useDocumentFolders, useFolderDocuments, useFolderBreadcrumb, useDeleteFolder, useMoveDocumentToFolder, useUnlinkDocumentFromFolder, useMoveDocumentToRoot } from '@/hooks/use-document-folders';
 import { useCases } from '@/hooks/use-cases';
 import { documentsApi } from '@/api/documents.api';
 import type { Document } from '@/types';
+import type { DocumentFolder } from '@/api/documentFolders.api';
 import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -38,8 +41,16 @@ export function DocumentsPage() {
     const [searchParams] = useSearchParams();
     const urlCaseId = searchParams.get('caseId') || '';
 
+    // Folder navigation state
+    const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
+
     // UI State
     const [showUploadDialog, setShowUploadDialog] = useState(false);
+    const [showCreateFolderDialog, setShowCreateFolderDialog] = useState(false);
+    const [editingFolder, setEditingFolder] = useState<DocumentFolder | null>(null);
+    const [moveToFolderDoc, setMoveToFolderDoc] = useState<Document | null>(null);
+    const [folderDialogMode, setFolderDialogMode] = useState<'move' | 'copy'>('move');
+    const [editDoc, setEditDoc] = useState<Document | null>(null);
     const [viewMode, setViewMode] = useState<ViewMode>('grid');
     const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
@@ -80,7 +91,16 @@ export function DocumentsPage() {
         }
     }, [urlCaseId]);
 
-    const { data, isLoading, error, refetch } = useDocuments({
+    // Fetch folders for current level
+    const { data: foldersData, isLoading: foldersLoading } = useDocumentFolders(currentFolderId);
+    const folders = foldersData?.data || [];
+
+    // Fetch breadcrumb for current folder
+    const { data: breadcrumbData } = useFolderBreadcrumb(currentFolderId);
+    const breadcrumb = breadcrumbData?.data || [];
+
+    // Fetch documents — either all or from current folder
+    const { data: allDocsData, isLoading: allDocsLoading, error: allDocsError, refetch: refetchAllDocs } = useDocuments({
         search: filters.search || undefined,
         documentType: filters.documentType || undefined,
         caseId: filters.caseId || undefined,
@@ -91,15 +111,41 @@ export function DocumentsPage() {
         limit,
     });
 
-    const { data: casesData } = useCases({ limit: 100 });
+    const { data: folderDocsData, isLoading: folderDocsLoading } = useFolderDocuments(
+        currentFolderId,
+        page,
+        limit,
+    );
 
+    // Choose between all docs and folder docs
+    const isInFolder = !!currentFolderId;
+    const documents = isInFolder ? (folderDocsData?.data || []) : (allDocsData?.data || []);
+    const totalPages = isInFolder
+        ? (folderDocsData?.meta?.totalPages || 1)
+        : (allDocsData?.meta?.totalPages || 1);
+    const isLoading = isInFolder ? folderDocsLoading : allDocsLoading;
+    const error = isInFolder ? null : allDocsError;
+
+    const refetch = () => {
+        if (isInFolder) {
+            queryClient.invalidateQueries({ queryKey: ['folder-documents'] });
+        } else {
+            refetchAllDocs();
+        }
+        queryClient.invalidateQueries({ queryKey: ['document-folders'] });
+    };
+
+    const { data: casesData } = useCases({ limit: 100 });
     const deleteMutation = useDeleteDocument();
     const downloadMutation = useDownloadDocument();
+    const deleteFolderMutation = useDeleteFolder();
+    const moveDocumentMutation = useMoveDocumentToFolder();
+    const unlinkDocumentMutation = useUnlinkDocumentFromFolder();
+    const moveToRootMutation = useMoveDocumentToRoot();
 
     // OCR Processing Mutation
     const ocrMutation = useMutation({
         mutationFn: async (documentId: string) => {
-            // Show loading toast
             const toastId = toast.loading('جارٍ معالجة OCR... قد تستغرق العملية عدة ثوانٍ');
             try {
                 const result = await documentsApi.processOcr(documentId);
@@ -138,13 +184,51 @@ export function DocumentsPage() {
         },
     });
 
-    const documents = data?.data || [];
-    const totalPages = data?.meta?.totalPages || 1;
     const cases = casesData?.data || [];
-
     const selectionMode = selectedIds.size > 0;
 
-    // Search handler
+    // ========== Navigation Handlers ==========
+    const handleOpenFolder = (folder: DocumentFolder) => {
+        setCurrentFolderId(folder.id);
+        setPage(1);
+        setSelectedIds(new Set());
+    };
+
+    const handleGoToRoot = () => {
+        setCurrentFolderId(null);
+        setPage(1);
+        setSelectedIds(new Set());
+    };
+
+    const handleGoToBreadcrumb = (folderId: string) => {
+        setCurrentFolderId(folderId);
+        setPage(1);
+        setSelectedIds(new Set());
+    };
+
+    // ========== Folder Actions ==========
+    const handleEditFolder = (folder: DocumentFolder) => {
+        setEditingFolder(folder);
+        setShowCreateFolderDialog(true);
+    };
+
+    const handleDeleteFolder = (folder: DocumentFolder) => {
+        if (window.confirm(`هل أنت متأكد من حذف المجلد "${folder.name}" وجميع محتوياته؟`)) {
+            deleteFolderMutation.mutate(folder.id);
+        }
+    };
+
+    const handleCloseCreateFolderDialog = () => {
+        setShowCreateFolderDialog(false);
+        setEditingFolder(null);
+    };
+
+    // Drag & Drop handler (default: move)
+    const handleDropDocument = (folderId: string, documentId: string) => {
+        moveDocumentMutation.mutate({ folderId, documentId });
+    };
+
+    // ========== Document Actions ==========
     const handleSearch = () => {
         setFilters(prev => ({ ...prev, search: searchValue }));
         setPage(1);
@@ -179,7 +263,6 @@ export function DocumentsPage() {
         setPage(1);
     };
 
-    // Preview handling
     const handlePreview = useCallback((doc: Document) => {
         const index = documents.findIndex(d => d.id === doc.id);
         setCurrentDocIndex(index >= 0 ? index : 0);
@@ -282,6 +365,38 @@ export function DocumentsPage() {
         e.target.value = '';
     };
 
+    // Move to folder (document disappears from root)
+    const handleMoveToFolder = (doc: Document) => {
+        setFolderDialogMode('move');
+        setMoveToFolderDoc(doc);
+    };
+
+    // Copy to folder (document stays in root too)
+    const handleCopyToFolder = (doc: Document) => {
+        setFolderDialogMode('copy');
+        setMoveToFolderDoc(doc);
+    };
+
+    // Remove copy/shortcut from current folder
+    const handleRemoveCopy = (doc: Document) => {
+        if (!currentFolderId) return;
+        if (window.confirm('هل تريد حذف نسخة المستند من هذا المجلد؟ المستند الأصلي لن يتأثر.')) {
+            unlinkDocumentMutation.mutate({ folderId: currentFolderId, documentId: doc.id });
+        }
+    };
+
+    // Edit document
+    const handleEdit = (doc: Document) => {
+        setEditDoc(doc);
+    };
+
+    // Move document back to root/main documents
+    const handleMoveToRoot = (doc: Document) => {
+        if (window.confirm('هل تريد نقل المستند للمجلد الأساسي (الصفحة الرئيسية للمستندات)؟')) {
+            moveToRootMutation.mutate(doc.id);
+        }
+    };
+
     const currentDocument = documents[currentDocIndex] || null;
     const allSelected = documents.length > 0 && selectedIds.size === documents.length;
 
@@ -362,6 +477,16 @@ export function DocumentsPage() {
                             <List className="w-4 h-4" />
                         </button>
                     </div>
+
+                    {/* Create Folder */}
+                    <Button
+                        variant="outline"
+                        onClick={() => setShowCreateFolderDialog(true)}
+                    >
+                        <FolderPlus className="w-4 h-4 ml-2" />
+                        مجلد جديد
+                    </Button>
+
                     <Button onClick={() => setShowUploadDialog(true)}>
                         <Plus className="w-4 h-4 ml-2" />
                         رفع مستند
@@ -369,179 +494,194 @@ export function DocumentsPage() {
                 </div>
             </div>
 
-            {/* Search and Filters */}
-            <div className="bg-card rounded-xl border p-4 space-y-4">
-                {/* Main Search Bar */}
-                <div className="flex gap-3">
-                    <div className="flex-1 relative">
-                        <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <input
-                            type="text"
-                            value={searchValue}
-                            onChange={(e) => setSearchValue(e.target.value)}
-                            onKeyPress={handleKeyPress}
-                            placeholder="ابحث في المستندات (يشمل محتوى OCR)..."
-                            className="w-full pr-10 pl-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background"
-                        />
-                    </div>
+            {/* Breadcrumb Navigation */}
+            {isInFolder && (
+                <div className="bg-card rounded-xl border p-3 flex items-center gap-2 text-sm overflow-x-auto">
                     <button
-                        onClick={handleSearch}
-                        className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                        onClick={handleGoToRoot}
+                        className="flex items-center gap-1 text-primary hover:underline whitespace-nowrap font-medium"
                     >
-                        بحث
+                        <Home className="w-4 h-4" />
+                        المستندات
                     </button>
-                    <button
-                        onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                        className={cn(
-                            "flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors",
-                            showAdvancedFilters ? "bg-primary text-primary-foreground" : "hover:bg-muted"
-                        )}
-                    >
-                        <Filter className="h-4 w-4" />
-                        فلاتر
-                    </button>
+                    {breadcrumb.map((item, index) => (
+                        <span key={item.id} className="flex items-center gap-1">
+                            <ChevronLeft className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                            {index === breadcrumb.length - 1 ? (
+                                <span className="font-medium whitespace-nowrap">{item.name}</span>
+                            ) : (
+                                <button
+                                    onClick={() => handleGoToBreadcrumb(item.id)}
+                                    className="text-primary hover:underline whitespace-nowrap"
+                                >
+                                    {item.name}
+                                </button>
+                            )}
+                        </span>
+                    ))}
                 </div>
+            )}
 
-                {/* Advanced Filters */}
-                {showAdvancedFilters && (
-                    <div className="p-4 bg-muted/30 rounded-lg border space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            {/* Document Type */}
-                            <div>
-                                <label className="block text-sm font-medium mb-2">نوع المستند</label>
-                                <select
-                                    value={filters.documentType}
-                                    onChange={(e) => { setFilters(prev => ({ ...prev, documentType: e.target.value })); setPage(1); }}
-                                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background"
-                                >
-                                    {documentTypes.map((type) => (
-                                        <option key={type.value} value={type.value}>
-                                            {type.label}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            {/* Case Filter */}
-                            <div>
-                                <label className="block text-sm font-medium mb-2">القضية</label>
-                                <select
-                                    value={filters.caseId}
-                                    onChange={(e) => { setFilters(prev => ({ ...prev, caseId: e.target.value })); setPage(1); }}
-                                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background"
-                                >
-                                    <option value="">جميع القضايا</option>
-                                    {cases.map((c: any) => (
-                                        <option key={c.id} value={c.id}>
-                                            {c.caseNumber} - {c.title}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            {/* From Date */}
-                            <div>
-                                <label className="block text-sm font-medium mb-2">من تاريخ</label>
-                                <input
-                                    type="date"
-                                    value={filters.fromDate}
-                                    onChange={(e) => { setFilters(prev => ({ ...prev, fromDate: e.target.value })); setPage(1); }}
-                                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background"
-                                />
-                            </div>
-
-                            {/* To Date */}
-                            <div>
-                                <label className="block text-sm font-medium mb-2">إلى تاريخ</label>
-                                <input
-                                    type="date"
-                                    value={filters.toDate}
-                                    onChange={(e) => { setFilters(prev => ({ ...prev, toDate: e.target.value })); setPage(1); }}
-                                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background"
-                                />
-                            </div>
-                        </div>
-
-                        {/* Only Latest Checkbox */}
-                        <div className="flex items-center gap-2">
+            {/* Search and Filters (only show when not in a folder or always) */}
+            {!isInFolder && (
+                <div className="bg-card rounded-xl border p-4 space-y-4">
+                    {/* Main Search Bar */}
+                    <div className="flex gap-3">
+                        <div className="flex-1 relative">
+                            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <input
-                                type="checkbox"
-                                id="onlyLatest"
-                                checked={filters.onlyLatest}
-                                onChange={(e) => { setFilters(prev => ({ ...prev, onlyLatest: e.target.checked })); setPage(1); }}
-                                className="rounded border-gray-300"
+                                type="text"
+                                value={searchValue}
+                                onChange={(e) => setSearchValue(e.target.value)}
+                                onKeyPress={handleKeyPress}
+                                placeholder="ابحث في المستندات (يشمل محتوى OCR)..."
+                                className="w-full pr-10 pl-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background"
                             />
-                            <label htmlFor="onlyLatest" className="text-sm">
-                                عرض الإصدارات الأخيرة فقط
-                            </label>
                         </div>
-
-                        {/* Clear Filters */}
-                        {hasActiveFilters && (
-                            <button
-                                onClick={handleReset}
-                                className="flex items-center gap-2 text-sm text-destructive hover:underline"
-                            >
-                                <X className="h-4 w-4" />
-                                مسح الفلاتر
-                            </button>
-                        )}
+                        <button
+                            onClick={handleSearch}
+                            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                        >
+                            بحث
+                        </button>
+                        <button
+                            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                            className={cn(
+                                "flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors",
+                                showAdvancedFilters ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                            )}
+                        >
+                            <Filter className="h-4 w-4" />
+                            فلاتر
+                        </button>
                     </div>
-                )}
 
-                {/* Active Filters Display */}
-                {hasActiveFilters && (
-                    <div className="flex flex-wrap gap-2">
-                        {filters.search && (
-                            <span className="flex items-center gap-1 px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
-                                <Search className="h-3 w-3" />
-                                بحث: {filters.search}
-                                <button onClick={() => { setSearchValue(''); setFilters(prev => ({ ...prev, search: '' })); }}>
-                                    <X className="h-3 w-3" />
+                    {/* Advanced Filters */}
+                    {showAdvancedFilters && (
+                        <div className="p-4 bg-muted/30 rounded-lg border space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">نوع المستند</label>
+                                    <select
+                                        value={filters.documentType}
+                                        onChange={(e) => { setFilters(prev => ({ ...prev, documentType: e.target.value })); setPage(1); }}
+                                        className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background"
+                                    >
+                                        {documentTypes.map((type) => (
+                                            <option key={type.value} value={type.value}>{type.label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">القضية</label>
+                                    <select
+                                        value={filters.caseId}
+                                        onChange={(e) => { setFilters(prev => ({ ...prev, caseId: e.target.value })); setPage(1); }}
+                                        className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background"
+                                    >
+                                        <option value="">جميع القضايا</option>
+                                        {cases.map((c: any) => (
+                                            <option key={c.id} value={c.id}>{c.caseNumber} - {c.title}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">من تاريخ</label>
+                                    <input
+                                        type="date"
+                                        value={filters.fromDate}
+                                        onChange={(e) => { setFilters(prev => ({ ...prev, fromDate: e.target.value })); setPage(1); }}
+                                        className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">إلى تاريخ</label>
+                                    <input
+                                        type="date"
+                                        value={filters.toDate}
+                                        onChange={(e) => { setFilters(prev => ({ ...prev, toDate: e.target.value })); setPage(1); }}
+                                        className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background"
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="checkbox"
+                                    id="onlyLatest"
+                                    checked={filters.onlyLatest}
+                                    onChange={(e) => { setFilters(prev => ({ ...prev, onlyLatest: e.target.checked })); setPage(1); }}
+                                    className="rounded border-gray-300"
+                                />
+                                <label htmlFor="onlyLatest" className="text-sm">
+                                    عرض الإصدارات الأخيرة فقط
+                                </label>
+                            </div>
+                            {hasActiveFilters && (
+                                <button
+                                    onClick={handleReset}
+                                    className="flex items-center gap-2 text-sm text-destructive hover:underline"
+                                >
+                                    <X className="h-4 w-4" />
+                                    مسح الفلاتر
                                 </button>
-                            </span>
-                        )}
-                        {filters.documentType && (
-                            <span className="flex items-center gap-1 px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
-                                <Tag className="h-3 w-3" />
-                                النوع: {documentTypes.find(t => t.value === filters.documentType)?.label}
-                                <button onClick={() => setFilters(prev => ({ ...prev, documentType: '' }))}>
-                                    <X className="h-3 w-3" />
-                                </button>
-                            </span>
-                        )}
-                        {filters.caseId && (
-                            <span className="flex items-center gap-1 px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
-                                القضية: {cases.find((c: any) => c.id === filters.caseId)?.caseNumber}
-                                <button onClick={() => setFilters(prev => ({ ...prev, caseId: '' }))}>
-                                    <X className="h-3 w-3" />
-                                </button>
-                            </span>
-                        )}
-                        {filters.fromDate && (
-                            <span className="flex items-center gap-1 px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
-                                <Calendar className="h-3 w-3" />
-                                من: {filters.fromDate}
-                                <button onClick={() => setFilters(prev => ({ ...prev, fromDate: '' }))}>
-                                    <X className="h-3 w-3" />
-                                </button>
-                            </span>
-                        )}
-                        {filters.toDate && (
-                            <span className="flex items-center gap-1 px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
-                                <Calendar className="h-3 w-3" />
-                                إلى: {filters.toDate}
-                                <button onClick={() => setFilters(prev => ({ ...prev, toDate: '' }))}>
-                                    <X className="h-3 w-3" />
-                                </button>
-                            </span>
-                        )}
-                    </div>
-                )}
-            </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Active Filters Display */}
+                    {hasActiveFilters && (
+                        <div className="flex flex-wrap gap-2">
+                            {filters.search && (
+                                <span className="flex items-center gap-1 px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
+                                    <Search className="h-3 w-3" />
+                                    بحث: {filters.search}
+                                    <button onClick={() => { setSearchValue(''); setFilters(prev => ({ ...prev, search: '' })); }}>
+                                        <X className="h-3 w-3" />
+                                    </button>
+                                </span>
+                            )}
+                            {filters.documentType && (
+                                <span className="flex items-center gap-1 px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
+                                    <Tag className="h-3 w-3" />
+                                    النوع: {documentTypes.find(t => t.value === filters.documentType)?.label}
+                                    <button onClick={() => setFilters(prev => ({ ...prev, documentType: '' }))}>
+                                        <X className="h-3 w-3" />
+                                    </button>
+                                </span>
+                            )}
+                            {filters.caseId && (
+                                <span className="flex items-center gap-1 px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
+                                    القضية: {cases.find((c: any) => c.id === filters.caseId)?.caseNumber}
+                                    <button onClick={() => setFilters(prev => ({ ...prev, caseId: '' }))}>
+                                        <X className="h-3 w-3" />
+                                    </button>
+                                </span>
+                            )}
+                            {filters.fromDate && (
+                                <span className="flex items-center gap-1 px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
+                                    <Calendar className="h-3 w-3" />
+                                    من: {filters.fromDate}
+                                    <button onClick={() => setFilters(prev => ({ ...prev, fromDate: '' }))}>
+                                        <X className="h-3 w-3" />
+                                    </button>
+                                </span>
+                            )}
+                            {filters.toDate && (
+                                <span className="flex items-center gap-1 px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
+                                    <Calendar className="h-3 w-3" />
+                                    إلى: {filters.toDate}
+                                    <button onClick={() => setFilters(prev => ({ ...prev, toDate: '' }))}>
+                                        <X className="h-3 w-3" />
+                                    </button>
+                                </span>
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Loading State */}
-            {isLoading && (
+            {(isLoading || foldersLoading) && (
                 <div className={cn(
                     'gap-4',
                     viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'space-y-2'
@@ -568,68 +708,123 @@ export function DocumentsPage() {
                 </div>
             )}
 
-            {/* Empty State */}
-            {!isLoading && !error && documents.length === 0 && (
-                <div className="bg-card rounded-xl border p-12 text-center">
-                    <FileText className="w-16 h-16 text-muted-foreground/50 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">لا توجد مستندات</h3>
-                    <p className="text-muted-foreground mb-4">
-                        لم يتم العثور على مستندات مطابقة
-                    </p>
-                    <Button onClick={() => setShowUploadDialog(true)}>
-                        <Plus className="w-4 h-4 ml-2" />
-                        رفع مستند جديد
-                    </Button>
-                </div>
-            )}
-
-            {/* Documents */}
-            {!isLoading && !error && documents.length > 0 && (
+            {/* Content (Folders + Documents) */}
+            {!isLoading && !foldersLoading && !error && (
                 <>
-                    <div className={cn(
-                        'gap-4',
-                        viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'space-y-2'
-                    )}>
-                        {documents.map((doc) => (
-                            <DocumentCard
-                                key={doc.id}
-                                document={doc}
-                                view={viewMode}
-                                onPreview={handlePreview}
-                                onDownload={handleDownload}
-                                onDelete={handleDelete}
-                                onVersionHistory={handleVersionHistory}
-                                onProcessOcr={handleProcessOcr}
-                                onUploadNewVersion={handleUploadNewVersion}
-                                isSelected={selectedIds.has(doc.id)}
-                                onSelect={handleSelect}
-                                selectionMode={selectionMode}
-                            />
-                        ))}
-                    </div>
+                    {/* Folders Section */}
+                    {folders.length > 0 && (
+                        <div>
+                            <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
+                                <FolderPlus className="w-4 h-4" />
+                                المجلدات ({folders.length})
+                            </h3>
+                            <div className={cn(
+                                'gap-3',
+                                viewMode === 'grid'
+                                    ? 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6'
+                                    : 'space-y-2'
+                            )}>
+                                {folders.map((folder) => (
+                                    <FolderCard
+                                        key={folder.id}
+                                        folder={folder}
+                                        onOpen={handleOpenFolder}
+                                        onEdit={handleEditFolder}
+                                        onDelete={handleDeleteFolder}
+                                        onDropDocument={handleDropDocument}
+                                        view={viewMode}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
-                    {/* Pagination */}
-                    {totalPages > 1 && (
-                        <div className="flex items-center justify-center gap-2 pt-4">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                                disabled={page === 1}
-                            >
-                                السابق
-                            </Button>
-                            <span className="text-sm text-muted-foreground px-4">
-                                صفحة {page} من {totalPages}
-                            </span>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                                disabled={page === totalPages}
-                            >
-                                التالي
-                            </Button>
+                    {/* Documents Section */}
+                    {documents.length > 0 && (
+                        <div>
+                            {folders.length > 0 && (
+                                <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
+                                    <FileText className="w-4 h-4" />
+                                    المستندات ({isInFolder ? folderDocsData?.meta?.total || documents.length : allDocsData?.meta?.total || documents.length})
+                                </h3>
+                            )}
+                            <div className={cn(
+                                'gap-4',
+                                viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'space-y-2'
+                            )}>
+                                {documents.map((doc) => (
+                                    <DocumentCard
+                                        key={doc.id}
+                                        document={doc}
+                                        view={viewMode}
+                                        onPreview={handlePreview}
+                                        onDownload={handleDownload}
+                                        onDelete={handleDelete}
+                                        onVersionHistory={handleVersionHistory}
+                                        onProcessOcr={handleProcessOcr}
+                                        onUploadNewVersion={handleUploadNewVersion}
+                                        onEdit={handleEdit}
+                                        onMoveToFolder={handleMoveToFolder}
+                                        onCopyToFolder={handleCopyToFolder}
+                                        onRemoveCopy={isInFolder ? handleRemoveCopy : undefined}
+                                        onMoveToRoot={isInFolder ? handleMoveToRoot : undefined}
+                                        isSelected={selectedIds.has(doc.id)}
+                                        onSelect={handleSelect}
+                                        selectionMode={selectionMode}
+                                    />
+                                ))}
+                            </div>
+
+                            {/* Pagination */}
+                            {totalPages > 1 && (
+                                <div className="flex items-center justify-center gap-2 pt-4">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                                        disabled={page === 1}
+                                    >
+                                        السابق
+                                    </Button>
+                                    <span className="text-sm text-muted-foreground px-4">
+                                        صفحة {page} من {totalPages}
+                                    </span>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                                        disabled={page === totalPages}
+                                    >
+                                        التالي
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Empty State */}
+                    {folders.length === 0 && documents.length === 0 && (
+                        <div className="bg-card rounded-xl border p-12 text-center">
+                            <FileText className="w-16 h-16 text-muted-foreground/50 mx-auto mb-4" />
+                            <h3 className="text-lg font-semibold mb-2">
+                                {isInFolder ? 'هذا المجلد فارغ' : 'لا توجد مستندات'}
+                            </h3>
+                            <p className="text-muted-foreground mb-4">
+                                {isInFolder
+                                    ? 'يمكنك إضافة مستندات أو إنشاء مجلدات فرعية'
+                                    : 'لم يتم العثور على مستندات مطابقة'
+                                }
+                            </p>
+                            <div className="flex items-center justify-center gap-3">
+                                <Button variant="outline" onClick={() => setShowCreateFolderDialog(true)}>
+                                    <FolderPlus className="w-4 h-4 ml-2" />
+                                    مجلد جديد
+                                </Button>
+                                <Button onClick={() => setShowUploadDialog(true)}>
+                                    <Plus className="w-4 h-4 ml-2" />
+                                    رفع مستند
+                                </Button>
+                            </div>
                         </div>
                     )}
                 </>
@@ -640,6 +835,33 @@ export function DocumentsPage() {
                 isOpen={showUploadDialog}
                 onClose={() => setShowUploadDialog(false)}
                 defaultCaseId={urlCaseId}
+                defaultFolderId={currentFolderId || undefined}
+            />
+
+            {/* Create/Edit Folder Dialog */}
+            <CreateFolderDialog
+                isOpen={showCreateFolderDialog}
+                onClose={handleCloseCreateFolderDialog}
+                parentId={currentFolderId}
+                editFolder={editingFolder}
+            />
+
+            {/* Move to Folder Dialog */}
+            {moveToFolderDoc && (
+                <MoveToFolderDialog
+                    isOpen={!!moveToFolderDoc}
+                    onClose={() => setMoveToFolderDoc(null)}
+                    documentId={moveToFolderDoc.id}
+                    documentTitle={moveToFolderDoc.title}
+                    mode={folderDialogMode}
+                />
+            )}
+
+            {/* Edit Document Dialog */}
+            <EditDocumentDialog
+                isOpen={!!editDoc}
+                onClose={() => setEditDoc(null)}
+                document={editDoc}
             />
 
             {/* Version History Dialog */}

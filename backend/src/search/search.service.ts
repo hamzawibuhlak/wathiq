@@ -198,4 +198,88 @@ export class SearchService {
 
         return { data: suggestions };
     }
+
+    /**
+     * Search mentionables for @mention in comments (users, cases, clients, hearings, documents, invoices)
+     */
+    async searchMentionables(q: string, tenantId: string) {
+        const search = q?.trim() || '';
+        const limit = 5;
+        const results: { type: string; id: string; name: string }[] = [];
+
+        const [users, cases, clients, hearings, documents, invoices] = await Promise.all([
+            this.prisma.user.findMany({
+                where: {
+                    tenantId,
+                    ...(search ? { name: { contains: search, mode: 'insensitive' } } : {}),
+                },
+                select: { id: true, name: true },
+                take: limit,
+            }),
+            this.prisma.case.findMany({
+                where: {
+                    tenantId,
+                    ...(search ? {
+                        OR: [
+                            { title: { contains: search, mode: 'insensitive' } },
+                            { caseNumber: { contains: search, mode: 'insensitive' } },
+                        ],
+                    } : {}),
+                },
+                select: { id: true, title: true, caseNumber: true },
+                take: limit,
+            }),
+            this.prisma.client.findMany({
+                where: {
+                    tenantId,
+                    ...(search ? { name: { contains: search, mode: 'insensitive' } } : {}),
+                },
+                select: { id: true, name: true },
+                take: limit,
+            }),
+            this.prisma.hearing.findMany({
+                where: {
+                    case: { tenantId },
+                    ...(search ? {
+                        OR: [
+                            { courtName: { contains: search, mode: 'insensitive' } },
+                            { notes: { contains: search, mode: 'insensitive' } },
+                        ],
+                    } : {}),
+                },
+                select: { id: true, courtName: true, hearingDate: true },
+                take: limit,
+            }).catch(() => [] as any[]),
+            this.prisma.document.findMany({
+                where: {
+                    tenantId,
+                    ...(search ? { title: { contains: search, mode: 'insensitive' } } : {}),
+                },
+                select: { id: true, title: true },
+                take: limit,
+            }).catch(() => [] as any[]),
+            this.prisma.invoice.findMany({
+                where: {
+                    tenantId,
+                    ...(search ? { invoiceNumber: { contains: search, mode: 'insensitive' } } : {}),
+                },
+                select: { id: true, invoiceNumber: true },
+                take: limit,
+            }).catch(() => [] as any[]),
+        ]);
+
+        users.forEach((u: any) => results.push({ type: 'user', id: u.id, name: u.name }));
+        cases.forEach((c: any) => results.push({ type: 'case', id: c.id, name: `${c.caseNumber} - ${c.title}` }));
+        clients.forEach((c: any) => results.push({ type: 'client', id: c.id, name: c.name }));
+        hearings.forEach((h: any) => results.push({
+            type: 'hearing',
+            id: h.id,
+            name: h.courtName || `جلسة ${new Date(h.hearingDate).toLocaleDateString('ar')}`,
+        }));
+        documents.forEach((d: any) => results.push({ type: 'document', id: d.id, name: d.title }));
+        invoices.forEach((i: any) => results.push({ type: 'invoice', id: i.id, name: `فاتورة ${i.invoiceNumber}` }));
+
+        return { data: results };
+    }
 }
+

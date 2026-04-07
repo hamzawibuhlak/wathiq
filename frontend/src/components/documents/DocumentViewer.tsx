@@ -11,7 +11,8 @@ import {
     ZoomOut,
     FileText,
     Image as ImageIcon,
-    File
+    File,
+    ExternalLink,
 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import type { Document } from '@/types';
@@ -46,6 +47,12 @@ export function DocumentViewer({
     const hasMultiple = documents.length > 1;
     const canGoPrevious = currentIndex > 0;
     const canGoNext = currentIndex < documents.length - 1;
+
+    // Build preview URL with token for authenticated access
+    const getPreviewUrlWithToken = (docId: string) => {
+        const baseUrl = import.meta.env.VITE_API_URL || '/api';
+        return `${baseUrl}/documents/${docId}/preview`;
+    };
 
     // Keyboard shortcuts
     const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -97,12 +104,17 @@ export function DocumentViewer({
     }, [isOpen]);
 
     const handlePrint = () => {
-        if (isPdf || isImage) {
-            const printWindow = window.open(
-                `${import.meta.env.VITE_API_URL || '/api'}/documents/${doc?.id}/preview`,
-                '_blank'
-            );
-            printWindow?.print();
+        if (doc && (isPdf || isImage)) {
+            const printWindow = window.open(getPreviewUrlWithToken(doc.id), '_blank');
+            if (printWindow) {
+                printWindow.addEventListener('load', () => printWindow.print());
+            }
+        }
+    };
+
+    const handleOpenInNewTab = () => {
+        if (doc) {
+            window.open(getPreviewUrlWithToken(doc.id), '_blank');
         }
     };
 
@@ -185,6 +197,18 @@ export function DocumentViewer({
                             <Button
                                 variant="ghost"
                                 size="sm"
+                                onClick={handleOpenInNewTab}
+                                title="فتح في نافذة جديدة"
+                            >
+                                <ExternalLink className="w-4 h-4" />
+                                <span className="mr-1 hidden sm:inline">فتح</span>
+                            </Button>
+                        )}
+
+                        {(isPdf || isImage) && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
                                 onClick={handlePrint}
                                 title="طباعة"
                             >
@@ -225,18 +249,39 @@ export function DocumentViewer({
                             style={{ cursor: imageZoom > 1 ? 'grab' : 'default' }}
                         >
                             <img
-                                src={`${import.meta.env.VITE_API_URL || '/api'}/documents/${doc.id}/preview`}
+                                src={getPreviewUrlWithToken(doc.id)}
                                 alt={doc.title}
                                 className="max-w-full max-h-full object-contain rounded-lg shadow-lg transition-transform"
                                 style={{ transform: `scale(${imageZoom})` }}
                             />
                         </div>
                     ) : isPdf ? (
-                        <iframe
-                            src={`${import.meta.env.VITE_API_URL || '/api'}/documents/${doc.id}/preview`}
+                        <object
+                            data={getPreviewUrlWithToken(doc.id)}
+                            type="application/pdf"
                             className="w-full h-full rounded-lg border bg-white"
-                            title={doc.title}
-                        />
+                        >
+                            {/* Fallback if object tag doesn't work */}
+                            <div className="flex flex-col items-center justify-center text-center p-8 h-full">
+                                <FileText className="w-24 h-24 text-red-500 mb-4" />
+                                <p className="text-lg font-medium mb-2">
+                                    {doc.title}
+                                </p>
+                                <p className="text-sm text-muted-foreground mb-6">
+                                    لا يمكن عرض ملف PDF مباشرة. يمكنك فتحه في نافذة جديدة أو تحميله.
+                                </p>
+                                <div className="flex items-center gap-3">
+                                    <Button onClick={handleOpenInNewTab}>
+                                        <ExternalLink className="w-4 h-4 ml-2" />
+                                        فتح في نافذة جديدة
+                                    </Button>
+                                    <Button variant="outline" onClick={() => onDownload?.(doc)}>
+                                        <Download className="w-4 h-4 ml-2" />
+                                        تحميل
+                                    </Button>
+                                </div>
+                            </div>
+                        </object>
                     ) : (
                         <div className="flex flex-col items-center justify-center text-center p-8">
                             {getFileIcon()}

@@ -286,11 +286,11 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
             {/* Logo */}
             <div className="h-16 flex items-center justify-between px-4 border-b bg-gradient-to-l from-primary/5 to-transparent">
                 <Link to={`${slugPrefix}/dashboard`} className="flex items-center gap-3">
-                    <div className="w-9 h-9 bg-gradient-to-br from-primary to-primary/80 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm">
+                    <div className="w-9 h-9 bg-gradient-to-br from-primary to-[hsl(var(--gold))] rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm">
                         <Scale className="w-5 h-5 text-primary-foreground" />
                     </div>
                     {!isCollapsed && (
-                        <span className="text-xl font-bold bg-gradient-to-l from-primary to-primary/70 bg-clip-text text-transparent">
+                        <span className="text-xl font-bold bg-gradient-to-l from-primary to-[hsl(var(--gold))] bg-clip-text text-transparent">
                             وثيق
                         </span>
                     )}

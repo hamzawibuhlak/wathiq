@@ -96,7 +96,9 @@ export function CaseForm({ initialData, onSubmit, isLoading, clients = [], lawye
             assignedToId: initialData?.assignedToId || (isLawyer ? user?.id : ''),
             courtName: initialData?.courtName || '',
             opposingParty: initialData?.opposingParty || '',
-            filingDate: initialData?.filingDate ? initialData.filingDate.split('T')[0] : '',
+            filingDate: initialData?.filingDate
+                ? initialData.filingDate.split('T')[0]
+                : new Date().toISOString().split('T')[0],  // اليوم كقيمة افتراضية
         },
     });
 

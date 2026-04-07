@@ -4,6 +4,19 @@ import type { ApiResponse, PaginatedResponse } from '@/types';
 export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'REVIEW' | 'BLOCKED' | 'COMPLETED' | 'CANCELLED';
 export type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
 
+export interface TaskAssignee {
+    id: string;
+    taskId: string;
+    userId: string;
+    user: { id: string; name: string; avatar?: string };
+}
+
+export interface MentionItem {
+    type: 'user' | 'case' | 'client' | 'hearing' | 'document' | 'invoice' | 'comment';
+    id: string;
+    name: string;
+}
+
 export interface Task {
     id: string;
     title: string;
@@ -11,6 +24,7 @@ export interface Task {
     status: TaskStatus;
     priority: TaskPriority;
     dueDate?: string;
+    dueTime?: string; // "HH:mm" optional time
     caseId?: string;
     hearingId?: string;
     assignedToId: string;
@@ -22,6 +36,7 @@ export interface Task {
     createdAt: string;
     updatedAt: string;
     assignedTo?: { id: string; name: string; avatar?: string };
+    assignees?: TaskAssignee[]; // multi-assignee list
     createdBy?: { id: string; name: string };
     case?: { id: string; title: string; caseNumber: string };
     hearing?: { id: string; hearingDate: string; courtName?: string };
@@ -34,6 +49,7 @@ export interface Task {
 export interface TaskComment {
     id: string;
     content: string;
+    mentions?: MentionItem[];
     taskId: string;
     userId: string;
     createdAt: string;
@@ -62,9 +78,11 @@ export interface CreateTaskData {
     status?: TaskStatus;
     priority?: TaskPriority;
     dueDate?: string;
+    dueTime?: string;
     caseId?: string;
     hearingId?: string;
     assignedToId: string;
+    assignedToIds?: string[]; // additional assignees
     parentId?: string;
     tags?: string[];
 }
@@ -103,8 +121,11 @@ export const tasksApi = {
     delete: (id: string) =>
         api.delete<ApiResponse<void>>(`/tasks/${id}`).then((res) => res.data),
 
-    addComment: (taskId: string, content: string) =>
-        api.post<ApiResponse<TaskComment>>(`/tasks/${taskId}/comments`, { content }).then((res) => res.data),
+    removeAssignee: (taskId: string, userId: string) =>
+        api.delete<ApiResponse<void>>(`/tasks/${taskId}/assignees/${userId}`).then((res) => res.data),
+
+    addComment: (taskId: string, content: string, mentions?: MentionItem[]) =>
+        api.post<ApiResponse<TaskComment>>(`/tasks/${taskId}/comments`, { content, mentions }).then((res) => res.data),
 
     deleteComment: (commentId: string) =>
         api.delete<ApiResponse<void>>(`/tasks/comments/${commentId}`).then((res) => res.data),
@@ -114,6 +135,10 @@ export const tasksApi = {
 
     bulkDelete: (ids: string[]) =>
         api.delete<ApiResponse<{ count: number }>>('/tasks/bulk/delete', { data: { ids } }).then((res) => res.data),
+
+    // Unified search for @mentions
+    searchMentionables: (q: string) =>
+        api.get<ApiResponse<MentionItem[]>>('/search/mentionables', { params: { q } }).then((res) => res.data),
 };
 
 export default tasksApi;

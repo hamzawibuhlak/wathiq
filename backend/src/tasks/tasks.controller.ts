@@ -150,6 +150,18 @@ export class TasksController {
         return this.tasksService.removeComment(commentId, tenantId, userId, userRole);
     }
 
+    @Delete(':id/assignees/:userId')
+    @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.LAWYER, UserRole.SECRETARY)
+    @ApiOperation({ summary: 'إزالة شخص من المهمة' })
+    @ApiResponse({ status: 200, description: 'تم إزالة الشخص من المهمة بنجاح' })
+    async removeAssignee(
+        @Param('id', ParseUUIDPipe) id: string,
+        @Param('userId', ParseUUIDPipe) userId: string,
+        @TenantId() tenantId: string,
+    ) {
+        return this.tasksService.removeAssignee(id, userId, tenantId);
+    }
+
     @Patch('bulk/status')
     @Roles(UserRole.OWNER, UserRole.ADMIN)
     @ApiOperation({ summary: 'تحديث حالة عدة مهام' })

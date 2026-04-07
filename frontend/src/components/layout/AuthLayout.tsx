@@ -1,5 +1,7 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { Scale } from 'lucide-react';
+import { AnimatePresence } from 'framer-motion';
+import { PageTransition } from '@/components/common/PageTransition';
 
 export function AuthLayout() {
     const location = useLocation();
@@ -43,13 +45,17 @@ export function AuthLayout() {
                     </div>
 
                     {/* Form content from pages */}
-                    <Outlet />
+                    <AnimatePresence mode="wait">
+                        <PageTransition key={location.pathname}>
+                            <Outlet />
+                        </PageTransition>
+                    </AnimatePresence>
                 </div>
             </div>
 
             {/* Right side - Branding */}
             <div className="hidden lg:block relative w-0 flex-1">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary to-primary/70">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary/90 to-[hsl(var(--gold))]">
                     <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-20" />
                     <div className="relative h-full flex flex-col items-center justify-center p-12 text-white">
                         <Scale className="w-20 h-20 mb-8" />

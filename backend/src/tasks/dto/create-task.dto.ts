@@ -22,10 +22,15 @@ export class CreateTaskDto {
     @IsEnum(TaskPriority)
     priority?: TaskPriority;
 
-    @ApiPropertyOptional({ description: 'تاريخ الاستحقاق' })
+    @ApiPropertyOptional({ description: 'تاريخ التسليم' })
     @IsOptional()
     @IsDateString()
     dueDate?: string;
+
+    @ApiPropertyOptional({ description: 'وقت التسليم (HH:mm)' })
+    @IsOptional()
+    @IsString()
+    dueTime?: string;
 
     @ApiPropertyOptional({ description: 'معرف القضية المرتبطة' })
     @IsOptional()
@@ -37,9 +42,15 @@ export class CreateTaskDto {
     @IsUUID()
     hearingId?: string;
 
-    @ApiProperty({ description: 'معرف المستخدم المعين للمهمة' })
+    @ApiProperty({ description: 'معرف المستخدم الأساسي المعين للمهمة' })
     @IsUUID()
     assignedToId: string;
+
+    @ApiPropertyOptional({ description: 'معرفات المستخدمين الإضافيين المعينين', type: [String] })
+    @IsOptional()
+    @IsArray()
+    @IsUUID('4', { each: true })
+    assignedToIds?: string[];
 
     @ApiPropertyOptional({ description: 'معرف المهمة الأب (للمهام الفرعية)' })
     @IsOptional()

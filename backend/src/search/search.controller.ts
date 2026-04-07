@@ -42,4 +42,15 @@ export class SearchController {
     ) {
         return this.searchService.getSearchSuggestions(query, tenantId);
     }
+
+    @Get('mentionables')
+    @ApiOperation({ summary: 'البحث عن عناصر قابلة للمنشن (@mention)' })
+    @ApiQuery({ name: 'q', required: false, description: 'نص البحث' })
+    @ApiResponse({ status: 200, description: 'قائمة العناصر القابلة للمنشن' })
+    async searchMentionables(
+        @Query('q') q: string = '',
+        @TenantId() tenantId: string,
+    ) {
+        return this.searchService.searchMentionables(q, tenantId);
+    }
 }

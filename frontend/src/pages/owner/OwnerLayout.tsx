@@ -3,7 +3,7 @@ import { Link, Outlet, useLocation, useParams } from 'react-router-dom';
 import {
     Building2, Users, Link2, GitBranch, CreditCard,
     LayoutDashboard, Headset, Ticket, Scale, ArrowLeft,
-    ChevronDown, Settings, Mail, Shield,
+    ChevronDown, Settings, Mail,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth.store';
 
@@ -38,8 +38,7 @@ function getNavGroups(slug: string): NavGroup[] {
             icon: Settings,
             items: [
                 { href: `${s}/owner/company`, label: 'ملف الشركة', icon: Building2 },
-                { href: `${s}/owner/users`, label: 'المستخدمون', icon: Users },
-                { href: `${s}/owner/roles`, label: 'الأدوار والصلاحيات', icon: Shield },
+                { href: `${s}/owner/roles-users`, label: 'الأدوار والمستخدمين', icon: Users },
                 { href: `${s}/owner/integrations`, label: 'الربط والتكاملات', icon: Link2 },
                 { href: `${s}/owner/workflows`, label: 'سير العمل', icon: GitBranch },
                 { href: `${s}/owner/billing`, label: 'الاشتراكات والفوترة', icon: CreditCard },

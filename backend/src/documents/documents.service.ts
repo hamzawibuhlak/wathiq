@@ -57,7 +57,7 @@ export class DocumentsService {
             andConditions.push({
                 OR: [
                     { caseId },
-                    { caseIds: { has: caseId } },
+                    { caseIds: { has: caseId } } as any,
                 ],
             });
         }
@@ -75,6 +75,7 @@ export class DocumentsService {
 
         const where: Prisma.DocumentWhereInput = {
             tenantId,
+            folderId: null, // Only show documents NOT moved to a folder
             ...(onlyLatest && { isLatest: true }),
             ...(documentType && { documentType: documentType as DocumentType }),
             ...(tags && tags.length > 0 && { tags: { hasSome: tags } }),
@@ -317,7 +318,7 @@ export class DocumentsService {
                     uploadedById: userId,
                     code: docCode.code,
                     codeNumber: docCode.codeNumber,
-                },
+                } as any,
                 include: {
                     case: { select: { id: true, caseNumber: true, title: true } },
                     uploadedBy: { select: { id: true, name: true } },

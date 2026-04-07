@@ -78,8 +78,9 @@ export class ClientsController {
     async create(
         @Body() createClientDto: CreateClientDto,
         @TenantId() tenantId: string,
+        @CurrentUser('id') userId: string,
     ) {
-        return this.clientsService.create(createClientDto, tenantId);
+        return this.clientsService.create(createClientDto, tenantId, userId);
     }
 
     @Patch(':id')

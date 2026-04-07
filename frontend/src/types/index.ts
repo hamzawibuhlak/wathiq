@@ -260,6 +260,38 @@ export interface Document {
 }
 
 // =====================
+// Document Folder Types
+// =====================
+
+export interface DocumentFolder {
+    id: string;
+    name: string;
+    color: string | null;
+    icon: string | null;
+    parentId: string | null;
+    clientId: string | null;
+    tenantId: string;
+    createdById: string | null;
+    createdAt: string;
+    updatedAt: string;
+    children?: DocumentFolder[];
+    _count?: {
+        children: number;
+        documentLinks: number;
+    };
+}
+
+export interface DocumentFolderLink {
+    id: string;
+    documentId: string;
+    folderId: string;
+    tenantId: string;
+    createdAt: string;
+    document?: Document;
+    folder?: DocumentFolder;
+}
+
+// =====================
 // Invoice Types
 // =====================
 

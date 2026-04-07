@@ -124,10 +124,10 @@ const LegalAISearchPage = lazy(() => import('@/pages/legal-library/LegalAISearch
 const OwnerLayout = lazy(() => import('@/pages/owner/OwnerLayout'));
 const OwnerDashboard = lazy(() => import('@/pages/owner/OwnerDashboard'));
 const OwnerCompanyPage = lazy(() => import('@/pages/owner/CompanyProfilePage'));
-const OwnerUsersPage = lazy(() => import('@/pages/owner/UsersManagementPage'));
 const OwnerIntegrationsPage = lazy(() => import('@/pages/owner/IntegrationsPage'));
 const OwnerWorkflowsPage = lazy(() => import('@/pages/owner/WorkflowsPage'));
 const OwnerBillingPage = lazy(() => import('@/pages/owner/BillingPage'));
+const OwnerRolesUsersPage = lazy(() => import('@/pages/owner/RolesUsersPage'));
 
 // Call Center
 const CallCenterPage = lazy(() => import('@/pages/calls/CallCenterPage'));
@@ -445,8 +445,11 @@ function App() {
                     >
                         <Route index element={<OwnerDashboard />} />
                         <Route path="company" element={<OwnerCompanyPage />} />
-                        <Route path="users" element={<OwnerUsersPage />} />
-                        <Route path="roles" element={<TenantRolesListPage />} />
+                        <Route path="roles-users" element={<OwnerRolesUsersPage />} />
+                        <Route path="roles-users/:id" element={<TenantRoleEditorPage />} />
+                        {/* Legacy redirects */}
+                        <Route path="users" element={<Navigate to="../roles-users" replace />} />
+                        <Route path="roles" element={<Navigate to="../roles-users" replace />} />
                         <Route path="roles/:id" element={<TenantRoleEditorPage />} />
                         <Route path="integrations" element={<OwnerIntegrationsPage />} />
                         <Route path="workflows" element={<OwnerWorkflowsPage />} />
