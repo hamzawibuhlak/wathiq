@@ -409,8 +409,9 @@ function TaskDetailsPage() {
                                             {/* Chips للمنشنات — قابلة للنقر — مع fallback للأسماء المفقودة */}
                                             {comment.mentions && Array.isArray(comment.mentions) && comment.mentions.length > 0 && (
                                                 <div className="flex flex-wrap gap-1 mt-2 pr-10">
-                                                    {(comment.mentions as MentionItem[]).map((m, i) => {
-                                                        const name = m.name || `${m.type} #${m.id?.slice(0, 4)}`;
+                                                    {(comment.mentions as MentionItem[]).filter(m => m && (m.name || m.id)).map((m, i) => {
+                                                        const name = m.name || (m.type ? `${m.type} #${m.id?.slice(0, 4)}` : null);
+                                                        if (!name) return null;
                                                         const url = getMentionUrl(m.type, m.id, p);
                                                         const chip = (
                                                             <span className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full hover:bg-primary/20 transition-colors cursor-pointer">
