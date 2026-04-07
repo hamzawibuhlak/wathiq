@@ -68,6 +68,73 @@ function getUserColor(userId: string) {
     return USER_COLORS[hash % USER_COLORS.length];
 }
 
+// مسار كل نوع منشن
+function getMentionUrl(type: string, id: string, slugPath: (path: string) => string): string {
+    switch (type) {
+        case 'case':     return slugPath(`/cases/${id}`);
+        case 'client':   return slugPath(`/clients/${id}`);
+        case 'hearing':  return slugPath(`/hearings/${id}`);
+        case 'document': return slugPath(`/documents/${id}`);
+        case 'invoice':  return slugPath(`/invoices/${id}`);
+        default:         return '';
+    }
+}
+
+// تحويل نص التعليق إلى عناصر — يكشف @mentions بـ regex ويُحولها لروابط
+function renderCommentWithMentions(
+    content: string,
+    mentions: MentionItem[],
+    slugPath: (path: string) => string
+): React.ReactNode {
+    // regex يكشف @word (بما فيها عربي ومسافات داخلية مسبوقة بـ @)
+    const regex = /@([\u0600-\u06FF\w][\u0600-\u06FF\w\s]*?)(?=\s@|\s*$|[،.؟!,?!])/g;
+    const parts: React.ReactNode[] = [];
+    let lastIndex = 0;
+    let key = 0;
+    let match: RegExpExecArray | null;
+
+    while ((match = regex.exec(content)) !== null) {
+        // النص قبل الـ @mention
+        if (match.index > lastIndex) {
+            parts.push(content.substring(lastIndex, match.index));
+        }
+
+        const mentionedName = match[1].trim();
+        // نبحث عن mention مطابق في الـ mentions array
+        const found = mentions?.find(
+            m => m.name && m.name.trim() === mentionedName
+        );
+
+        const url = found ? getMentionUrl(found.type, found.id, slugPath) : '';
+
+        const chip = (
+            <span
+                key={key++}
+                className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-primary/10 text-primary font-medium text-sm hover:bg-primary/20 transition-colors"
+            >
+                @{mentionedName}
+            </span>
+        );
+
+        parts.push(
+            url ? (
+                <Link key={`l-${key}`} to={url} className="no-underline">{chip}</Link>
+            ) : chip
+        );
+
+        lastIndex = match.index + match[0].length;
+    }
+
+    // باقي النص
+    if (lastIndex < content.length) {
+        parts.push(content.substring(lastIndex));
+    }
+
+    // إذا لم يجد أي منشن — أرجع النص كما هو
+    if (parts.length === 0) return content;
+    return parts;
+}
+
 function TaskDetailsPage() {
     const { id } = useParams<{ id: string }>();
     const { p, nav } = useSlugPath();
@@ -332,20 +399,30 @@ function TaskDetailsPage() {
                                                     </button>
                                                 )}
                                             </div>
-                                            <p className="text-sm whitespace-pre-wrap pr-10">
-                                                {comment.content}
+                                            <p className="text-sm whitespace-pre-wrap pr-10 leading-relaxed">
+                                                {renderCommentWithMentions(
+                                                    comment.content,
+                                                    (comment.mentions as MentionItem[]) || [],
+                                                    p
+                                                )}
                                             </p>
-                                            {/* Render mentions */}
+                                            {/* Chips للمنشنات — قابلة للنقر — مع fallback للأسماء المفقودة */}
                                             {comment.mentions && Array.isArray(comment.mentions) && comment.mentions.length > 0 && (
                                                 <div className="flex flex-wrap gap-1 mt-2 pr-10">
-                                                    {(comment.mentions as MentionItem[]).map((m, i) => (
-                                                        <span
-                                                            key={i}
-                                                            className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full"
-                                                        >
-                                                            @{m.name}
-                                                        </span>
-                                                    ))}
+                                                    {(comment.mentions as MentionItem[]).map((m, i) => {
+                                                        const name = m.name || `${m.type} #${m.id?.slice(0, 4)}`;
+                                                        const url = getMentionUrl(m.type, m.id, p);
+                                                        const chip = (
+                                                            <span className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full hover:bg-primary/20 transition-colors cursor-pointer">
+                                                                @{name}
+                                                            </span>
+                                                        );
+                                                        return url ? (
+                                                            <Link key={i} to={url}>{chip}</Link>
+                                                        ) : (
+                                                            <span key={i}>{chip}</span>
+                                                        );
+                                                    })}
                                                 </div>
                                             )}
                                         </div>
