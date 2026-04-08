@@ -156,7 +156,7 @@ export default function LegalDocumentEditorPage() {
         queryFn: () => legalDocumentsApi.getById(id!),
         enabled: !!id,
     });
-    const document = docData?.data ?? docData;
+    const docRecord = docData?.data ?? docData;
 
     const { data: firmData } = useQuery({
         queryKey: ['firm'],
@@ -186,8 +186,8 @@ export default function LegalDocumentEditorPage() {
     const docs = (docsData as any)?.data ?? [];
 
     // ── Linked client/case for variable resolution ─────────────────────────
-    const linkedClientId = document?.clientId;
-    const linkedCaseId   = document?.caseId;
+    const linkedClientId = docRecord?.clientId;
+    const linkedCaseId   = docRecord?.caseId;
     const { data: linkedClientData } = useQuery({
         queryKey: ['client', linkedClientId],
         queryFn: () => clientsApi.getById(linkedClientId!),
@@ -203,25 +203,25 @@ export default function LegalDocumentEditorPage() {
         client: (linkedClientData as any)?.data ?? linkedClientData,
         case:   (linkedCaseData as any)?.data ?? linkedCaseData,
         firm,
-        doc:    document,
+        doc:    docRecord,
     };
 
     // ── Initialize content ─────────────────────────────────────────────────
     useEffect(() => {
-        if (document) {
-            setTitle(document.title ?? '');
-            setStatus(document.status ?? 'DRAFT');
-            const settings = document.settings as any;
+        if (docRecord) {
+            setTitle(docRecord.title ?? '');
+            setStatus(docRecord.status ?? 'DRAFT');
+            const settings = docRecord.settings as any;
             if (settings?.fontSize) setFontSize(settings.fontSize);
             if (settings?.showLetterhead) setShowLetterhead(true);
         }
-    }, [document]);
+    }, [docRecord]);
 
     useEffect(() => {
-        if (editorRef.current && document?.content && !editorRef.current.innerHTML) {
-            editorRef.current.innerHTML = document.content;
+        if (editorRef.current && docRecord?.content && !editorRef.current.innerHTML) {
+            editorRef.current.innerHTML = docRecord.content;
         }
-    }, [document?.content]);
+    }, [docRecord?.content]);
 
     // ── Save mutation ──────────────────────────────────────────────────────
     const saveMutation = useMutation({
@@ -852,10 +852,10 @@ export default function LegalDocumentEditorPage() {
                             </button>
                         </div>
                         <div className="flex-1 overflow-auto p-2">
-                            {!document?.versions?.length ? (
+                            {!docRecord?.versions?.length ? (
                                 <div className="text-center py-10 text-slate-400 text-xs">لا توجد إصدارات سابقة</div>
                             ) : (
-                                document.versions.map((v: any) => (
+                                docRecord.versions.map((v: any) => (
                                     <div key={v.id} className="p-3 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all mb-1">
                                         <div className="flex items-center justify-between mb-1">
                                             <span className="text-sm font-semibold text-slate-800">v{v.version}</span>
