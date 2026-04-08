@@ -11,7 +11,7 @@ import {
     FileText, Users, Briefcase, X, Copy, Search,
     LayoutTemplate, Strikethrough, Highlighter,
     Trash2, RotateCw, Palette, PanelTop, PanelBottom,
-    Maximize2, ImagePlus, Download, Columns2, RotateCcw,
+    Maximize2, ImagePlus, Download, RotateCcw,
 } from 'lucide-react';
 import { legalDocumentsApi } from '@/api/legalDocuments';
 import { firmApi } from '@/api/settings.api';
@@ -224,9 +224,6 @@ export default function LegalDocumentEditorPage() {
     const editorRef          = useRef<HTMLDivElement>(null);
     const autoSaveRef        = useRef<ReturnType<typeof setInterval>>();
     const varMenuRef         = useRef<HTMLDivElement>(null);
-    const fontColorRef       = useRef<HTMLInputElement>(null);
-    const highlightColorRef  = useRef<HTMLInputElement>(null);
-    const tableCellBgRef     = useRef<HTMLInputElement>(null);
     const imageInputRef      = useRef<HTMLInputElement>(null);
 
     // ── Extra toolbar state ────────────────────────────────────────────────
