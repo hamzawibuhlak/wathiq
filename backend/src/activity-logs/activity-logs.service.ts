@@ -21,8 +21,12 @@ export class ActivityLogsService {
   async findAll(params: {
     tenantId: string;
     userId?: string;
+    userIds?: string[];
     entity?: string;
+    entityId?: string;
+    entityIds?: string[];
     action?: string;
+    actions?: string[];
     startDate?: Date;
     endDate?: Date;
     page?: number;
@@ -31,8 +35,12 @@ export class ActivityLogsService {
     const {
       tenantId,
       userId,
+      userIds,
       entity,
+      entityId,
+      entityIds,
       action,
+      actions,
       startDate,
       endDate,
       page = 1,
@@ -40,13 +48,22 @@ export class ActivityLogsService {
     } = params;
 
     const where: any = { tenantId };
-    if (userId) where.userId = userId;
+    // User filter: single or multiple
+    if (userIds?.length) where.userId = { in: userIds };
+    else if (userId) where.userId = userId;
+    // Entity type filter
     if (entity) where.entity = entity;
-    if (action) where.action = action;
+    // Entity ID filter: single or multiple (for specific client/case)
+    if (entityIds?.length) where.entityId = { in: entityIds };
+    else if (entityId) where.entityId = entityId;
+    // Action filter: single or multiple
+    if (actions?.length) where.action = { in: actions };
+    else if (action) where.action = action;
     if (startDate || endDate) {
       where.createdAt = {};
       if (startDate) where.createdAt.gte = startDate;
-      if (endDate) where.createdAt.lte = endDate;
+      // endDate: extend to end of day
+      if (endDate) { const ed = new Date(endDate); ed.setHours(23,59,59,999); where.createdAt.lte = ed; }
     }
 
     const [logs, total] = await Promise.all([
@@ -78,6 +95,30 @@ export class ActivityLogsService {
         totalPages: Math.ceil(total / limit),
       },
     };
+  }
+
+  async exportCsv(params: Parameters<ActivityLogsService['findAll']>[0]): Promise<string> {
+    // Fetch all matching records (up to 5000)
+    const result = await this.findAll({ ...params, page: 1, limit: 5000 });
+    const rows = result.data as any[];
+    const actionLabels: Record<string, string> = { CREATE: 'إنشاء', UPDATE: 'تعديل', DELETE: 'حذف', VIEW: 'عرض' };
+    const entityLabels: Record<string, string> = { Case: 'القضايا', Client: 'العملاء', Hearing: 'الجلسات', Invoice: 'الفواتير', Document: 'المستندات', User: 'المستخدمين' };
+    const header = ['التاريخ', 'الإجراء', 'النوع', 'المعرف', 'الوصف', 'المستخدم', 'البريد', 'عنوان IP'];
+    const escape = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const csvLines = [
+      header.map(escape).join(','),
+      ...rows.map(r => [
+        new Date(r.createdAt).toLocaleString('ar-SA'),
+        actionLabels[r.action] || r.action,
+        entityLabels[r.entity] || r.entity,
+        r.entityId || '',
+        r.description || '',
+        r.user?.name || '',
+        r.user?.email || '',
+        r.ipAddress || '',
+      ].map(escape).join(',')),
+    ];
+    return '\uFEFF' + csvLines.join('\n'); // BOM for Excel Arabic support
   }
 
   async getStats(tenantId: string) {

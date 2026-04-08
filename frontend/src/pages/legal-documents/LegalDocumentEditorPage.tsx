@@ -204,7 +204,8 @@ export default function LegalDocumentEditorPage() {
     const [status, setStatus]               = useState('DRAFT');
     const [hasUnsaved, setHasUnsaved]       = useState(false);
     const [isSaving, setIsSaving]           = useState(false);
-    const [fontSize, setFontSize]           = useState(14);
+    const [fontSize, setFontSize]           = useState(14);  // toolbar display
+    const [editorFontSize, setEditorFontSize] = useState(14); // container default
     const [showHistory, setShowHistory]     = useState(false);
     const [showStatusMenu, setShowStatusMenu] = useState(false);
     const [showSplit, setShowSplit]         = useState(false);
@@ -225,6 +226,19 @@ export default function LegalDocumentEditorPage() {
     const autoSaveRef        = useRef<ReturnType<typeof setInterval>>();
     const varMenuRef         = useRef<HTMLDivElement>(null);
     const imageInputRef      = useRef<HTMLInputElement>(null);
+    const savedTableCtxRef   = useRef<{ cell: HTMLTableCellElement; row: HTMLTableRowElement; table: HTMLTableElement; ci: number; ri: number } | null>(null);
+    // Saves the last non-collapsed selection inside the editor so toolbar actions work even after focus loss
+    const savedSelectionRef  = useRef<Range | null>(null);
+    // Header/footer contentEditable refs (3 columns each)
+    const headerRef0 = useRef<HTMLDivElement>(null);
+    const headerRef1 = useRef<HTMLDivElement>(null);
+    const headerRef2 = useRef<HTMLDivElement>(null);
+    const footerRef0 = useRef<HTMLDivElement>(null);
+    const footerRef1 = useRef<HTMLDivElement>(null);
+    const footerRef2 = useRef<HTMLDivElement>(null);
+    const headerPartRefs = [headerRef0, headerRef1, headerRef2];
+    const footerPartRefs = [footerRef0, footerRef1, footerRef2];
+    const headerFooterInitedDoc = useRef<string | null>(null);
 
     // ── Extra toolbar state ────────────────────────────────────────────────
     const [fontFamily, setFontFamily]   = useState("Arial");
@@ -316,7 +330,7 @@ export default function LegalDocumentEditorPage() {
             setTitle(docRecord.title ?? '');
             setStatus(docRecord.status ?? 'DRAFT');
             const settings = docRecord.settings as any;
-            if (settings?.fontSize) setFontSize(settings.fontSize);
+            if (settings?.fontSize) { setFontSize(settings.fontSize); setEditorFontSize(settings.editorFontSize ?? settings.fontSize); }
             if (settings?.showLetterhead) setShowLetterhead(true);
             if (settings?.pageSize) setPageSize(settings.pageSize);
             if (settings?.pageOrientation) setPageOrientation(settings.pageOrientation);
@@ -337,6 +351,35 @@ export default function LegalDocumentEditorPage() {
         }
     }, [docRecord?.content]);
 
+    // ── Set default paragraph separator to <p> for professional structure ──
+    useEffect(() => {
+        try { window.document.execCommand('defaultParagraphSeparator', false, 'p'); } catch { /**/ }
+    }, []);
+
+    // ── Initialize header/footer contentEditable divs when doc loads ──────
+    useEffect(() => {
+        if (!docRecord?.id) return;
+        if (headerFooterInitedDoc.current === docRecord.id) return;
+        headerFooterInitedDoc.current = docRecord.id;
+        // Set innerHTML after React renders the divs (they may not be visible yet)
+        const initHF = () => {
+            headerPartRefs.forEach((ref, i) => {
+                if (ref.current && !ref.current.innerHTML) {
+                    ref.current.innerHTML = (i === 0 && headerCols === 1) ? headerContent : (headerParts[i] || '');
+                }
+            });
+            footerPartRefs.forEach((ref, i) => {
+                if (ref.current && !ref.current.innerHTML) {
+                    ref.current.innerHTML = (i === 0 && footerCols === 1) ? footerContent : (footerParts[i] || '');
+                }
+            });
+        };
+        initHF();
+        // Also run after a tick in case the divs aren't mounted yet
+        setTimeout(initHF, 50);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [docRecord?.id, showHeader, showFooter]);
+
     // ── Save mutation ──────────────────────────────────────────────────────
     const saveMutation = useMutation({
         mutationFn: (data: any) => legalDocumentsApi.update(id!, data),
@@ -346,15 +389,23 @@ export default function LegalDocumentEditorPage() {
         },
     });
 
+    // Read header/footer HTML from refs (includes rich formatting from toolbar)
+    const getHFPartsHtml = (refs: typeof headerPartRefs, stateParts: string[]) =>
+        refs.map((r, i) => r.current?.innerHTML ?? stateParts[i] ?? '');
+
     const handleSave = async () => {
         if (!editorRef.current) return;
         setIsSaving(true);
+        const liveHeaderParts = getHFPartsHtml(headerPartRefs, headerParts);
+        const liveFooterParts = getHFPartsHtml(footerPartRefs, footerParts);
+        const liveHeaderContent = headerRef0.current?.innerHTML ?? headerContent;
+        const liveFooterContent = footerRef0.current?.innerHTML ?? footerContent;
         try {
             await saveMutation.mutateAsync({
                 content: editorRef.current.innerHTML,
                 title,
                 status,
-                settings: { fontSize, showLetterhead, pageSize, pageOrientation, showHeader, headerContent, headerCols, headerParts, showFooter, footerContent, footerCols, footerParts },
+                settings: { fontSize, editorFontSize, showLetterhead, pageSize, pageOrientation, showHeader, headerContent: liveHeaderContent, headerCols, headerParts: liveHeaderParts, showFooter, footerContent: liveFooterContent, footerCols, footerParts: liveFooterParts },
             });
             toast.success('تم الحفظ ✓');
         } catch {
@@ -372,7 +423,11 @@ export default function LegalDocumentEditorPage() {
                     await saveMutation.mutateAsync({
                         content: editorRef.current.innerHTML,
                         title,
-                        settings: { fontSize, showLetterhead, pageSize, pageOrientation, showHeader, headerContent, headerCols, headerParts, showFooter, footerContent, footerCols, footerParts },
+                        settings: {
+                            fontSize, editorFontSize, showLetterhead, pageSize, pageOrientation,
+                            showHeader, headerContent: headerRef0.current?.innerHTML ?? headerContent, headerCols, headerParts: getHFPartsHtml(headerPartRefs, headerParts),
+                            showFooter, footerContent: footerRef0.current?.innerHTML ?? footerContent, footerCols, footerParts: getHFPartsHtml(footerPartRefs, footerParts),
+                        },
                     });
                 } catch { /* silent */ }
             }
@@ -389,28 +444,71 @@ export default function LegalDocumentEditorPage() {
         return () => window.removeEventListener('keydown', handler);
     }, [title, hasUnsaved]);
 
-    // ── Editor commands ────────────────────────────────────────────────────
+    // ── Helper: is a node inside the editor? ─────────────────────────────────
+    const inEditor = (n: Node | null) => !!(n && editorRef.current?.contains(n));
+
+    // ── Get the best available range (current selection or saved) ────────────
+    // Does NOT focus or alter the DOM — pure read.
+    const getBestRange = (): Range | null => {
+        const sel = window.getSelection();
+        if (sel && sel.rangeCount > 0 && inEditor(sel.anchorNode)) {
+            return sel.getRangeAt(0);
+        }
+        if (savedSelectionRef.current && inEditor(savedSelectionRef.current.commonAncestorContainer)) {
+            return savedSelectionRef.current.cloneRange();
+        }
+        return null;
+    };
+
+    // ── Editor commands (bold, italic, heading, align, lists…) ────────────────
     const exec = (cmd: string, val?: string) => {
-        window.document.execCommand(cmd, false, val);
+        const sel = window.getSelection();
+        // Restore saved selection if focus was taken by the toolbar button
+        if ((!sel || !sel.rangeCount || !inEditor(sel.anchorNode)) && savedSelectionRef.current) {
+            try { sel?.removeAllRanges(); sel?.addRange(savedSelectionRef.current.cloneRange()); } catch { /**/ }
+        }
+        // Focus *after* restoring range so execCommand has a target
         editorRef.current?.focus();
+        window.document.execCommand(cmd, false, val);
         setHasUnsaved(true);
     };
 
-    // ── Apply font size to selection only ────────────────────────────────
+    // ── Apply font size using Range API + font-7 trick ─────────────────────────
+    // Rule: NEVER call setEditorFontSize from here — that changes ALL text.
+    // With a selection → wrap it.  Collapsed cursor → execCommand sets typing size.
     const applyFontSize = (size: number) => {
-        setFontSize(size);
-        editorRef.current?.focus();
-        const sel = window.getSelection();
-        if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
-            // Use the font-size-7 hack then replace with spans
+        setFontSize(size); // update toolbar display only
+
+        const range = getBestRange();
+
+        if (range && !range.collapsed) {
+            // ── Non-collapsed: apply ONLY to selected text ──
+            // Restore the range first (without calling focus which can reset selection)
+            const sel = window.getSelection();
+            try { sel?.removeAllRanges(); sel?.addRange(range); } catch { /**/ }
+            // execCommand font-7 trick: marks everything in selection with <font size=7>
             window.document.execCommand('fontSize', false, '7');
+            // Replace every <font size=7> with a proper <span style="font-size:Xpx">
             editorRef.current?.querySelectorAll('font[size="7"]').forEach((el: Element) => {
                 const span = window.document.createElement('span');
                 span.style.fontSize = `${size}px`;
                 while (el.firstChild) span.appendChild(el.firstChild);
                 el.parentNode?.replaceChild(span, el);
             });
+        } else if (range && range.collapsed) {
+            // ── Collapsed cursor: set typing size at cursor ──
+            // Restore collapsed position, then execCommand marks the insertion point
+            const sel = window.getSelection();
+            try { sel?.removeAllRanges(); sel?.addRange(range); } catch { /**/ }
+            window.document.execCommand('fontSize', false, '7');
+            editorRef.current?.querySelectorAll('font[size="7"]').forEach((el: Element) => {
+                (el as HTMLElement).removeAttribute('size');
+                (el as HTMLElement).style.fontSize = `${size}px`;
+            });
         }
+        // If NO range at all (nothing was ever clicked in editor): silently update container default
+        if (!range) setEditorFontSize(size);
+
         setHasUnsaved(true);
     };
 
@@ -483,12 +581,19 @@ export default function LegalDocumentEditorPage() {
         e.target.value = '';
     };
 
-    // ── Track table context on selection change ────────────────────────────
+    // ── Track table context & save selection on every selection change ────────
     useEffect(() => {
         const onSel = () => {
             const sel = window.getSelection();
             if (!sel?.rangeCount) { setInTable(false); return; }
-            let node: Node | null = sel.getRangeAt(0).commonAncestorContainer;
+            const range = sel.getRangeAt(0);
+
+            // Save non-collapsed selection that lives inside the editor
+            if (!sel.isCollapsed && editorRef.current?.contains(range.commonAncestorContainer)) {
+                savedSelectionRef.current = range.cloneRange();
+            }
+
+            let node: Node | null = range.commonAncestorContainer;
             if (node?.nodeType === Node.TEXT_NODE) node = node.parentNode;
             let el = node as Element | null;
             let found = false;
@@ -496,27 +601,39 @@ export default function LegalDocumentEditorPage() {
                 if (el.tagName === 'TD' || el.tagName === 'TH') { found = true; break; }
                 el = el.parentElement;
             }
+            if (found && el) {
+                const cell = el as HTMLTableCellElement;
+                const row = cell.parentElement as HTMLTableRowElement;
+                const table = row.closest('table') as HTMLTableElement;
+                savedTableCtxRef.current = { cell, row, table, ci: cell.cellIndex, ri: row.rowIndex };
+            }
             setInTable(found);
         };
         window.document.addEventListener('selectionchange', onSel);
         return () => window.document.removeEventListener('selectionchange', onSel);
     }, []);
 
-    // ── Table context ──────────────────────────────────────────────────────
+    // ── Table context — tries current selection, falls back to last cached cell ─
     const getTableCtx = () => {
         const sel = window.getSelection();
-        if (!sel?.rangeCount) return null;
-        let node: Node | null = sel.getRangeAt(0).commonAncestorContainer;
-        if (node?.nodeType === Node.TEXT_NODE) node = node.parentNode;
-        let cell = node as Element | null;
-        while (cell && cell !== editorRef.current) {
-            if (cell.tagName === 'TD' || cell.tagName === 'TH') break;
-            cell = cell.parentElement;
+        if (sel?.rangeCount) {
+            let node: Node | null = sel.getRangeAt(0).commonAncestorContainer;
+            if (node?.nodeType === Node.TEXT_NODE) node = node.parentNode;
+            let cell = node as Element | null;
+            while (cell && cell !== editorRef.current) {
+                if (cell.tagName === 'TD' || cell.tagName === 'TH') break;
+                cell = cell.parentElement;
+            }
+            if (cell && (cell.tagName === 'TD' || cell.tagName === 'TH')) {
+                const row   = cell.parentElement as HTMLTableRowElement;
+                const table = row.closest('table') as HTMLTableElement;
+                const ctx = { cell: cell as HTMLTableCellElement, row, table, ci: (cell as HTMLTableCellElement).cellIndex, ri: row.rowIndex };
+                savedTableCtxRef.current = ctx; // cache it
+                return ctx;
+            }
         }
-        if (!cell || (cell.tagName !== 'TD' && cell.tagName !== 'TH')) return null;
-        const row   = cell.parentElement as HTMLTableRowElement;
-        const table = row.closest('table') as HTMLTableElement;
-        return { cell: cell as HTMLTableCellElement, row, table, ci: (cell as HTMLTableCellElement).cellIndex, ri: row.rowIndex };
+        // Fallback: use last known table context (e.g. when input is focused)
+        return savedTableCtxRef.current;
     };
 
     const tableAddRowBelow = () => {
@@ -605,6 +722,12 @@ export default function LegalDocumentEditorPage() {
         const c = getTableCtx(); if (!c) return;
         const normalized = /^\d+$/.test(height.trim()) ? `${height.trim()}px` : height.trim();
         (c.row as HTMLElement).style.height = normalized;
+        setHasUnsaved(true);
+    };
+    const tableDeleteCell = () => {
+        const c = getTableCtx(); if (!c) return;
+        c.row.deleteCell(c.ci);
+        savedTableCtxRef.current = null;
         setHasUnsaved(true);
     };
 
@@ -832,17 +955,30 @@ export default function LegalDocumentEditorPage() {
     return (
         <div className="flex flex-col h-screen bg-slate-100 overflow-hidden" dir="rtl">
         <style>{`
+          /* ── Headings ── */
           .wq-editor h1 { font-size: 2em !important; font-weight: 700 !important; line-height: 1.3 !important; margin: 0.67em 0 !important; display: block !important; }
           .wq-editor h2 { font-size: 1.5em !important; font-weight: 700 !important; line-height: 1.3 !important; margin: 0.75em 0 !important; display: block !important; }
           .wq-editor h3 { font-size: 1.25em !important; font-weight: 600 !important; line-height: 1.4 !important; margin: 0.83em 0 !important; display: block !important; }
           .wq-editor p  { margin: 0.5em 0 !important; }
+          /* ── Lists ── */
           .wq-editor ul { list-style-type: disc !important; padding-right: 1.5em !important; margin: 0.5em 0 !important; }
           .wq-editor ol { list-style-type: decimal !important; padding-right: 1.5em !important; margin: 0.5em 0 !important; }
           .wq-editor li { display: list-item !important; }
+          /* ── Tables ── */
           .wq-editor td, .wq-editor th { outline: none !important; box-shadow: none !important; }
-          .wq-editor *:focus { outline: none !important; }
           .wq-editor table { border-collapse: collapse !important; }
-          .wq-editor img { max-width: 100%; height: auto; }
+          /* ── Focus / selection ── */
+          .wq-editor *:focus { outline: none !important; }
+          .wq-editor::selection, .wq-editor *::selection { background: rgba(59,130,246,0.25) !important; }
+          /* ── Images ── */
+          .wq-editor img { max-width: 100%; height: auto; cursor: default; }
+          .wq-editor img:hover { outline: 2px solid #3b82f6; outline-offset: 2px; }
+          /* ── Header/footer placeholder ── */
+          .hf-editable:empty::before { content: attr(data-placeholder); color: #94a3b8; pointer-events: none; }
+          .hf-editable { min-height: 1.4em; }
+          .hf-editable:focus { background: rgba(139,92,246,0.04); border-radius: 3px; }
+          /* ── Var tokens ── */
+          .var-token { color: #1d4ed8; font-weight: 600; background: #dbeafe; padding: 0 2px; border-radius: 3px; white-space: nowrap; }
         `}</style>
 
             {/* ══════════════ TOP BAR ══════════════ */}
@@ -907,7 +1043,17 @@ export default function LegalDocumentEditorPage() {
                     </button>
                 </div>
             </div>
-            <div className="bg-white border-b border-slate-100 px-3 py-1 flex items-center gap-0.5 flex-shrink-0 flex-wrap z-10">
+            {/* The onMouseDown here fires BEFORE any child control takes focus,
+                giving us the last chance to snapshot the editor selection. */}
+            <div
+                className="bg-white border-b border-slate-100 px-3 py-1 flex items-center gap-0.5 flex-shrink-0 flex-wrap z-10"
+                onMouseDown={() => {
+                    const sel = window.getSelection();
+                    if (sel && sel.rangeCount > 0 && !sel.isCollapsed && inEditor(sel.anchorNode)) {
+                        savedSelectionRef.current = sel.getRangeAt(0).cloneRange();
+                    }
+                }}
+            >
                 <ToolBtn onClick={() => exec('undo')} title="تراجع"><Undo className="w-3.5 h-3.5" /></ToolBtn>
                 <ToolBtn onClick={() => exec('redo')} title="إعادة"><Redo className="w-3.5 h-3.5" /></ToolBtn>
                 <Divider />
@@ -916,8 +1062,9 @@ export default function LegalDocumentEditorPage() {
                 <select
                     value={fontFamily}
                     onChange={e => {
+                        const r = getBestRange();
                         setFontFamily(e.target.value);
-                        editorRef.current?.focus();
+                        if (r) { const s = window.getSelection(); try { s?.removeAllRanges(); s?.addRange(r); } catch { /**/ } }
                         window.document.execCommand('fontName', false, e.target.value);
                         setHasUnsaved(true);
                     }}
@@ -965,8 +1112,8 @@ export default function LegalDocumentEditorPage() {
                         <div className="absolute top-full mt-1 z-50" style={{ right: 0 }}>
                             <ColorGrid
                                 currentColor={fontColor}
-                                onSelect={c => { setFontColor(c); editorRef.current?.focus(); window.document.execCommand('foreColor', false, c); setHasUnsaved(true); setColorPickerTarget(null); }}
-                                onReset={() => { setFontColor('#1a1a1a'); editorRef.current?.focus(); window.document.execCommand('foreColor', false, '#1a1a1a'); setHasUnsaved(true); setColorPickerTarget(null); }}
+                                onSelect={c => { const r = getBestRange(); setFontColor(c); if (r) { const s = window.getSelection(); try { s?.removeAllRanges(); s?.addRange(r); } catch { /**/ } } window.document.execCommand('foreColor', false, c); setHasUnsaved(true); setColorPickerTarget(null); }}
+                                onReset={() => { const r = getBestRange(); setFontColor('#1a1a1a'); if (r) { const s = window.getSelection(); try { s?.removeAllRanges(); s?.addRange(r); } catch { /**/ } } window.document.execCommand('foreColor', false, '#1a1a1a'); setHasUnsaved(true); setColorPickerTarget(null); }}
                             />
                         </div>
                     )}
@@ -988,8 +1135,8 @@ export default function LegalDocumentEditorPage() {
                         <div className="absolute top-full mt-1 z-50" style={{ right: 0 }}>
                             <ColorGrid
                                 currentColor={hlColor}
-                                onSelect={c => { setHlColor(c); editorRef.current?.focus(); window.document.execCommand('hiliteColor', false, c); setHasUnsaved(true); setColorPickerTarget(null); }}
-                                onReset={() => { setHlColor('transparent'); editorRef.current?.focus(); window.document.execCommand('hiliteColor', false, 'transparent'); setHasUnsaved(true); setColorPickerTarget(null); }}
+                                onSelect={c => { const r = getBestRange(); setHlColor(c); if (r) { const s = window.getSelection(); try { s?.removeAllRanges(); s?.addRange(r); } catch { /**/ } } window.document.execCommand('hiliteColor', false, c); setHasUnsaved(true); setColorPickerTarget(null); }}
+                                onReset={() => { const r = getBestRange(); setHlColor('transparent'); if (r) { const s = window.getSelection(); try { s?.removeAllRanges(); s?.addRange(r); } catch { /**/ } } window.document.execCommand('hiliteColor', false, 'transparent'); setHasUnsaved(true); setColorPickerTarget(null); }}
                             />
                         </div>
                     )}
@@ -1050,6 +1197,9 @@ export default function LegalDocumentEditorPage() {
                         <ToolBtn onClick={tableAddColRight} title="عمود يسار"><span className="text-xs font-bold">← عمود</span></ToolBtn>
                         <ToolBtn onClick={tableDeleteCol}   title="حذف العمود">
                             <span className="flex items-center gap-0.5 text-red-500"><Trash2 className="w-3 h-3" /><span className="text-xs">عمود</span></span>
+                        </ToolBtn>
+                        <ToolBtn onClick={tableDeleteCell} title="حذف الخلية الحالية">
+                            <span className="flex items-center gap-0.5 text-red-500"><Trash2 className="w-3 h-3" /><span className="text-xs">خلية</span></span>
                         </ToolBtn>
                         <Divider />
                         {/* Cell background color */}
@@ -1223,15 +1373,19 @@ export default function LegalDocumentEditorPage() {
                                 </div>
                                 <div className={cn('gap-3', headerCols > 1 ? 'grid' : 'block')} style={{ gridTemplateColumns: headerCols > 1 ? `repeat(${headerCols}, 1fr)` : undefined }}>
                                     {Array.from({ length: headerCols }).map((_, i) => (
-                                        <input key={i} type="text"
-                                            value={headerCols === 1 ? headerContent : headerParts[i]}
-                                            onChange={e => {
-                                                if (headerCols === 1) { setHeaderContent(e.target.value); }
-                                                else { const p = [...headerParts]; p[i] = e.target.value; setHeaderParts(p); }
+                                        <div
+                                            key={i}
+                                            ref={headerPartRefs[i]}
+                                            contentEditable
+                                            suppressContentEditableWarning
+                                            onInput={e => {
+                                                const html = (e.target as HTMLDivElement).innerHTML;
+                                                if (headerCols === 1) { setHeaderContent(html); }
+                                                else { const p = [...headerParts]; p[i] = html; setHeaderParts(p); }
                                                 setHasUnsaved(true);
                                             }}
-                                            placeholder={headerCols === 1 ? 'رأس الصفحة...' : ['يمين','وسط','يسار'][i] + '...'}
-                                            className="w-full bg-transparent outline-none text-sm text-slate-600 placeholder:text-slate-300 text-right border-b border-violet-100 pb-1"
+                                            data-placeholder={headerCols === 1 ? 'رأس الصفحة...' : ['يمين','وسط','يسار'][i] + '...'}
+                                            className="hf-editable w-full bg-transparent outline-none text-sm text-slate-600 text-right border-b border-violet-100 pb-1"
                                             style={{ fontFamily: `'${fontFamily}', Arial, sans-serif`, fontSize: `${Math.max(10, fontSize - 2)}px` }}
                                             dir="rtl"
                                         />
@@ -1251,7 +1405,7 @@ export default function LegalDocumentEditorPage() {
                             className="wq-editor outline-none w-full"
                             style={{
                                 fontFamily: `'${fontFamily}', Arial, sans-serif`,
-                                fontSize: `${fontSize}px`,
+                                fontSize: `${editorFontSize}px`,
                                 lineHeight: 1.9,
                                 color: '#1a1a1a',
                                 direction: 'rtl',
@@ -1279,15 +1433,19 @@ export default function LegalDocumentEditorPage() {
                                 </div>
                                 <div className={cn('gap-3', footerCols > 1 ? 'grid' : 'block')} style={{ gridTemplateColumns: footerCols > 1 ? `repeat(${footerCols}, 1fr)` : undefined }}>
                                     {Array.from({ length: footerCols }).map((_, i) => (
-                                        <input key={i} type="text"
-                                            value={footerCols === 1 ? footerContent : footerParts[i]}
-                                            onChange={e => {
-                                                if (footerCols === 1) { setFooterContent(e.target.value); }
-                                                else { const p = [...footerParts]; p[i] = e.target.value; setFooterParts(p); }
+                                        <div
+                                            key={i}
+                                            ref={footerPartRefs[i]}
+                                            contentEditable
+                                            suppressContentEditableWarning
+                                            onInput={e => {
+                                                const html = (e.target as HTMLDivElement).innerHTML;
+                                                if (footerCols === 1) { setFooterContent(html); }
+                                                else { const p = [...footerParts]; p[i] = html; setFooterParts(p); }
                                                 setHasUnsaved(true);
                                             }}
-                                            placeholder={footerCols === 1 ? 'تذييل الصفحة...' : ['يمين','وسط','يسار'][i] + '...'}
-                                            className="w-full bg-transparent outline-none text-sm text-slate-600 placeholder:text-slate-300 text-right border-b border-violet-100 pb-1"
+                                            data-placeholder={footerCols === 1 ? 'تذييل الصفحة...' : ['يمين','وسط','يسار'][i] + '...'}
+                                            className="hf-editable w-full bg-transparent outline-none text-sm text-slate-600 text-right border-b border-violet-100 pb-1"
                                             style={{ fontFamily: `'${fontFamily}', Arial, sans-serif`, fontSize: `${Math.max(10, fontSize - 2)}px` }}
                                             dir="rtl"
                                         />
