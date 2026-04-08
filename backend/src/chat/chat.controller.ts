@@ -18,7 +18,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { ChatService } from './chat.service';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
-import { v4 as uuid } from 'uuid';
+import { randomUUID } from 'crypto';
 
 // In-memory store for user online status (userId -> last heartbeat timestamp)
 const onlineUsers = new Map<string, number>();
@@ -124,7 +124,7 @@ export class ChatController {
             storage: diskStorage({
                 destination: join(process.cwd(), 'uploads', 'chat'),
                 filename: (_req, file, cb) => {
-                    const uniqueName = `${uuid()}${extname(file.originalname)}`;
+                    const uniqueName = `${randomUUID()}${extname(file.originalname)}`;
                     cb(null, uniqueName);
                 },
             }),

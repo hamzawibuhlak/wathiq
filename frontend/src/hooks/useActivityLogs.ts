@@ -1,15 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { activityLogsApi } from '@/api/activity-logs';
+import { activityLogsApi, ActivityLogsParams } from '@/api/activity-logs';
 
-export function useActivityLogs(params: {
-  page?: number;
-  limit?: number;
-  entity?: string;
-  action?: string;
-  userId?: string;
-  startDate?: string;
-  endDate?: string;
-}) {
+export function useActivityLogs(params: ActivityLogsParams) {
   return useQuery({
     queryKey: ['activity-logs', params],
     queryFn: () => activityLogsApi.getAll(params),
