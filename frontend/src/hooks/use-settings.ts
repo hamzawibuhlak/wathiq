@@ -342,6 +342,22 @@ export function useUploadFirmLogo() {
     });
 }
 
+export function useUploadFirmLetterhead() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (file: File) => firmApi.uploadLetterhead(file),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['firm-settings'] });
+            queryClient.invalidateQueries({ queryKey: ['firm'] });
+            toast.success('تم رفع ورقة الهيد ليتر بنجاح');
+        },
+        onError: () => {
+            toast.error('حدث خطأ أثناء رفع الهيد ليتر');
+        },
+    });
+}
+
 // =====================
 // Notifications Hooks
 // =====================
