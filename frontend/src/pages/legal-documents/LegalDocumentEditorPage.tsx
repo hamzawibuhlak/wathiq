@@ -11,7 +11,7 @@ import {
     FileText, Users, Briefcase, X, Copy, Search,
     LayoutTemplate, Strikethrough, Highlighter,
     Trash2, RotateCw, Palette, PanelTop, PanelBottom,
-    Maximize2,
+    Maximize2, ImagePlus, Download, Columns2, RotateCcw,
 } from 'lucide-react';
 import { legalDocumentsApi } from '@/api/legalDocuments';
 import { firmApi } from '@/api/settings.api';
@@ -134,6 +134,65 @@ function ToolBtn({ onClick, title, active, children }: {
 // ─── Divider ───────────────────────────────────────────────────────────────
 const Divider = () => <div className="w-px h-5 bg-gray-200 mx-0.5 flex-shrink-0" />;
 
+// ─── Color palette ─────────────────────────────────────────────────────────
+const COLOR_ROWS = [
+    ['#000000','#434343','#666666','#999999','#b7b7b7','#cccccc','#d9d9d9','#efefef','#f3f3f3','#ffffff'],
+    ['#ff0000','#ff4500','#ff9900','#ffff00','#00ff00','#00ffff','#4a86e8','#0000ff','#9900ff','#ff00ff'],
+    ['#f4cccc','#fce5cd','#fff2cc','#d9ead3','#d0e4f1','#cfe2f3','#d9d2e9','#ead1dc','#e6b8a2','#d5a6bd'],
+    ['#ea9999','#f9cb9c','#ffe599','#b6d7a8','#9fc5e8','#9fc5e8','#b4a7d6','#ea9999','#e6b8a2','#d5a6bd'],
+    ['#e06666','#f6b26b','#ffd966','#93c47d','#76a5af','#6fa8dc','#8e7cc3','#c27ba0','#a64d79','#85200c'],
+    ['#cc0000','#e69138','#f1c232','#6aa84f','#45818e','#3d85c8','#674ea7','#a61c00','#85200c','#7f6000'],
+    ['#990000','#b45f06','#bf9000','#38761d','#134f5c','#1155cc','#351c75','#741b47','#4c1130','#660000'],
+    ['#660000','#783f04','#7f6000','#274e13','#0c343d','#1c4587','#20124d','#4c1130','#2d0922','#000000'],
+];
+
+function ColorGrid({ onSelect, onReset, currentColor }: {
+    onSelect: (c: string) => void;
+    onReset: () => void;
+    currentColor: string;
+}) {
+    return (
+        <div className="bg-white border border-slate-200 rounded-xl shadow-2xl p-3 w-[220px]" dir="rtl">
+            <button
+                onMouseDown={e => { e.preventDefault(); onReset(); }}
+                className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 mb-2 w-full hover:bg-slate-50 rounded-md px-1 py-1"
+            >
+                <RotateCcw className="w-3 h-3" />
+                إعادة ضبط
+            </button>
+            <div className="space-y-0.5">
+                {COLOR_ROWS.map((row, ri) => (
+                    <div key={ri} className="flex gap-0.5">
+                        {row.map(c => (
+                            <button
+                                key={c}
+                                onMouseDown={e => { e.preventDefault(); onSelect(c); }}
+                                className="w-5 h-5 rounded-sm border border-black/10 hover:scale-110 transition-transform flex-shrink-0 relative"
+                                style={{ backgroundColor: c }}
+                                title={c}
+                            >
+                                {c === currentColor && (
+                                    <span className="absolute inset-0 flex items-center justify-center text-[8px]" style={{ color: c === '#ffffff' || c === '#f3f3f3' || c === '#efefef' || c === '#d9d9d9' ? '#333' : '#fff' }}>✓</span>
+                                )}
+                            </button>
+                        ))}
+                    </div>
+                ))}
+            </div>
+            <div className="mt-2 pt-2 border-t border-slate-100">
+                <p className="text-[10px] text-slate-400 mb-1">مخصص</p>
+                <input
+                    type="color"
+                    value={currentColor}
+                    onMouseDown={e => e.stopPropagation()}
+                    onChange={e => onSelect(e.target.value)}
+                    className="w-full h-6 rounded cursor-pointer border border-slate-200"
+                />
+            </div>
+        </div>
+    );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 export default function LegalDocumentEditorPage() {
     const { id } = useParams<{ id: string }>();
@@ -168,6 +227,7 @@ export default function LegalDocumentEditorPage() {
     const fontColorRef       = useRef<HTMLInputElement>(null);
     const highlightColorRef  = useRef<HTMLInputElement>(null);
     const tableCellBgRef     = useRef<HTMLInputElement>(null);
+    const imageInputRef      = useRef<HTMLInputElement>(null);
 
     // ── Extra toolbar state ────────────────────────────────────────────────
     const [fontFamily, setFontFamily]   = useState("Arial");
@@ -187,6 +247,15 @@ export default function LegalDocumentEditorPage() {
     const [tableCellBgColor, setTableCellBgColor] = useState('#f8fafc');
     const [tableColWidth,    setTableColWidth]    = useState('');
     const [tableRowHeight,   setTableRowHeight]   = useState('');
+
+    // ── Color picker popup ─────────────────────────────────────────────────
+    const [colorPickerTarget, setColorPickerTarget] = useState<'font'|'highlight'|'cellBg'|null>(null);
+
+    // ── Header/Footer columns ──────────────────────────────────────────────
+    const [headerCols, setHeaderCols] = useState(1);
+    const [headerParts, setHeaderParts] = useState(['','','']);
+    const [footerCols, setFooterCols] = useState(1);
+    const [footerParts, setFooterParts] = useState(['','','']);
 
     // ── Data fetching ──────────────────────────────────────────────────────
     const { data: docData, isLoading } = useQuery({
@@ -256,8 +325,12 @@ export default function LegalDocumentEditorPage() {
             if (settings?.pageOrientation) setPageOrientation(settings.pageOrientation);
             if (settings?.showHeader) setShowHeader(true);
             if (settings?.headerContent) setHeaderContent(settings.headerContent);
+            if (settings?.headerCols) setHeaderCols(settings.headerCols);
+            if (settings?.headerParts) setHeaderParts(settings.headerParts);
             if (settings?.showFooter) setShowFooter(true);
             if (settings?.footerContent) setFooterContent(settings.footerContent);
+            if (settings?.footerCols) setFooterCols(settings.footerCols);
+            if (settings?.footerParts) setFooterParts(settings.footerParts);
         }
     }, [docRecord]);
 
@@ -284,7 +357,7 @@ export default function LegalDocumentEditorPage() {
                 content: editorRef.current.innerHTML,
                 title,
                 status,
-                settings: { fontSize, showLetterhead, pageSize, pageOrientation, showHeader, headerContent, showFooter, footerContent },
+                settings: { fontSize, showLetterhead, pageSize, pageOrientation, showHeader, headerContent, headerCols, headerParts, showFooter, footerContent, footerCols, footerParts },
             });
             toast.success('تم الحفظ ✓');
         } catch {
@@ -302,13 +375,13 @@ export default function LegalDocumentEditorPage() {
                     await saveMutation.mutateAsync({
                         content: editorRef.current.innerHTML,
                         title,
-                        settings: { fontSize, showLetterhead, pageSize, pageOrientation, showHeader, headerContent, showFooter, footerContent },
+                        settings: { fontSize, showLetterhead, pageSize, pageOrientation, showHeader, headerContent, headerCols, headerParts, showFooter, footerContent, footerCols, footerParts },
                     });
                 } catch { /* silent */ }
             }
-        }, 30000);
+        }, 5000);
         return () => clearInterval(autoSaveRef.current);
-    }, [hasUnsaved, title, fontSize, showLetterhead, pageSize, pageOrientation, showHeader, headerContent, showFooter, footerContent]);
+    }, [hasUnsaved, title, fontSize, showLetterhead, pageSize, pageOrientation, showHeader, headerContent, headerCols, headerParts, showFooter, footerContent, footerCols, footerParts]);
 
     // Ctrl+S
     useEffect(() => {
@@ -324,6 +397,93 @@ export default function LegalDocumentEditorPage() {
         window.document.execCommand(cmd, false, val);
         editorRef.current?.focus();
         setHasUnsaved(true);
+    };
+
+    // ── Apply font size to selection only ────────────────────────────────
+    const applyFontSize = (size: number) => {
+        setFontSize(size);
+        editorRef.current?.focus();
+        const sel = window.getSelection();
+        if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
+            // Use the font-size-7 hack then replace with spans
+            window.document.execCommand('fontSize', false, '7');
+            editorRef.current?.querySelectorAll('font[size="7"]').forEach((el: Element) => {
+                const span = window.document.createElement('span');
+                span.style.fontSize = `${size}px`;
+                while (el.firstChild) span.appendChild(el.firstChild);
+                el.parentNode?.replaceChild(span, el);
+            });
+        }
+        setHasUnsaved(true);
+    };
+
+    // ── Export as Word (.doc) ─────────────────────────────────────────────
+    const handleExportWord = () => {
+        if (!editorRef.current) return;
+        const pSize = PAGE_SIZES[pageSize] ?? PAGE_SIZES['A4'];
+        const isLandscape = pageOrientation === 'landscape';
+        const pageW = isLandscape ? pSize.h : pSize.w;
+        const pageH = isLandscape ? pSize.w : pSize.h;
+        const headerHtml = showHeader && (headerParts.some(p => p) || headerContent)
+            ? `<div style="border-bottom:1px solid #ccc;padding-bottom:8px;margin-bottom:12px;font-size:${Math.max(10, fontSize - 2)}px;color:#555;">${headerContent || headerParts.filter(Boolean).join(' &nbsp;|&nbsp; ')}</div>`
+            : '';
+        const footerHtml = showFooter && (footerParts.some(p => p) || footerContent)
+            ? `<div style="border-top:1px solid #ccc;padding-top:8px;margin-top:12px;font-size:${Math.max(10, fontSize - 2)}px;color:#555;">${footerContent || footerParts.filter(Boolean).join(' &nbsp;|&nbsp; ')}</div>`
+            : '';
+        const html = `
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+  <meta charset="UTF-8">
+  <xml><w:WordDocument><w:View>Print</w:View>
+    <w:Zoom>100</w:Zoom>
+    <w:DoNotOptimizeForBrowser/>
+    <w:PageSize w:w="${Math.round(pageW * 56.7)}" w:h="${Math.round(pageH * 56.7)}" ${isLandscape ? 'w:orient="landscape"' : ''}/>
+    <w:PageMargins w:top="1134" w:right="1134" w:bottom="1134" w:left="1134"/>
+  </w:WordDocument></xml>
+  <style>
+    body { font-family: Arial, sans-serif; font-size: ${fontSize}pt; direction: rtl; margin: 0; }
+    h1 { font-size: 20pt; font-weight: bold; margin: 12pt 0; }
+    h2 { font-size: 16pt; font-weight: bold; margin: 10pt 0; }
+    h3 { font-size: 13pt; font-weight: bold; margin: 8pt 0; }
+    p { margin: 6pt 0; }
+    table { border-collapse: collapse; width: 100%; margin: 8pt 0; }
+    td, th { border: 1pt solid #ccc; padding: 6pt 8pt; text-align: right; }
+    th { background: #f0f4f8; font-weight: bold; }
+    ul { list-style: disc; padding-right: 18pt; }
+    ol { list-style: decimal; padding-right: 18pt; }
+    .var-token { color: #1d4ed8; font-weight: 600; }
+  </style>
+</head>
+<body dir="rtl">
+  ${headerHtml}
+  ${editorRef.current.innerHTML}
+  ${footerHtml}
+</body></html>`;
+        const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+        const url = URL.createObjectURL(blob);
+        const a = window.document.createElement('a');
+        a.href = url;
+        a.download = `${title || 'document'}.doc`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    // ── Insert image from local file ──────────────────────────────────────
+    const handleInsertImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+            const src = ev.target?.result as string;
+            editorRef.current?.focus();
+            window.document.execCommand('insertHTML', false,
+                `<img src="${src}" style="max-width:100%;height:auto;display:block;margin:8px 0;" />`
+            );
+            setHasUnsaved(true);
+        };
+        reader.readAsDataURL(file);
+        // reset so same file can be re-selected
+        e.target.value = '';
     };
 
     // ── Track table context on selection change ────────────────────────────
@@ -550,11 +710,20 @@ export default function LegalDocumentEditorPage() {
                 <img src="${firm.letterheadUrl}" style="width:100%;max-height:120px;object-fit:contain;" />
                </div>`
             : '';
-        const headerHtml = showHeader && headerContent
-            ? `<div style="border-bottom:1px solid #e2e8f0;padding-bottom:10px;margin-bottom:16px;font-size:${Math.max(10, fontSize - 2)}px;color:#64748b;">${headerContent}</div>`
+        const hfFontSize = `${Math.max(10, fontSize - 2)}px`;
+        const headerText = headerCols === 1 ? headerContent : headerParts.filter(Boolean).join(' | ');
+        const footerText = footerCols === 1 ? footerContent : footerParts.filter(Boolean).join(' | ');
+        const headerColsHtml = headerCols > 1
+            ? `<div style="display:flex;gap:12px;">${Array.from({length:headerCols}).map((_,i) => `<div style="flex:1;text-align:${['right','center','left'][i]}">${(headerParts[i]||'')}</div>`).join('')}</div>`
+            : headerText;
+        const footerColsHtml = footerCols > 1
+            ? `<div style="display:flex;gap:12px;">${Array.from({length:footerCols}).map((_,i) => `<div style="flex:1;text-align:${['right','center','left'][i]}">${(footerParts[i]||'')}</div>`).join('')}</div>`
+            : footerText;
+        const headerHtml = showHeader && (headerText || headerCols > 1)
+            ? `<div style="border-bottom:1px solid #e2e8f0;padding-bottom:10px;margin-bottom:16px;font-size:${hfFontSize};color:#64748b;">${headerColsHtml}</div>`
             : '';
-        const footerHtml = showFooter && footerContent
-            ? `<div style="border-top:1px solid #e2e8f0;padding-top:10px;margin-top:16px;font-size:${Math.max(10, fontSize - 2)}px;color:#64748b;">${footerContent}</div>`
+        const footerHtml = showFooter && (footerText || footerCols > 1)
+            ? `<div style="border-top:1px solid #e2e8f0;padding-top:10px;margin-top:16px;font-size:${hfFontSize};color:#64748b;">${footerColsHtml}</div>`
             : '';
         const win = window.open('', '_blank');
         if (!win) return;
@@ -578,9 +747,9 @@ export default function LegalDocumentEditorPage() {
     @page { size: ${pageCssSize}; margin: 15mm 20mm; }
     @media print { body { padding: 0; } }
     .page { padding: 15mm 20mm; }
-    h1 { font-size: 20px; font-weight: 700; text-align: center; margin: 16px 0; }
-    h2 { font-size: 17px; font-weight: 700; margin: 14px 0; }
-    h3 { font-size: 15px; font-weight: 600; color: #1a3a5c; margin: 12px 0; }
+    h1 { font-size: ${fontSize * 1.8}px; font-weight: 700; margin: 16px 0; }
+    h2 { font-size: ${fontSize * 1.4}px; font-weight: 700; margin: 14px 0; }
+    h3 { font-size: ${fontSize * 1.2}px; font-weight: 600; margin: 12px 0; }
     p  { margin: 8px 0; text-align: justify; }
     table { width: 100%; border-collapse: collapse; margin: 14px 0; }
     td, th { border: 1px solid #ccc; padding: 8px 12px; text-align: right; }
@@ -665,6 +834,19 @@ export default function LegalDocumentEditorPage() {
 
     return (
         <div className="flex flex-col h-screen bg-slate-100 overflow-hidden" dir="rtl">
+        <style>{`
+          .wq-editor h1 { font-size: 2em !important; font-weight: 700 !important; line-height: 1.3 !important; margin: 0.67em 0 !important; display: block !important; }
+          .wq-editor h2 { font-size: 1.5em !important; font-weight: 700 !important; line-height: 1.3 !important; margin: 0.75em 0 !important; display: block !important; }
+          .wq-editor h3 { font-size: 1.25em !important; font-weight: 600 !important; line-height: 1.4 !important; margin: 0.83em 0 !important; display: block !important; }
+          .wq-editor p  { margin: 0.5em 0 !important; }
+          .wq-editor ul { list-style-type: disc !important; padding-right: 1.5em !important; margin: 0.5em 0 !important; }
+          .wq-editor ol { list-style-type: decimal !important; padding-right: 1.5em !important; margin: 0.5em 0 !important; }
+          .wq-editor li { display: list-item !important; }
+          .wq-editor td, .wq-editor th { outline: none !important; box-shadow: none !important; }
+          .wq-editor *:focus { outline: none !important; }
+          .wq-editor table { border-collapse: collapse !important; }
+          .wq-editor img { max-width: 100%; height: auto; }
+        `}</style>
 
             {/* ══════════════ TOP BAR ══════════════ */}
             <div className="bg-white border-b border-slate-200 px-3 py-2 flex items-center gap-2 flex-shrink-0 shadow-sm z-20">
@@ -753,51 +935,51 @@ export default function LegalDocumentEditorPage() {
 
                 {/* Font size */}
                 <div className="flex items-center gap-0.5 bg-slate-50 rounded-md px-1 py-0.5 border border-slate-200">
-                    <button onMouseDown={e => { e.preventDefault(); setFontSize(s => Math.max(10, s - 1)); }} className="p-0.5 rounded hover:bg-slate-200">
+                    <button onMouseDown={e => { e.preventDefault(); applyFontSize(Math.max(10, fontSize - 1)); }} className="p-0.5 rounded hover:bg-slate-200">
                         <Minus className="w-3 h-3 text-slate-500" />
                     </button>
                     <select
                         value={fontSize}
-                        onChange={e => setFontSize(Number(e.target.value))}
+                        onMouseDown={e => e.stopPropagation()}
+                        onChange={e => applyFontSize(Number(e.target.value))}
                         className="text-xs text-slate-600 bg-transparent border-none outline-none w-10 text-center"
                     >
-                        {[10,11,12,13,14,15,16,18,20,22,24,28,32,36].map(s => (
+                        {[8,9,10,11,12,13,14,15,16,18,20,22,24,26,28,32,36,40,48,60,72].map(s => (
                             <option key={s} value={s}>{s}</option>
                         ))}
                     </select>
-                    <button onMouseDown={e => { e.preventDefault(); setFontSize(s => Math.min(48, s + 1)); }} className="p-0.5 rounded hover:bg-slate-200">
+                    <button onMouseDown={e => { e.preventDefault(); applyFontSize(Math.min(72, fontSize + 1)); }} className="p-0.5 rounded hover:bg-slate-200">
                         <Plus className="w-3 h-3 text-slate-500" />
                     </button>
                 </div>
                 <Divider />
 
                 {/* Font color */}
-                <div className="relative" title="لون الخط">
+                <div className="relative">
                     <button
-                        onMouseDown={e => { e.preventDefault(); fontColorRef.current?.click(); }}
+                        onMouseDown={e => { e.preventDefault(); setColorPickerTarget(t => t === 'font' ? null : 'font'); }}
+                        title="لون الخط"
                         className="p-1.5 rounded-md hover:bg-slate-100 transition-colors flex flex-col items-center gap-0.5"
                     >
                         <span className="font-bold text-sm leading-none" style={{ color: fontColor }}>A</span>
                         <span className="w-4 h-1 rounded-full block" style={{ backgroundColor: fontColor }} />
                     </button>
-                    <input
-                        ref={fontColorRef}
-                        type="color"
-                        value={fontColor}
-                        onChange={e => {
-                            setFontColor(e.target.value);
-                            editorRef.current?.focus();
-                            window.document.execCommand('foreColor', false, e.target.value);
-                            setHasUnsaved(true);
-                        }}
-                        className="absolute opacity-0 w-0 h-0 pointer-events-none"
-                    />
+                    {colorPickerTarget === 'font' && (
+                        <div className="absolute top-full mt-1 z-50" style={{ right: 0 }}>
+                            <ColorGrid
+                                currentColor={fontColor}
+                                onSelect={c => { setFontColor(c); editorRef.current?.focus(); window.document.execCommand('foreColor', false, c); setHasUnsaved(true); setColorPickerTarget(null); }}
+                                onReset={() => { setFontColor('#1a1a1a'); editorRef.current?.focus(); window.document.execCommand('foreColor', false, '#1a1a1a'); setHasUnsaved(true); setColorPickerTarget(null); }}
+                            />
+                        </div>
+                    )}
                 </div>
 
                 {/* Highlight color */}
-                <div className="relative" title="تظليل">
+                <div className="relative">
                     <button
-                        onMouseDown={e => { e.preventDefault(); highlightColorRef.current?.click(); }}
+                        onMouseDown={e => { e.preventDefault(); setColorPickerTarget(t => t === 'highlight' ? null : 'highlight'); }}
+                        title="تظليل النص"
                         className="p-1.5 rounded-md hover:bg-slate-100 transition-colors"
                     >
                         <div className="relative">
@@ -805,26 +987,23 @@ export default function LegalDocumentEditorPage() {
                             <span className="absolute -bottom-0.5 left-0 right-0 h-1 rounded-full" style={{ backgroundColor: hlColor }} />
                         </div>
                     </button>
-                    <input
-                        ref={highlightColorRef}
-                        type="color"
-                        value={hlColor}
-                        onChange={e => {
-                            setHlColor(e.target.value);
-                            editorRef.current?.focus();
-                            window.document.execCommand('hiliteColor', false, e.target.value);
-                            setHasUnsaved(true);
-                        }}
-                        className="absolute opacity-0 w-0 h-0 pointer-events-none"
-                    />
+                    {colorPickerTarget === 'highlight' && (
+                        <div className="absolute top-full mt-1 z-50" style={{ right: 0 }}>
+                            <ColorGrid
+                                currentColor={hlColor}
+                                onSelect={c => { setHlColor(c); editorRef.current?.focus(); window.document.execCommand('hiliteColor', false, c); setHasUnsaved(true); setColorPickerTarget(null); }}
+                                onReset={() => { setHlColor('transparent'); editorRef.current?.focus(); window.document.execCommand('hiliteColor', false, 'transparent'); setHasUnsaved(true); setColorPickerTarget(null); }}
+                            />
+                        </div>
+                    )}
                 </div>
                 <Divider />
 
                 {/* Headings */}
-                <ToolBtn onClick={() => exec('formatBlock', 'h1')} title="عنوان 1"><Heading1 className="w-3.5 h-3.5" /></ToolBtn>
-                <ToolBtn onClick={() => exec('formatBlock', 'h2')} title="عنوان 2"><Heading2 className="w-3.5 h-3.5" /></ToolBtn>
-                <ToolBtn onClick={() => exec('formatBlock', 'h3')} title="عنوان 3"><Heading3 className="w-3.5 h-3.5" /></ToolBtn>
-                <ToolBtn onClick={() => exec('formatBlock', 'p')}  title="فقرة"><Type className="w-3.5 h-3.5" /></ToolBtn>
+                <ToolBtn onClick={() => exec('formatBlock', '<h1>')} title="عنوان 1"><Heading1 className="w-3.5 h-3.5" /></ToolBtn>
+                <ToolBtn onClick={() => exec('formatBlock', '<h2>')} title="عنوان 2"><Heading2 className="w-3.5 h-3.5" /></ToolBtn>
+                <ToolBtn onClick={() => exec('formatBlock', '<h3>')} title="عنوان 3"><Heading3 className="w-3.5 h-3.5" /></ToolBtn>
+                <ToolBtn onClick={() => exec('formatBlock', '<p>')}  title="فقرة"><Type className="w-3.5 h-3.5" /></ToolBtn>
                 <Divider />
 
                 {/* Format */}
@@ -877,24 +1056,24 @@ export default function LegalDocumentEditorPage() {
                         </ToolBtn>
                         <Divider />
                         {/* Cell background color */}
-                        <div className="relative" title="لون خلفية الخلية">
+                        <div className="relative">
                             <button
-                                onMouseDown={e => { e.preventDefault(); tableCellBgRef.current?.click(); }}
+                                onMouseDown={e => { e.preventDefault(); setColorPickerTarget(t => t === 'cellBg' ? null : 'cellBg'); }}
+                                title="لون خلفية الخلية"
                                 className="p-1.5 rounded-md hover:bg-slate-100 transition-colors flex flex-col items-center gap-0.5"
                             >
                                 <Palette className="w-3.5 h-3.5 text-slate-600" />
                                 <span className="w-4 h-1 rounded-full block" style={{ backgroundColor: tableCellBgColor }} />
                             </button>
-                            <input
-                                ref={tableCellBgRef}
-                                type="color"
-                                value={tableCellBgColor}
-                                onChange={e => {
-                                    setTableCellBgColor(e.target.value);
-                                    tableSetCellBgColor(e.target.value);
-                                }}
-                                className="absolute opacity-0 w-0 h-0 pointer-events-none"
-                            />
+                            {colorPickerTarget === 'cellBg' && (
+                                <div className="absolute top-full mt-1 z-50" style={{ right: 0 }}>
+                                    <ColorGrid
+                                        currentColor={tableCellBgColor}
+                                        onSelect={c => { setTableCellBgColor(c); tableSetCellBgColor(c); setColorPickerTarget(null); }}
+                                        onReset={() => { setTableCellBgColor(''); tableSetCellBgColor(''); setColorPickerTarget(null); }}
+                                    />
+                                </div>
+                            )}
                         </div>
                         <Divider />
                         {/* Column width */}
@@ -935,8 +1114,6 @@ export default function LegalDocumentEditorPage() {
                         </ToolBtn>
                     </>
                 )}
-                <Divider />
-
                 {/* Page size + orientation */}
                 <Divider />
                 <select
@@ -975,7 +1152,30 @@ export default function LegalDocumentEditorPage() {
                     <Braces className="w-3.5 h-3.5" />
                     متغير
                 </button>
+                <Divider />
+
+                {/* Image upload */}
+                <label title="إدراج صورة" className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer">
+                    <ImagePlus className="w-3.5 h-3.5" />
+                    صورة
+                    <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleInsertImage} />
+                </label>
+
+                {/* Word export */}
+                <button
+                    onMouseDown={e => { e.preventDefault(); handleExportWord(); }}
+                    title="تنزيل كملف Word"
+                    className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors"
+                >
+                    <Download className="w-3.5 h-3.5" />
+                    Word
+                </button>
             </div>
+
+            {/* Close color pickers on outside click */}
+            {colorPickerTarget && (
+                <div className="fixed inset-0 z-40" onMouseDown={() => setColorPickerTarget(null)} />
+            )}
 
 
             {/* ══════════════ CONTENT AREA ══════════════ */}
@@ -1010,20 +1210,36 @@ export default function LegalDocumentEditorPage() {
 
                         {/* Header */}
                         {showHeader && (
-                            <div className="border-b border-dashed border-violet-200 bg-violet-50/40 px-10 py-2">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <PanelTop className="w-3 h-3 text-violet-400 flex-shrink-0" />
-                                    <span className="text-[10px] text-violet-400 font-medium">رأس الصفحة</span>
+                            <div className="border-b-2 border-dashed border-violet-300 bg-violet-50/60 px-8 py-3 print:border-b print:border-slate-300">
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-1.5">
+                                        <PanelTop className="w-3 h-3 text-violet-400" />
+                                        <span className="text-[10px] text-violet-400 font-medium">رأس الصفحة</span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <span className="text-[10px] text-slate-400">أعمدة:</span>
+                                        {[1,2,3].map(n => (
+                                            <button key={n} onMouseDown={e => { e.preventDefault(); setHeaderCols(n); }}
+                                                className={cn('w-5 h-5 text-[10px] rounded border transition-colors', headerCols === n ? 'bg-violet-600 text-white border-violet-600' : 'border-slate-300 text-slate-500 hover:bg-slate-100')}>{n}</button>
+                                        ))}
+                                    </div>
                                 </div>
-                                <input
-                                    type="text"
-                                    value={headerContent}
-                                    onChange={e => { setHeaderContent(e.target.value); setHasUnsaved(true); }}
-                                    placeholder="اكتب نص رأس الصفحة هنا..."
-                                    className="w-full bg-transparent outline-none text-sm text-slate-600 placeholder:text-slate-300 text-right"
-                                    style={{ fontFamily: `'${fontFamily}', Arial, sans-serif`, fontSize: `${Math.max(10, fontSize - 2)}px` }}
-                                    dir="rtl"
-                                />
+                                <div className={cn('gap-3', headerCols > 1 ? 'grid' : 'block')} style={{ gridTemplateColumns: headerCols > 1 ? `repeat(${headerCols}, 1fr)` : undefined }}>
+                                    {Array.from({ length: headerCols }).map((_, i) => (
+                                        <input key={i} type="text"
+                                            value={headerCols === 1 ? headerContent : headerParts[i]}
+                                            onChange={e => {
+                                                if (headerCols === 1) { setHeaderContent(e.target.value); }
+                                                else { const p = [...headerParts]; p[i] = e.target.value; setHeaderParts(p); }
+                                                setHasUnsaved(true);
+                                            }}
+                                            placeholder={headerCols === 1 ? 'رأس الصفحة...' : ['يمين','وسط','يسار'][i] + '...'}
+                                            className="w-full bg-transparent outline-none text-sm text-slate-600 placeholder:text-slate-300 text-right border-b border-violet-100 pb-1"
+                                            style={{ fontFamily: `'${fontFamily}', Arial, sans-serif`, fontSize: `${Math.max(10, fontSize - 2)}px` }}
+                                            dir="rtl"
+                                        />
+                                    ))}
+                                </div>
                             </div>
                         )}
 
@@ -1035,7 +1251,7 @@ export default function LegalDocumentEditorPage() {
                             onInput={handleInput}
                             dir="rtl"
                             lang="ar"
-                            className="outline-none w-full"
+                            className="wq-editor outline-none w-full"
                             style={{
                                 fontFamily: `'${fontFamily}', Arial, sans-serif`,
                                 fontSize: `${fontSize}px`,
@@ -1050,20 +1266,36 @@ export default function LegalDocumentEditorPage() {
 
                         {/* Footer */}
                         {showFooter && (
-                            <div className="border-t border-dashed border-violet-200 bg-violet-50/40 px-10 py-2">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <PanelBottom className="w-3 h-3 text-violet-400 flex-shrink-0" />
-                                    <span className="text-[10px] text-violet-400 font-medium">تذييل الصفحة</span>
+                            <div className="border-t-2 border-dashed border-violet-300 bg-violet-50/60 px-8 py-3 print:border-t print:border-slate-300">
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-1.5">
+                                        <PanelBottom className="w-3 h-3 text-violet-400" />
+                                        <span className="text-[10px] text-violet-400 font-medium">تذييل الصفحة</span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <span className="text-[10px] text-slate-400">أعمدة:</span>
+                                        {[1,2,3].map(n => (
+                                            <button key={n} onMouseDown={e => { e.preventDefault(); setFooterCols(n); }}
+                                                className={cn('w-5 h-5 text-[10px] rounded border transition-colors', footerCols === n ? 'bg-violet-600 text-white border-violet-600' : 'border-slate-300 text-slate-500 hover:bg-slate-100')}>{n}</button>
+                                        ))}
+                                    </div>
                                 </div>
-                                <input
-                                    type="text"
-                                    value={footerContent}
-                                    onChange={e => { setFooterContent(e.target.value); setHasUnsaved(true); }}
-                                    placeholder="اكتب نص تذييل الصفحة هنا..."
-                                    className="w-full bg-transparent outline-none text-sm text-slate-600 placeholder:text-slate-300 text-right"
-                                    style={{ fontFamily: `'${fontFamily}', Arial, sans-serif`, fontSize: `${Math.max(10, fontSize - 2)}px` }}
-                                    dir="rtl"
-                                />
+                                <div className={cn('gap-3', footerCols > 1 ? 'grid' : 'block')} style={{ gridTemplateColumns: footerCols > 1 ? `repeat(${footerCols}, 1fr)` : undefined }}>
+                                    {Array.from({ length: footerCols }).map((_, i) => (
+                                        <input key={i} type="text"
+                                            value={footerCols === 1 ? footerContent : footerParts[i]}
+                                            onChange={e => {
+                                                if (footerCols === 1) { setFooterContent(e.target.value); }
+                                                else { const p = [...footerParts]; p[i] = e.target.value; setFooterParts(p); }
+                                                setHasUnsaved(true);
+                                            }}
+                                            placeholder={footerCols === 1 ? 'تذييل الصفحة...' : ['يمين','وسط','يسار'][i] + '...'}
+                                            className="w-full bg-transparent outline-none text-sm text-slate-600 placeholder:text-slate-300 text-right border-b border-violet-100 pb-1"
+                                            style={{ fontFamily: `'${fontFamily}', Arial, sans-serif`, fontSize: `${Math.max(10, fontSize - 2)}px` }}
+                                            dir="rtl"
+                                        />
+                                    ))}
+                                </div>
                             </div>
                         )}
                     </div>
