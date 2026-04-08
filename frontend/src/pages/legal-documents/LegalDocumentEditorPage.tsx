@@ -10,6 +10,7 @@ import {
     Table as TableIcon, ChevronDown, Braces, PanelRight,
     FileText, Users, Briefcase, X, Copy, Search,
     LayoutTemplate, Strikethrough, Highlighter,
+    Trash2,
 } from 'lucide-react';
 import { legalDocumentsApi } from '@/api/legalDocuments';
 import { firmApi } from '@/api/settings.api';
@@ -146,9 +147,17 @@ export default function LegalDocumentEditorPage() {
     const [varActiveNode, setVarActiveNode] = useState<Node | null>(null);
     const [varActiveCat, setVarActiveCat]   = useState<string | null>(null);
 
-    const editorRef   = useRef<HTMLDivElement>(null);
-    const autoSaveRef = useRef<ReturnType<typeof setInterval>>();
-    const varMenuRef  = useRef<HTMLDivElement>(null);
+    const editorRef        = useRef<HTMLDivElement>(null);
+    const autoSaveRef      = useRef<ReturnType<typeof setInterval>>();
+    const varMenuRef       = useRef<HTMLDivElement>(null);
+    const fontColorRef     = useRef<HTMLInputElement>(null);
+    const highlightColorRef = useRef<HTMLInputElement>(null);
+
+    // ── Extra toolbar state ────────────────────────────────────────────────
+    const [fontFamily, setFontFamily]   = useState("Cairo");
+    const [fontColor,  setFontColor]    = useState('#1a1a1a');
+    const [hlColor,    setHlColor]      = useState('#fef08a');
+    const [inTable,    setInTable]      = useState(false);
 
     // ── Data fetching ──────────────────────────────────────────────────────
     const { data: docData, isLoading } = useQuery({
@@ -279,6 +288,97 @@ export default function LegalDocumentEditorPage() {
     const exec = (cmd: string, val?: string) => {
         window.document.execCommand(cmd, false, val);
         editorRef.current?.focus();
+        setHasUnsaved(true);
+    };
+
+    // ── Track table context on selection change ────────────────────────────
+    useEffect(() => {
+        const onSel = () => {
+            const sel = window.getSelection();
+            if (!sel?.rangeCount) { setInTable(false); return; }
+            let node: Node | null = sel.getRangeAt(0).commonAncestorContainer;
+            if (node?.nodeType === Node.TEXT_NODE) node = node.parentNode;
+            let el = node as Element | null;
+            let found = false;
+            while (el && editorRef.current?.contains(el)) {
+                if (el.tagName === 'TD' || el.tagName === 'TH') { found = true; break; }
+                el = el.parentElement;
+            }
+            setInTable(found);
+        };
+        window.document.addEventListener('selectionchange', onSel);
+        return () => window.document.removeEventListener('selectionchange', onSel);
+    }, []);
+
+    // ── Table context ──────────────────────────────────────────────────────
+    const getTableCtx = () => {
+        const sel = window.getSelection();
+        if (!sel?.rangeCount) return null;
+        let node: Node | null = sel.getRangeAt(0).commonAncestorContainer;
+        if (node?.nodeType === Node.TEXT_NODE) node = node.parentNode;
+        let cell = node as Element | null;
+        while (cell && cell !== editorRef.current) {
+            if (cell.tagName === 'TD' || cell.tagName === 'TH') break;
+            cell = cell.parentElement;
+        }
+        if (!cell || (cell.tagName !== 'TD' && cell.tagName !== 'TH')) return null;
+        const row   = cell.parentElement as HTMLTableRowElement;
+        const table = row.closest('table') as HTMLTableElement;
+        return { cell: cell as HTMLTableCellElement, row, table, ci: (cell as HTMLTableCellElement).cellIndex, ri: row.rowIndex };
+    };
+
+    const tableAddRowBelow = () => {
+        const c = getTableCtx(); if (!c) return;
+        const newRow = c.table.insertRow(c.ri + 1);
+        for (let i = 0; i < c.table.rows[0].cells.length; i++) {
+            const td = newRow.insertCell(i);
+            td.style.cssText = 'border:1px solid #cbd5e1;padding:8px 12px;';
+            td.innerHTML = '&nbsp;';
+        }
+        setHasUnsaved(true);
+    };
+    const tableAddRowAbove = () => {
+        const c = getTableCtx(); if (!c) return;
+        const newRow = c.table.insertRow(c.ri);
+        for (let i = 0; i < c.table.rows[0].cells.length; i++) {
+            const td = newRow.insertCell(i);
+            td.style.cssText = 'border:1px solid #cbd5e1;padding:8px 12px;';
+            td.innerHTML = '&nbsp;';
+        }
+        setHasUnsaved(true);
+    };
+    const tableDeleteRow = () => {
+        const c = getTableCtx(); if (!c) return;
+        if (c.table.rows.length <= 1) return;
+        c.table.deleteRow(c.ri);
+        setHasUnsaved(true);
+    };
+    const tableAddColRight = () => {
+        const c = getTableCtx(); if (!c) return;
+        for (let i = 0; i < c.table.rows.length; i++) {
+            const td = c.table.rows[i].insertCell(c.ci + 1);
+            td.style.cssText = i === 0
+                ? 'border:1px solid #cbd5e1;padding:8px 12px;background:#f8fafc;font-weight:700;'
+                : 'border:1px solid #cbd5e1;padding:8px 12px;';
+            td.innerHTML = '&nbsp;';
+        }
+        setHasUnsaved(true);
+    };
+    const tableAddColLeft = () => {
+        const c = getTableCtx(); if (!c) return;
+        for (let i = 0; i < c.table.rows.length; i++) {
+            const td = c.table.rows[i].insertCell(c.ci);
+            td.style.cssText = i === 0
+                ? 'border:1px solid #cbd5e1;padding:8px 12px;background:#f8fafc;font-weight:700;'
+                : 'border:1px solid #cbd5e1;padding:8px 12px;';
+            td.innerHTML = '&nbsp;';
+        }
+        setHasUnsaved(true);
+    };
+    const tableDeleteCol = () => {
+        const c = getTableCtx(); if (!c) return;
+        if (c.table.rows[0].cells.length <= 1) return;
+        for (let i = 0; i < c.table.rows.length; i++) c.table.rows[i].deleteCell(c.ci);
         setHasUnsaved(true);
     };
 
@@ -523,66 +623,38 @@ export default function LegalDocumentEditorPage() {
 
                 {/* Actions */}
                 <div className="flex items-center gap-1">
-                    {/* Letterhead toggle */}
-                    <button
-                        onClick={() => { setShowLetterhead(v => !v); setHasUnsaved(true); }}
-                        title="الهيد ليتر"
-                        className={cn(
-                            'p-1.5 rounded-lg transition-colors text-xs font-medium flex items-center gap-1',
-                            showLetterhead ? 'bg-indigo-100 text-indigo-700' : 'text-slate-400 hover:bg-slate-100'
-                        )}
-                    >
-                        <LayoutTemplate className="w-4 h-4" />
-                    </button>
-
-                    {/* Split screen */}
-                    <button
-                        onClick={() => { setShowSplit(v => !v); setPanelSelected(null); }}
-                        title="تقسيم الشاشة"
-                        className={cn(
-                            'p-1.5 rounded-lg transition-colors',
-                            showSplit ? 'bg-blue-100 text-blue-700' : 'text-slate-400 hover:bg-slate-100'
-                        )}
-                    >
-                        <PanelRight className="w-4 h-4" />
-                    </button>
-
-                    {/* History */}
-                    <button
-                        onClick={() => setShowHistory(!showHistory)}
-                        title="سجل الإصدارات"
-                        className={cn(
-                            'p-1.5 rounded-lg transition-colors',
-                            showHistory ? 'bg-slate-200 text-slate-700' : 'text-slate-400 hover:bg-slate-100'
-                        )}
-                    >
-                        <History className="w-4 h-4" />
-                    </button>
-
-                    {/* Print / PDF */}
-                    <button onClick={handlePrint} title="طباعة / PDF" className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors">
-                        <Printer className="w-4 h-4" />
-                    </button>
-                    <button onClick={handleExportPDF} title="تصدير PDF" className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors">
-                        <FileDown className="w-4 h-4" />
-                    </button>
-
-                    {/* Save */}
-                    <button
-                        onClick={handleSave}
-                        disabled={isSaving}
-                        className="flex items-center gap-1.5 bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-blue-700 transition-colors disabled:opacity-50 font-semibold shadow-sm whitespace-nowrap"
-                    >
+                    <button onClick={() => { setShowLetterhead(v => !v); setHasUnsaved(true); }} title="الهيد ليتر" className={cn('p-1.5 rounded-lg transition-colors', showLetterhead ? 'bg-indigo-100 text-indigo-700' : 'text-slate-400 hover:bg-slate-100')}><LayoutTemplate className="w-4 h-4" /></button>
+                    <button onClick={() => { setShowSplit(v => !v); setPanelSelected(null); }} title="تقسيم الشاشة" className={cn('p-1.5 rounded-lg transition-colors', showSplit ? 'bg-blue-100 text-blue-700' : 'text-slate-400 hover:bg-slate-100')}><PanelRight className="w-4 h-4" /></button>
+                    <button onClick={() => setShowHistory(h => !h)} title="سجل الإصدارات" className={cn('p-1.5 rounded-lg transition-colors', showHistory ? 'bg-slate-200 text-slate-700' : 'text-slate-400 hover:bg-slate-100')}><History className="w-4 h-4" /></button>
+                    <button onClick={handlePrint} title="طباعة" className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors"><Printer className="w-4 h-4" /></button>
+                    <button onClick={handleExportPDF} title="تصدير PDF" className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors"><FileDown className="w-4 h-4" /></button>
+                    <button onClick={handleSave} disabled={isSaving} className="flex items-center gap-1.5 bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs hover:bg-blue-700 transition-colors disabled:opacity-50 font-semibold shadow-sm whitespace-nowrap">
                         <Save className="w-3.5 h-3.5" />
                         {isSaving ? 'جاري...' : 'حفظ'}
                     </button>
                 </div>
             </div>
-
-            {/* ══════════════ TOOLBAR ══════════════ */}
             <div className="bg-white border-b border-slate-100 px-3 py-1 flex items-center gap-0.5 flex-shrink-0 flex-wrap z-10">
                 <ToolBtn onClick={() => exec('undo')} title="تراجع"><Undo className="w-3.5 h-3.5" /></ToolBtn>
                 <ToolBtn onClick={() => exec('redo')} title="إعادة"><Redo className="w-3.5 h-3.5" /></ToolBtn>
+                <Divider />
+
+                {/* Font family */}
+                <select
+                    value={fontFamily}
+                    onChange={e => {
+                        setFontFamily(e.target.value);
+                        editorRef.current?.focus();
+                        window.document.execCommand('fontName', false, e.target.value);
+                        setHasUnsaved(true);
+                    }}
+                    className="text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-md px-1.5 py-0.5 outline-none h-7"
+                    title="نوع الخط"
+                >
+                    {['Cairo','Tajawal','Amiri','Arial','Times New Roman','Courier New','Georgia'].map(f =>
+                        <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>
+                    )}
+                </select>
                 <Divider />
 
                 {/* Font size */}
@@ -595,13 +667,62 @@ export default function LegalDocumentEditorPage() {
                         onChange={e => setFontSize(Number(e.target.value))}
                         className="text-xs text-slate-600 bg-transparent border-none outline-none w-10 text-center"
                     >
-                        {[10,11,12,13,14,15,16,18,20,22,24].map(s => (
+                        {[10,11,12,13,14,15,16,18,20,22,24,28,32,36].map(s => (
                             <option key={s} value={s}>{s}</option>
                         ))}
                     </select>
-                    <button onMouseDown={e => { e.preventDefault(); setFontSize(s => Math.min(30, s + 1)); }} className="p-0.5 rounded hover:bg-slate-200">
+                    <button onMouseDown={e => { e.preventDefault(); setFontSize(s => Math.min(48, s + 1)); }} className="p-0.5 rounded hover:bg-slate-200">
                         <Plus className="w-3 h-3 text-slate-500" />
                     </button>
+                </div>
+                <Divider />
+
+                {/* Font color */}
+                <div className="relative" title="لون الخط">
+                    <button
+                        onMouseDown={e => { e.preventDefault(); fontColorRef.current?.click(); }}
+                        className="p-1.5 rounded-md hover:bg-slate-100 transition-colors flex flex-col items-center gap-0.5"
+                    >
+                        <span className="font-bold text-sm leading-none" style={{ color: fontColor }}>A</span>
+                        <span className="w-4 h-1 rounded-full block" style={{ backgroundColor: fontColor }} />
+                    </button>
+                    <input
+                        ref={fontColorRef}
+                        type="color"
+                        value={fontColor}
+                        onChange={e => {
+                            setFontColor(e.target.value);
+                            editorRef.current?.focus();
+                            window.document.execCommand('foreColor', false, e.target.value);
+                            setHasUnsaved(true);
+                        }}
+                        className="absolute opacity-0 w-0 h-0 pointer-events-none"
+                    />
+                </div>
+
+                {/* Highlight color */}
+                <div className="relative" title="تظليل">
+                    <button
+                        onMouseDown={e => { e.preventDefault(); highlightColorRef.current?.click(); }}
+                        className="p-1.5 rounded-md hover:bg-slate-100 transition-colors"
+                    >
+                        <div className="relative">
+                            <Highlighter className="w-3.5 h-3.5 text-slate-600" />
+                            <span className="absolute -bottom-0.5 left-0 right-0 h-1 rounded-full" style={{ backgroundColor: hlColor }} />
+                        </div>
+                    </button>
+                    <input
+                        ref={highlightColorRef}
+                        type="color"
+                        value={hlColor}
+                        onChange={e => {
+                            setHlColor(e.target.value);
+                            editorRef.current?.focus();
+                            window.document.execCommand('hiliteColor', false, e.target.value);
+                            setHasUnsaved(true);
+                        }}
+                        className="absolute opacity-0 w-0 h-0 pointer-events-none"
+                    />
                 </div>
                 <Divider />
 
@@ -617,7 +738,6 @@ export default function LegalDocumentEditorPage() {
                 <ToolBtn onClick={() => exec('italic')}        title="مائل"><Italic className="w-3.5 h-3.5" /></ToolBtn>
                 <ToolBtn onClick={() => exec('underline')}     title="تسطير"><UnderlineIcon className="w-3.5 h-3.5" /></ToolBtn>
                 <ToolBtn onClick={() => exec('strikeThrough')} title="شطب"><Strikethrough className="w-3.5 h-3.5" /></ToolBtn>
-                <ToolBtn onClick={() => exec('hiliteColor', '#fef08a')} title="تظليل"><Highlighter className="w-3.5 h-3.5" /></ToolBtn>
                 <Divider />
 
                 {/* Alignment */}
@@ -632,7 +752,7 @@ export default function LegalDocumentEditorPage() {
                 <ToolBtn onClick={() => exec('insertOrderedList')}   title="قائمة مرقمة"><ListOrdered className="w-3.5 h-3.5" /></ToolBtn>
                 <Divider />
 
-                {/* Table */}
+                {/* Table insert */}
                 <ToolBtn
                     onClick={() => {
                         exec('insertHTML', '<table style="width:100%;border-collapse:collapse;margin:12px 0"><tr><th style="border:1px solid #cbd5e1;padding:8px 12px;background:#f8fafc;text-align:right;font-weight:700">العمود 1</th><th style="border:1px solid #cbd5e1;padding:8px 12px;background:#f8fafc;text-align:right;font-weight:700">العمود 2</th><th style="border:1px solid #cbd5e1;padding:8px 12px;background:#f8fafc;text-align:right;font-weight:700">العمود 3</th></tr><tr><td style="border:1px solid #cbd5e1;padding:8px 12px">&nbsp;</td><td style="border:1px solid #cbd5e1;padding:8px 12px">&nbsp;</td><td style="border:1px solid #cbd5e1;padding:8px 12px">&nbsp;</td></tr></table>');
@@ -644,6 +764,25 @@ export default function LegalDocumentEditorPage() {
                 <ToolBtn onClick={() => exec('insertHorizontalRule')} title="خط فاصل">
                     <Minus className="w-3.5 h-3.5" />
                 </ToolBtn>
+
+                {/* Table row/col controls — show only when cursor is inside a table */}
+                {inTable && (
+                    <>
+                        <Divider />
+                        <span className="text-xs text-slate-400 px-1">الجدول:</span>
+                        <ToolBtn onClick={tableAddRowAbove} title="صف أعلى"><span className="text-xs font-bold">↑ صف</span></ToolBtn>
+                        <ToolBtn onClick={tableAddRowBelow} title="صف أسفل"><span className="text-xs font-bold">↓ صف</span></ToolBtn>
+                        <ToolBtn onClick={tableDeleteRow}   title="حذف الصف">
+                            <span className="flex items-center gap-0.5 text-red-500"><Trash2 className="w-3 h-3" /><span className="text-xs">صف</span></span>
+                        </ToolBtn>
+                        <Divider />
+                        <ToolBtn onClick={tableAddColLeft}  title="عمود يمين"><span className="text-xs font-bold">→ عمود</span></ToolBtn>
+                        <ToolBtn onClick={tableAddColRight} title="عمود يسار"><span className="text-xs font-bold">← عمود</span></ToolBtn>
+                        <ToolBtn onClick={tableDeleteCol}   title="حذف العمود">
+                            <span className="flex items-center gap-0.5 text-red-500"><Trash2 className="w-3 h-3" /><span className="text-xs">عمود</span></span>
+                        </ToolBtn>
+                    </>
+                )}
                 <Divider />
 
                 {/* Variable button */}
@@ -657,7 +796,7 @@ export default function LegalDocumentEditorPage() {
                         setVarActiveNode(null);
                         setShowVarMenu(v => !v);
                     }}
-                    title="إدراج متغير ({{)"
+                    title="إدراج متغير ({{"
                     className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors"
                 >
                     <Braces className="w-3.5 h-3.5" />
@@ -665,59 +804,52 @@ export default function LegalDocumentEditorPage() {
                 </button>
             </div>
 
+
             {/* ══════════════ CONTENT AREA ══════════════ */}
             <div className="flex flex-1 overflow-hidden relative">
 
                 {/* ── Editor ── */}
-                <div className="flex-1 overflow-auto bg-slate-100 py-8">
-                    <div
-                        className="mx-auto bg-white shadow-xl"
-                        style={{
-                            width: showSplit ? '100%' : '210mm',
-                            maxWidth: showSplit ? '100%' : '210mm',
-                            minHeight: '297mm',
-                        }}
-                    >
-                        {/* Letterhead */}
-                        {showLetterhead && firm?.letterheadUrl && (
-                            <div className="w-full border-b border-slate-100 p-0">
-                                <img
-                                    src={firm.letterheadUrl}
-                                    alt="هيد ليتر المكتب"
-                                    className="w-full object-contain"
-                                    style={{ maxHeight: '130px' }}
-                                />
-                            </div>
-                        )}
-                        {showLetterhead && !firm?.letterheadUrl && (
-                            <div className="border-b border-dashed border-slate-200 p-4 text-center text-slate-400 text-xs">
-                                لم يتم رفع ورقة الهيد ليتر بعد —
-                                <Link to={p('/settings')} className="text-blue-500 mr-1 hover:underline">
-                                    ارفعها من الإعدادات
-                                </Link>
-                            </div>
-                        )}
+                <div className="flex-1 overflow-auto bg-white">
+                    {/* Letterhead */}
+                    {showLetterhead && firm?.letterheadUrl && (
+                        <div className="w-full border-b border-slate-100 p-0">
+                            <img
+                                src={firm.letterheadUrl}
+                                alt="هيد ليتر المكتب"
+                                className="w-full object-contain"
+                                style={{ maxHeight: '130px' }}
+                            />
+                        </div>
+                    )}
+                    {showLetterhead && !firm?.letterheadUrl && (
+                        <div className="border-b border-dashed border-slate-200 p-4 text-center text-slate-400 text-xs">
+                            لم يتم رفع ورقة الهيد ليتر بعد —
+                            <Link to={p('/settings')} className="text-blue-500 mr-1 hover:underline">
+                                ارفعها من الإعدادات
+                            </Link>
+                        </div>
+                    )}
 
-                        {/* Editor content */}
-                        <div
-                            ref={editorRef}
-                            contentEditable
-                            suppressContentEditableWarning
-                            onInput={handleInput}
-                            dir="rtl"
-                            lang="ar"
-                            className="outline-none min-h-[250px]"
-                            style={{
-                                fontFamily: "'Cairo', 'Arial', sans-serif",
-                                fontSize: `${fontSize}px`,
-                                lineHeight: 1.9,
-                                color: '#1a1a1a',
-                                direction: 'rtl',
-                                textAlign: 'right',
-                                padding: showSplit ? '16px 24px' : '25mm 30mm',
-                            }}
-                        />
-                    </div>
+                    {/* Editor content — full width, no A4 box */}
+                    <div
+                        ref={editorRef}
+                        contentEditable
+                        suppressContentEditableWarning
+                        onInput={handleInput}
+                        dir="rtl"
+                        lang="ar"
+                        className="outline-none w-full"
+                        style={{
+                            fontFamily: `'${fontFamily}', 'Cairo', 'Arial', sans-serif`,
+                            fontSize: `${fontSize}px`,
+                            lineHeight: 1.9,
+                            color: '#1a1a1a',
+                            direction: 'rtl',
+                            textAlign: 'right',
+                            padding: '32px 48px',
+                            minHeight: 'calc(100vh - 160px)',
+                        }}
+                    />
                 </div>
 
                 {/* ── Split Panel ── */}
