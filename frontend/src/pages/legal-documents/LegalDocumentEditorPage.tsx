@@ -10,7 +10,8 @@ import {
     Table as TableIcon, ChevronDown, Braces, PanelRight,
     FileText, Users, Briefcase, X, Copy, Search,
     LayoutTemplate, Strikethrough, Highlighter,
-    Trash2,
+    Trash2, RotateCw, Palette, PanelTop, PanelBottom,
+    Maximize2,
 } from 'lucide-react';
 import { legalDocumentsApi } from '@/api/legalDocuments';
 import { firmApi } from '@/api/settings.api';
@@ -77,6 +78,20 @@ const VARIABLE_CATEGORIES = [
         ],
     },
 ];
+
+// ─── Page sizes ────────────────────────────────────────────────────────────
+const PAGE_SIZES: Record<string, { label: string; w: number; h: number }> = {
+    'A1':     { label: 'A1',     w: 594, h: 841 },
+    'A2':     { label: 'A2',     w: 420, h: 594 },
+    'A3':     { label: 'A3',     w: 297, h: 420 },
+    'A4':     { label: 'A4',     w: 210, h: 297 },
+    'A5':     { label: 'A5',     w: 148, h: 210 },
+    'A6':     { label: 'A6',     w: 105, h: 148 },
+    'Letter': { label: 'Letter', w: 216, h: 279 },
+    'Legal':  { label: 'Legal',  w: 216, h: 356 },
+};
+// 1mm ≈ 3.7795px at 96dpi
+const MM_TO_PX = 3.7795;
 
 // ─── Side panel tabs ───────────────────────────────────────────────────────
 const PANEL_TABS = [
@@ -147,17 +162,31 @@ export default function LegalDocumentEditorPage() {
     const [varActiveNode, setVarActiveNode] = useState<Node | null>(null);
     const [varActiveCat, setVarActiveCat]   = useState<string | null>(null);
 
-    const editorRef        = useRef<HTMLDivElement>(null);
-    const autoSaveRef      = useRef<ReturnType<typeof setInterval>>();
-    const varMenuRef       = useRef<HTMLDivElement>(null);
-    const fontColorRef     = useRef<HTMLInputElement>(null);
-    const highlightColorRef = useRef<HTMLInputElement>(null);
+    const editorRef          = useRef<HTMLDivElement>(null);
+    const autoSaveRef        = useRef<ReturnType<typeof setInterval>>();
+    const varMenuRef         = useRef<HTMLDivElement>(null);
+    const fontColorRef       = useRef<HTMLInputElement>(null);
+    const highlightColorRef  = useRef<HTMLInputElement>(null);
+    const tableCellBgRef     = useRef<HTMLInputElement>(null);
 
     // ── Extra toolbar state ────────────────────────────────────────────────
-    const [fontFamily, setFontFamily]   = useState("Cairo");
+    const [fontFamily, setFontFamily]   = useState("Arial");
     const [fontColor,  setFontColor]    = useState('#1a1a1a');
     const [hlColor,    setHlColor]      = useState('#fef08a');
     const [inTable,    setInTable]      = useState(false);
+
+    // ── Page layout state ──────────────────────────────────────────────────
+    const [pageSize,        setPageSize]        = useState('A4');
+    const [pageOrientation, setPageOrientation] = useState<'portrait' | 'landscape'>('portrait');
+    const [showHeader,      setShowHeader]      = useState(false);
+    const [headerContent,   setHeaderContent]   = useState('');
+    const [showFooter,      setShowFooter]      = useState(false);
+    const [footerContent,   setFooterContent]   = useState('');
+
+    // ── Table extra state ──────────────────────────────────────────────────
+    const [tableCellBgColor, setTableCellBgColor] = useState('#f8fafc');
+    const [tableColWidth,    setTableColWidth]    = useState('');
+    const [tableRowHeight,   setTableRowHeight]   = useState('');
 
     // ── Data fetching ──────────────────────────────────────────────────────
     const { data: docData, isLoading } = useQuery({
@@ -223,6 +252,12 @@ export default function LegalDocumentEditorPage() {
             const settings = docRecord.settings as any;
             if (settings?.fontSize) setFontSize(settings.fontSize);
             if (settings?.showLetterhead) setShowLetterhead(true);
+            if (settings?.pageSize) setPageSize(settings.pageSize);
+            if (settings?.pageOrientation) setPageOrientation(settings.pageOrientation);
+            if (settings?.showHeader) setShowHeader(true);
+            if (settings?.headerContent) setHeaderContent(settings.headerContent);
+            if (settings?.showFooter) setShowFooter(true);
+            if (settings?.footerContent) setFooterContent(settings.footerContent);
         }
     }, [docRecord]);
 
@@ -249,7 +284,7 @@ export default function LegalDocumentEditorPage() {
                 content: editorRef.current.innerHTML,
                 title,
                 status,
-                settings: { fontSize, showLetterhead },
+                settings: { fontSize, showLetterhead, pageSize, pageOrientation, showHeader, headerContent, showFooter, footerContent },
             });
             toast.success('تم الحفظ ✓');
         } catch {
@@ -267,13 +302,13 @@ export default function LegalDocumentEditorPage() {
                     await saveMutation.mutateAsync({
                         content: editorRef.current.innerHTML,
                         title,
-                        settings: { fontSize, showLetterhead },
+                        settings: { fontSize, showLetterhead, pageSize, pageOrientation, showHeader, headerContent, showFooter, footerContent },
                     });
                 } catch { /* silent */ }
             }
         }, 30000);
         return () => clearInterval(autoSaveRef.current);
-    }, [hasUnsaved, title, fontSize, showLetterhead]);
+    }, [hasUnsaved, title, fontSize, showLetterhead, pageSize, pageOrientation, showHeader, headerContent, showFooter, footerContent]);
 
     // Ctrl+S
     useEffect(() => {
@@ -381,6 +416,40 @@ export default function LegalDocumentEditorPage() {
         for (let i = 0; i < c.table.rows.length; i++) c.table.rows[i].deleteCell(c.ci);
         setHasUnsaved(true);
     };
+    const tableSetCellBgColor = (color: string) => {
+        const c = getTableCtx(); if (!c) return;
+        (c.cell as HTMLElement).style.backgroundColor = color;
+        setHasUnsaved(true);
+    };
+    const tableEqualizeColumns = () => {
+        const c = getTableCtx(); if (!c) return;
+        const numCols = c.table.rows[0]?.cells.length ?? 1;
+        const w = `${(100 / numCols).toFixed(1)}%`;
+        for (let r = 0; r < c.table.rows.length; r++) {
+            for (let col = 0; col < c.table.rows[r].cells.length; col++) {
+                (c.table.rows[r].cells[col] as HTMLElement).style.width = w;
+            }
+        }
+        setHasUnsaved(true);
+    };
+    const tableApplyColWidth = (width: string) => {
+        if (!width.trim()) return;
+        const c = getTableCtx(); if (!c) return;
+        // Normalize: if it's a pure number, treat as px
+        const normalized = /^\d+$/.test(width.trim()) ? `${width.trim()}px` : width.trim();
+        for (let r = 0; r < c.table.rows.length; r++) {
+            const cell = c.table.rows[r].cells[c.ci] as HTMLElement | undefined;
+            if (cell) cell.style.width = normalized;
+        }
+        setHasUnsaved(true);
+    };
+    const tableApplyRowHeight = (height: string) => {
+        if (!height.trim()) return;
+        const c = getTableCtx(); if (!c) return;
+        const normalized = /^\d+$/.test(height.trim()) ? `${height.trim()}px` : height.trim();
+        (c.row as HTMLElement).style.height = normalized;
+        setHasUnsaved(true);
+    };
 
     // ── {{ variable detection ────────────────────────────────────────────
     const handleInput = useCallback(() => {
@@ -471,10 +540,21 @@ export default function LegalDocumentEditorPage() {
     // ── PDF Export (print to PDF) ──────────────────────────────────────────
     const handleExportPDF = () => {
         if (!editorRef.current) return;
+        const pSize = PAGE_SIZES[pageSize] ?? PAGE_SIZES['A4'];
+        const isLandscape = pageOrientation === 'landscape';
+        const pageCssSize = isLandscape
+            ? `${pSize.h}mm ${pSize.w}mm`
+            : `${pSize.w}mm ${pSize.h}mm`;
         const letterheadHtml = (showLetterhead && firm?.letterheadUrl)
             ? `<div style="width:100%;margin-bottom:20px;page-break-inside:avoid;">
                 <img src="${firm.letterheadUrl}" style="width:100%;max-height:120px;object-fit:contain;" />
                </div>`
+            : '';
+        const headerHtml = showHeader && headerContent
+            ? `<div style="border-bottom:1px solid #e2e8f0;padding-bottom:10px;margin-bottom:16px;font-size:${Math.max(10, fontSize - 2)}px;color:#64748b;">${headerContent}</div>`
+            : '';
+        const footerHtml = showFooter && footerContent
+            ? `<div style="border-top:1px solid #e2e8f0;padding-top:10px;margin-top:16px;font-size:${Math.max(10, fontSize - 2)}px;color:#64748b;">${footerContent}</div>`
             : '';
         const win = window.open('', '_blank');
         if (!win) return;
@@ -488,16 +568,16 @@ export default function LegalDocumentEditorPage() {
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: 'Cairo', Arial, sans-serif;
+      font-family: 'Arial', 'Cairo', sans-serif;
       font-size: ${fontSize}px;
       line-height: 1.9;
       color: #1a1a1a;
       direction: rtl;
       background: white;
     }
-    @page { size: A4; margin: 20mm 25mm; }
+    @page { size: ${pageCssSize}; margin: 15mm 20mm; }
     @media print { body { padding: 0; } }
-    .page { padding: 20mm 25mm; min-height: 297mm; }
+    .page { padding: 15mm 20mm; }
     h1 { font-size: 20px; font-weight: 700; text-align: center; margin: 16px 0; }
     h2 { font-size: 17px; font-weight: 700; margin: 14px 0; }
     h3 { font-size: 15px; font-weight: 600; color: #1a3a5c; margin: 12px 0; }
@@ -511,7 +591,9 @@ export default function LegalDocumentEditorPage() {
 <body>
   <div class="page">
     ${letterheadHtml}
+    ${headerHtml}
     ${editorRef.current.innerHTML}
+    ${footerHtml}
   </div>
 </body>
 </html>`);
@@ -556,6 +638,16 @@ export default function LegalDocumentEditorPage() {
             ),
         }))
         .filter(c => c.vars.length > 0);
+
+    // ── Page dimensions for visual display ────────────────────────────────
+    const pageDims = (() => {
+        const s = PAGE_SIZES[pageSize] ?? PAGE_SIZES['A4'];
+        const isLand = pageOrientation === 'landscape';
+        return {
+            width:  Math.round((isLand ? s.h : s.w) * MM_TO_PX),
+            height: Math.round((isLand ? s.w : s.h) * MM_TO_PX),
+        };
+    })();
 
     // ── Loading ────────────────────────────────────────────────────────────
     if (isLoading) {
@@ -623,6 +715,8 @@ export default function LegalDocumentEditorPage() {
 
                 {/* Actions */}
                 <div className="flex items-center gap-1">
+                    <button onClick={() => { setShowHeader(v => !v); setHasUnsaved(true); }} title="رأس الصفحة (هيدر)" className={cn('p-1.5 rounded-lg transition-colors', showHeader ? 'bg-violet-100 text-violet-700' : 'text-slate-400 hover:bg-slate-100')}><PanelTop className="w-4 h-4" /></button>
+                    <button onClick={() => { setShowFooter(v => !v); setHasUnsaved(true); }} title="تذييل الصفحة (فوتر)" className={cn('p-1.5 rounded-lg transition-colors', showFooter ? 'bg-violet-100 text-violet-700' : 'text-slate-400 hover:bg-slate-100')}><PanelBottom className="w-4 h-4" /></button>
                     <button onClick={() => { setShowLetterhead(v => !v); setHasUnsaved(true); }} title="الهيد ليتر" className={cn('p-1.5 rounded-lg transition-colors', showLetterhead ? 'bg-indigo-100 text-indigo-700' : 'text-slate-400 hover:bg-slate-100')}><LayoutTemplate className="w-4 h-4" /></button>
                     <button onClick={() => { setShowSplit(v => !v); setPanelSelected(null); }} title="تقسيم الشاشة" className={cn('p-1.5 rounded-lg transition-colors', showSplit ? 'bg-blue-100 text-blue-700' : 'text-slate-400 hover:bg-slate-100')}><PanelRight className="w-4 h-4" /></button>
                     <button onClick={() => setShowHistory(h => !h)} title="سجل الإصدارات" className={cn('p-1.5 rounded-lg transition-colors', showHistory ? 'bg-slate-200 text-slate-700' : 'text-slate-400 hover:bg-slate-100')}><History className="w-4 h-4" /></button>
@@ -651,7 +745,7 @@ export default function LegalDocumentEditorPage() {
                     className="text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-md px-1.5 py-0.5 outline-none h-7"
                     title="نوع الخط"
                 >
-                    {['Cairo','Tajawal','Amiri','Arial','Times New Roman','Courier New','Georgia'].map(f =>
+                    {['Arial','Cairo','Tajawal','Amiri','Times New Roman','Courier New','Georgia','Verdana','Tahoma'].map(f =>
                         <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>
                     )}
                 </select>
@@ -769,7 +863,7 @@ export default function LegalDocumentEditorPage() {
                 {inTable && (
                     <>
                         <Divider />
-                        <span className="text-xs text-slate-400 px-1">الجدول:</span>
+                        <span className="text-xs text-slate-400 px-1 whitespace-nowrap">الجدول:</span>
                         <ToolBtn onClick={tableAddRowAbove} title="صف أعلى"><span className="text-xs font-bold">↑ صف</span></ToolBtn>
                         <ToolBtn onClick={tableAddRowBelow} title="صف أسفل"><span className="text-xs font-bold">↓ صف</span></ToolBtn>
                         <ToolBtn onClick={tableDeleteRow}   title="حذف الصف">
@@ -781,8 +875,87 @@ export default function LegalDocumentEditorPage() {
                         <ToolBtn onClick={tableDeleteCol}   title="حذف العمود">
                             <span className="flex items-center gap-0.5 text-red-500"><Trash2 className="w-3 h-3" /><span className="text-xs">عمود</span></span>
                         </ToolBtn>
+                        <Divider />
+                        {/* Cell background color */}
+                        <div className="relative" title="لون خلفية الخلية">
+                            <button
+                                onMouseDown={e => { e.preventDefault(); tableCellBgRef.current?.click(); }}
+                                className="p-1.5 rounded-md hover:bg-slate-100 transition-colors flex flex-col items-center gap-0.5"
+                            >
+                                <Palette className="w-3.5 h-3.5 text-slate-600" />
+                                <span className="w-4 h-1 rounded-full block" style={{ backgroundColor: tableCellBgColor }} />
+                            </button>
+                            <input
+                                ref={tableCellBgRef}
+                                type="color"
+                                value={tableCellBgColor}
+                                onChange={e => {
+                                    setTableCellBgColor(e.target.value);
+                                    tableSetCellBgColor(e.target.value);
+                                }}
+                                className="absolute opacity-0 w-0 h-0 pointer-events-none"
+                            />
+                        </div>
+                        <Divider />
+                        {/* Column width */}
+                        <div className="flex items-center gap-0.5" title="عرض العمود الحالي">
+                            <input
+                                type="text"
+                                value={tableColWidth}
+                                onChange={e => setTableColWidth(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); tableApplyColWidth(tableColWidth); } }}
+                                placeholder="عرض"
+                                className="w-14 text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-md px-1.5 py-0.5 outline-none h-7 text-center"
+                            />
+                            <button
+                                onMouseDown={e => { e.preventDefault(); tableApplyColWidth(tableColWidth); }}
+                                className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-600 h-7 whitespace-nowrap"
+                                title="تطبيق عرض العمود"
+                            >✓ عمود</button>
+                        </div>
+                        {/* Row height */}
+                        <div className="flex items-center gap-0.5" title="ارتفاع الصف الحالي">
+                            <input
+                                type="text"
+                                value={tableRowHeight}
+                                onChange={e => setTableRowHeight(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); tableApplyRowHeight(tableRowHeight); } }}
+                                placeholder="ارتفاع"
+                                className="w-14 text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-md px-1.5 py-0.5 outline-none h-7 text-center"
+                            />
+                            <button
+                                onMouseDown={e => { e.preventDefault(); tableApplyRowHeight(tableRowHeight); }}
+                                className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-600 h-7 whitespace-nowrap"
+                                title="تطبيق ارتفاع الصف"
+                            >✓ صف</button>
+                        </div>
+                        {/* Equalize columns */}
+                        <ToolBtn onClick={tableEqualizeColumns} title="توحيد عرض الأعمدة">
+                            <Maximize2 className="w-3.5 h-3.5" />
+                        </ToolBtn>
                     </>
                 )}
+                <Divider />
+
+                {/* Page size + orientation */}
+                <Divider />
+                <select
+                    value={pageSize}
+                    onChange={e => { setPageSize(e.target.value); setHasUnsaved(true); }}
+                    className="text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-md px-1.5 py-0.5 outline-none h-7"
+                    title="حجم الصفحة"
+                >
+                    {Object.keys(PAGE_SIZES).map(s => (
+                        <option key={s} value={s}>{PAGE_SIZES[s].label}</option>
+                    ))}
+                </select>
+                <ToolBtn
+                    onClick={() => { setPageOrientation(o => o === 'portrait' ? 'landscape' : 'portrait'); setHasUnsaved(true); }}
+                    title={pageOrientation === 'portrait' ? 'عامودي — اضغط للأفقي' : 'أفقي — اضغط للعامودي'}
+                    active={pageOrientation === 'landscape'}
+                >
+                    <RotateCw className={cn('w-3.5 h-3.5 transition-transform', pageOrientation === 'landscape' && 'rotate-90')} />
+                </ToolBtn>
                 <Divider />
 
                 {/* Variable button */}
@@ -809,47 +982,96 @@ export default function LegalDocumentEditorPage() {
             <div className="flex flex-1 overflow-hidden relative">
 
                 {/* ── Editor ── */}
-                <div className="flex-1 overflow-auto bg-white">
-                    {/* Letterhead */}
-                    {showLetterhead && firm?.letterheadUrl && (
-                        <div className="w-full border-b border-slate-100 p-0">
-                            <img
-                                src={firm.letterheadUrl}
-                                alt="هيد ليتر المكتب"
-                                className="w-full object-contain"
-                                style={{ maxHeight: '130px' }}
-                            />
-                        </div>
-                    )}
-                    {showLetterhead && !firm?.letterheadUrl && (
-                        <div className="border-b border-dashed border-slate-200 p-4 text-center text-slate-400 text-xs">
-                            لم يتم رفع ورقة الهيد ليتر بعد —
-                            <Link to={p('/settings')} className="text-blue-500 mr-1 hover:underline">
-                                ارفعها من الإعدادات
-                            </Link>
-                        </div>
-                    )}
-
-                    {/* Editor content — full width, no A4 box */}
+                <div className="flex-1 overflow-auto bg-slate-100 py-8">
+                    {/* Page container — visually simulates selected paper size */}
                     <div
-                        ref={editorRef}
-                        contentEditable
-                        suppressContentEditableWarning
-                        onInput={handleInput}
-                        dir="rtl"
-                        lang="ar"
-                        className="outline-none w-full"
-                        style={{
-                            fontFamily: `'${fontFamily}', 'Cairo', 'Arial', sans-serif`,
-                            fontSize: `${fontSize}px`,
-                            lineHeight: 1.9,
-                            color: '#1a1a1a',
-                            direction: 'rtl',
-                            textAlign: 'right',
-                            padding: '32px 48px',
-                            minHeight: 'calc(100vh - 160px)',
-                        }}
-                    />
+                        className="mx-auto bg-white shadow-xl ring-1 ring-slate-200"
+                        style={{ width: `${pageDims.width}px`, minHeight: `${pageDims.height}px` }}
+                    >
+                        {/* Letterhead */}
+                        {showLetterhead && firm?.letterheadUrl && (
+                            <div className="w-full border-b border-slate-100 p-0">
+                                <img
+                                    src={firm.letterheadUrl}
+                                    alt="هيد ليتر المكتب"
+                                    className="w-full object-contain"
+                                    style={{ maxHeight: '130px' }}
+                                />
+                            </div>
+                        )}
+                        {showLetterhead && !firm?.letterheadUrl && (
+                            <div className="border-b border-dashed border-slate-200 p-4 text-center text-slate-400 text-xs">
+                                لم يتم رفع ورقة الهيد ليتر بعد —
+                                <Link to={p('/settings')} className="text-blue-500 mr-1 hover:underline">
+                                    ارفعها من الإعدادات
+                                </Link>
+                            </div>
+                        )}
+
+                        {/* Header */}
+                        {showHeader && (
+                            <div className="border-b border-dashed border-violet-200 bg-violet-50/40 px-10 py-2">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <PanelTop className="w-3 h-3 text-violet-400 flex-shrink-0" />
+                                    <span className="text-[10px] text-violet-400 font-medium">رأس الصفحة</span>
+                                </div>
+                                <input
+                                    type="text"
+                                    value={headerContent}
+                                    onChange={e => { setHeaderContent(e.target.value); setHasUnsaved(true); }}
+                                    placeholder="اكتب نص رأس الصفحة هنا..."
+                                    className="w-full bg-transparent outline-none text-sm text-slate-600 placeholder:text-slate-300 text-right"
+                                    style={{ fontFamily: `'${fontFamily}', Arial, sans-serif`, fontSize: `${Math.max(10, fontSize - 2)}px` }}
+                                    dir="rtl"
+                                />
+                            </div>
+                        )}
+
+                        {/* Editor content */}
+                        <div
+                            ref={editorRef}
+                            contentEditable
+                            suppressContentEditableWarning
+                            onInput={handleInput}
+                            dir="rtl"
+                            lang="ar"
+                            className="outline-none w-full"
+                            style={{
+                                fontFamily: `'${fontFamily}', Arial, sans-serif`,
+                                fontSize: `${fontSize}px`,
+                                lineHeight: 1.9,
+                                color: '#1a1a1a',
+                                direction: 'rtl',
+                                textAlign: 'right',
+                                padding: '32px 40px',
+                                minHeight: `${Math.max(300, pageDims.height - 180)}px`,
+                            }}
+                        />
+
+                        {/* Footer */}
+                        {showFooter && (
+                            <div className="border-t border-dashed border-violet-200 bg-violet-50/40 px-10 py-2">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <PanelBottom className="w-3 h-3 text-violet-400 flex-shrink-0" />
+                                    <span className="text-[10px] text-violet-400 font-medium">تذييل الصفحة</span>
+                                </div>
+                                <input
+                                    type="text"
+                                    value={footerContent}
+                                    onChange={e => { setFooterContent(e.target.value); setHasUnsaved(true); }}
+                                    placeholder="اكتب نص تذييل الصفحة هنا..."
+                                    className="w-full bg-transparent outline-none text-sm text-slate-600 placeholder:text-slate-300 text-right"
+                                    style={{ fontFamily: `'${fontFamily}', Arial, sans-serif`, fontSize: `${Math.max(10, fontSize - 2)}px` }}
+                                    dir="rtl"
+                                />
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Size label below page */}
+                    <div className="text-center mt-3 text-[10px] text-slate-400">
+                        {PAGE_SIZES[pageSize]?.label} — {pageOrientation === 'portrait' ? 'عامودي' : 'أفقي'}
+                    </div>
                 </div>
 
                 {/* ── Split Panel ── */}
