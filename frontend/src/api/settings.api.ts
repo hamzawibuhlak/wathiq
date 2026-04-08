@@ -154,6 +154,7 @@ export interface FirmSettings {
     id: string;
     name: string;
     logo?: string;
+    letterheadUrl?: string;
     email?: string;
     phone?: string;
     address?: string;
@@ -185,6 +186,14 @@ export const firmApi = {
         const formData = new FormData();
         formData.append('file', file);
         return api.post<ApiResponse<{ logoUrl: string }>>('/uploads/logo', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        }).then((res) => res.data);
+    },
+
+    uploadLetterhead: (file: File) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        return api.post<ApiResponse<{ letterheadUrl: string }>>('/uploads/letterhead', formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
         }).then((res) => res.data);
     },

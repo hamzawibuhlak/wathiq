@@ -51,4 +51,9 @@ export class UpdateTenantDto {
     @IsOptional()
     @IsString()
     licenseNumber?: string;
+
+    @ApiProperty({ required: false, description: 'رابط ورقة الهيد ليتر للمكتب' })
+    @IsOptional()
+    @IsString()
+    letterheadUrl?: string;
 }

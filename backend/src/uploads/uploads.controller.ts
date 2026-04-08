@@ -135,6 +135,47 @@ export class UploadsController {
         };
     }
 
+    // ========== Letterhead Upload ==========
+    @Post('letterhead')
+    @UseGuards(JwtAuthGuard)
+    @ApiOperation({ summary: 'رفع ورقة الهيد ليتر للمكتب' })
+    @ApiConsumes('multipart/form-data')
+    @ApiBody({
+        schema: {
+            type: 'object',
+            properties: {
+                file: { type: 'string', format: 'binary' },
+            },
+        },
+    })
+    @UseInterceptors(
+        FileInterceptor('file', {
+            storage,
+            fileFilter: imageFilter,
+            limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+        }),
+    )
+    async uploadLetterhead(
+        @UploadedFile() file: Express.Multer.File,
+        @TenantId() tenantId: string,
+    ) {
+        if (!file) {
+            throw new BadRequestException('لم يتم رفع ملف');
+        }
+
+        const letterheadUrl = `/uploads/${file.filename}`;
+
+        await this.prisma.tenant.update({
+            where: { id: tenantId },
+            data: { letterheadUrl },
+        });
+
+        return {
+            data: { letterheadUrl },
+            message: 'تم رفع ورقة الهيد ليتر بنجاح',
+        };
+    }
+
     // ========== Payment Proof Upload ==========
     @Post('payment-proof/:invoiceId')
     @UseGuards(JwtAuthGuard)

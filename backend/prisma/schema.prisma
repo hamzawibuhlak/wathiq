@@ -163,8 +163,9 @@ model Tenant {
   taxNumber     String? // الرقم الضريبي
   commercialReg String? // السجل التجاري
   website       String? // الموقع الإلكتروني
-  logo          String?
-  isActive      Boolean @default(true)
+  logo              String?
+  letterheadUrl     String? // ورقة الهيد ليتر للمكتب
+  isActive          Boolean @default(true)
 
   // Phase 37: Entity Codes
   code       String?  @unique // e.g. "test_law"
