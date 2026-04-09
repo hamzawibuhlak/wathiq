@@ -7,7 +7,7 @@ import {
     ArrowLeft, Clock, Zap, Brain, ChevronDown,
     ExternalLink, Copy, CheckCircle, AlertCircle,
     MessageSquare, Loader2, Send, BarChart3, Bookmark,
-    BookmarkCheck, Calendar, Hash, User, FolderOpen,
+    Calendar, Hash, FolderOpen,
     Tag, X, ChevronRight, Building2,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -199,7 +199,7 @@ export default function LegalAISearchPage() {
     };
 
     // Text selection handler — shows save popup
-    const handleTextSelection = useCallback((e: MouseEvent) => {
+    const handleTextSelection = useCallback((_e: MouseEvent) => {
         const sel = window.getSelection();
         if (!sel || sel.isCollapsed || !sel.toString().trim() || sel.toString().trim().length < 10) {
             setTextPopup(null);

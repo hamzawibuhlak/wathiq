@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSlugPath } from '@/hooks/useSlugPath';
 import {
-    Bookmark, ChevronLeft, Trash2, Folder, FolderPlus, Scale, BookMarked, Hash, Plus,
+    Bookmark, ChevronLeft, Trash2, Folder, FolderPlus, Scale, BookMarked, Hash,
     Copy, Check, Edit2, X, Globe, Lock, MessageSquare, Tag, Briefcase, ChevronDown, ChevronUp,
     FolderOpen, Send, FileText,
 } from 'lucide-react';
