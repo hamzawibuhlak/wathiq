@@ -291,6 +291,7 @@ model Tenant {
   // Phase 30: Legal Library
   legalBookmarks      LegalBookmark[]
   bookmarkFolders     BookmarkFolder[]
+  folderComments      FolderComment[]
   caseLegalReferences CaseLegalReference[]
   legalSearchLogs     LegalSearchLog[]
   legalArticleNotes   LegalArticleNote[]
@@ -432,6 +433,7 @@ model User {
   // Phase 30: Legal Library
   legalBookmarks      LegalBookmark[]
   bookmarkFolders     BookmarkFolder[]
+  folderComments      FolderComment[]
   caseLegalReferences CaseLegalReference[]
   legalSearchLogs     LegalSearchLog[]
   legalArticleNotes   LegalArticleNote[]
@@ -582,6 +584,7 @@ model Case {
 
   // Phase 30: Legal Library
   caseLegalReferences CaseLegalReference[]
+  legalBookmarks      LegalBookmark[]
 
   // Phase 32: Call Center
   callRecords CallRecord[]
@@ -3537,16 +3540,20 @@ model LegalTerm {
 }
 
 model LegalBookmark {
-  id           String       @id @default(uuid())
-  type         BookmarkType
-  regulationId String?
-  articleId    String?
-  precedentId  String?
-  termId       String?
-  notes        String?      @db.Text
-  folderId     String?
-  tenantId     String
-  createdBy    String
+  id              String       @id @default(uuid())
+  type            BookmarkType
+  regulationId    String?
+  articleId       String?
+  precedentId     String?
+  termId          String?
+  notes           String?      @db.Text
+  highlightedText String?      @db.Text // النص المحدد المحفوظ
+  tags            String[]     @default([])
+  caseId          String?      // ربط بقضية معينة
+  folderId        String?
+  sortOrder       Int          @default(0)
+  tenantId        String
+  createdBy       String
 
   regulation LegalRegulation?   @relation(fields: [regulationId], references: [id])
   article    RegulationArticle? @relation(fields: [articleId], references: [id])
@@ -3554,28 +3561,52 @@ model LegalBookmark {
   user       User               @relation(fields: [createdBy], references: [id])
   tenant     Tenant             @relation(fields: [tenantId], references: [id])
   folder     BookmarkFolder?    @relation(fields: [folderId], references: [id])
+  case       Case?              @relation(fields: [caseId], references: [id])
 
   createdAt DateTime @default(now())
 
-  @@unique([type, regulationId, tenantId, createdBy])
   @@index([tenantId, type])
+  @@index([tenantId, createdBy])
+  @@index([folderId])
   @@map("legal_bookmarks")
 }
 
 model BookmarkFolder {
-  id        String  @id @default(uuid())
-  name      String
-  color     String?
-  tenantId  String
-  createdBy String
+  id          String  @id @default(uuid())
+  name        String
+  color       String?
+  description String?
+  isPublic    Boolean @default(false) // مجلد عام للشركة
+  icon        String?
+  tenantId    String
+  createdBy   String
 
   bookmarks LegalBookmark[]
+  comments  FolderComment[]
   tenant    Tenant          @relation(fields: [tenantId], references: [id])
   user      User            @relation(fields: [createdBy], references: [id])
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("bookmark_folders")
+}
+
+model FolderComment {
+  id       String @id @default(uuid())
+  folderId String
+  content  String @db.Text
+  tenantId String
+  authorId String
+
+  folder BookmarkFolder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  author User           @relation(fields: [authorId], references: [id])
+  tenant Tenant         @relation(fields: [tenantId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([folderId])
+  @@map("folder_comments")
 }
 
 model CaseLegalReference {
@@ -3678,6 +3709,7 @@ enum BookmarkType {
   ARTICLE
   PRECEDENT
   TERM
+  TEXT // نص محدد من نتائج البحث
 }
 
 // =====================================================

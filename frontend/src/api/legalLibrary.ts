@@ -33,13 +33,21 @@ export const legalLibraryApi = {
     deleteArticleNote: (noteId: string) => api.delete(`/legal-library/notes/${noteId}`).then((r: any) => r.data),
 
     // Bookmarks
-    getBookmarks: (folderId?: string) => api.get('/legal-library/bookmarks', { params: { folderId } }).then((r: any) => r.data),
+    getBookmarks: (params?: { folderId?: string; tag?: string }) => api.get('/legal-library/bookmarks', { params }).then((r: any) => r.data),
     addBookmark: (data: any) => api.post('/legal-library/bookmarks', data).then((r: any) => r.data),
+    updateBookmark: (id: string, data: any) => api.patch(`/legal-library/bookmarks/${id}`, data).then((r: any) => r.data),
     removeBookmark: (id: string) => api.delete(`/legal-library/bookmarks/${id}`).then((r: any) => r.data),
 
     // Folders
     getFolders: () => api.get('/legal-library/folders').then((r: any) => r.data),
     createFolder: (data: any) => api.post('/legal-library/folders', data).then((r: any) => r.data),
+    updateFolder: (id: string, data: any) => api.patch(`/legal-library/folders/${id}`, data).then((r: any) => r.data),
+    deleteFolder: (id: string) => api.delete(`/legal-library/folders/${id}`).then((r: any) => r.data),
+
+    // Folder Comments
+    getFolderComments: (folderId: string) => api.get(`/legal-library/folders/${folderId}/comments`).then((r: any) => r.data),
+    addFolderComment: (folderId: string, content: string) => api.post(`/legal-library/folders/${folderId}/comments`, { content }).then((r: any) => r.data),
+    deleteFolderComment: (id: string) => api.delete(`/legal-library/folders/comments/${id}`).then((r: any) => r.data),
 
     // Case References
     linkToCase: (caseId: string, data: any) => api.post(`/legal-library/cases/${caseId}/references`, data).then((r: any) => r.data),

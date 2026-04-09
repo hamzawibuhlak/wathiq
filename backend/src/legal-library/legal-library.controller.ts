@@ -215,8 +215,9 @@ export class LegalLibraryController {
         @TenantId() tenantId: string,
         @CurrentUser() user: any,
         @Query('folderId') folderId?: string,
+        @Query('tag') tag?: string,
     ) {
-        return this.service.getBookmarks(tenantId, user.id, folderId);
+        return this.service.getBookmarks(tenantId, user.id, folderId, tag);
     }
 
     @Post('bookmarks')
@@ -226,6 +227,16 @@ export class LegalLibraryController {
         @Body() data: any,
     ) {
         return this.service.addBookmark(tenantId, user.id, data);
+    }
+
+    @Patch('bookmarks/:id')
+    updateBookmark(
+        @Param('id') id: string,
+        @TenantId() tenantId: string,
+        @CurrentUser() user: any,
+        @Body() data: any,
+    ) {
+        return this.service.updateBookmark(id, tenantId, user.id, data);
     }
 
     @Delete('bookmarks/:id')
@@ -250,6 +261,53 @@ export class LegalLibraryController {
         @Body() data: any,
     ) {
         return this.service.createFolder(tenantId, user.id, data);
+    }
+
+    @Patch('folders/:id')
+    updateFolder(
+        @Param('id') id: string,
+        @TenantId() tenantId: string,
+        @CurrentUser() user: any,
+        @Body() data: any,
+    ) {
+        return this.service.updateFolder(id, tenantId, user.id, data);
+    }
+
+    @Delete('folders/:id')
+    deleteFolder(
+        @Param('id') id: string,
+        @TenantId() tenantId: string,
+        @CurrentUser() user: any,
+    ) {
+        return this.service.deleteFolder(id, tenantId, user.id);
+    }
+
+    // ── FOLDER COMMENTS ───────────────────────────
+    @Get('folders/:folderId/comments')
+    getFolderComments(
+        @Param('folderId') folderId: string,
+        @TenantId() tenantId: string,
+    ) {
+        return this.service.getFolderComments(folderId, tenantId);
+    }
+
+    @Post('folders/:folderId/comments')
+    addFolderComment(
+        @Param('folderId') folderId: string,
+        @TenantId() tenantId: string,
+        @CurrentUser() user: any,
+        @Body('content') content: string,
+    ) {
+        return this.service.addFolderComment(folderId, tenantId, user.id, content);
+    }
+
+    @Delete('folders/comments/:id')
+    deleteFolderComment(
+        @Param('id') id: string,
+        @TenantId() tenantId: string,
+        @CurrentUser() user: any,
+    ) {
+        return this.service.deleteFolderComment(id, tenantId, user.id);
     }
 
     // ── CASE REFERENCES ───────────────────────────

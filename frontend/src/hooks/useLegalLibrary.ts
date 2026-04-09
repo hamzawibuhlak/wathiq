@@ -58,13 +58,21 @@ export const useAiSearch = () => {
 };
 
 // Bookmarks
-export const useBookmarks = (folderId?: string) =>
-    useQuery({ queryKey: ['bookmarks', folderId], queryFn: () => legalLibraryApi.getBookmarks(folderId) });
+export const useBookmarks = (params?: { folderId?: string; tag?: string }) =>
+    useQuery({ queryKey: ['bookmarks', params], queryFn: () => legalLibraryApi.getBookmarks(params) });
 
 export const useAddBookmark = () => {
     const qc = useQueryClient();
     return useMutation({
         mutationFn: (data: any) => legalLibraryApi.addBookmark(data),
+        onSuccess: () => qc.invalidateQueries({ queryKey: ['bookmarks'] }),
+    });
+};
+
+export const useUpdateBookmark = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, data }: { id: string; data: any }) => legalLibraryApi.updateBookmark(id, data),
         onSuccess: () => qc.invalidateQueries({ queryKey: ['bookmarks'] }),
     });
 };
@@ -86,6 +94,42 @@ export const useCreateFolder = () => {
     return useMutation({
         mutationFn: (data: any) => legalLibraryApi.createFolder(data),
         onSuccess: () => qc.invalidateQueries({ queryKey: ['bookmark-folders'] }),
+    });
+};
+
+export const useUpdateFolder = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, data }: { id: string; data: any }) => legalLibraryApi.updateFolder(id, data),
+        onSuccess: () => qc.invalidateQueries({ queryKey: ['bookmark-folders'] }),
+    });
+};
+
+export const useDeleteFolder = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (id: string) => legalLibraryApi.deleteFolder(id),
+        onSuccess: () => qc.invalidateQueries({ queryKey: ['bookmark-folders'] }),
+    });
+};
+
+// Folder Comments
+export const useFolderComments = (folderId: string) =>
+    useQuery({ queryKey: ['folder-comments', folderId], queryFn: () => legalLibraryApi.getFolderComments(folderId), enabled: !!folderId });
+
+export const useAddFolderComment = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: ({ folderId, content }: { folderId: string; content: string }) => legalLibraryApi.addFolderComment(folderId, content),
+        onSuccess: (_d, { folderId }) => qc.invalidateQueries({ queryKey: ['folder-comments', folderId] }),
+    });
+};
+
+export const useDeleteFolderComment = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (id: string) => legalLibraryApi.deleteFolderComment(id),
+        onSuccess: () => qc.invalidateQueries({ queryKey: ['folder-comments'] }),
     });
 };
 
