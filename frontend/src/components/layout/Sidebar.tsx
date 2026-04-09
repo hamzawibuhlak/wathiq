@@ -46,6 +46,7 @@ import {
     BookOpen,
     ClipboardList,
     Sparkles,
+    Bookmark,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -97,6 +98,7 @@ const navGroups: NavGroup[] = [
             { path: 'activity-logs', icon: History, label: 'التايم لاين', permission: { resource: 'settings', action: 'view_activity_log' } },
             { path: 'legal-library', icon: BookOpen, label: 'المكتبة القانونية', moduleKey: 'legal_library', permission: { resource: 'cases', action: 'view_list' } },
             { path: 'legal-search', icon: Sparkles, label: 'البحث الذكي', moduleKey: 'legal_ai', permission: { resource: 'cases', action: 'view_list' } },
+            { path: 'legal-library/bookmarks', icon: Bookmark, label: 'المفضلة والمحفوظات', moduleKey: 'legal_library', permission: { resource: 'cases', action: 'view_list' } },
             { path: 'forms', icon: ClipboardList, label: 'النماذج', moduleKey: 'forms', permission: { resource: 'cases', action: 'view_list' } },
         ],
     },
