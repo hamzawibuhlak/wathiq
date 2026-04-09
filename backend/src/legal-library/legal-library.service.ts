@@ -421,22 +421,23 @@ export class LegalLibraryService {
     }
 
     // ─── BOOKMARKS ────────────────────────────────
-    async getBookmarks(tenantId: string, userId: string, folderId?: string) {
+    async getBookmarks(tenantId: string, userId: string, folderId?: string, tag?: string) {
+        const where: any = { tenantId, createdBy: userId };
+        if (folderId) where.folderId = folderId;
+        if (tag) where.tags = { has: tag };
+
         return this.prisma.legalBookmark.findMany({
-            where: {
-                tenantId,
-                createdBy: userId,
-                ...(folderId ? { folderId } : {}),
-            },
+            where,
             include: {
-                regulation: { select: { id: true, title: true, category: true } },
+                regulation: { select: { id: true, title: true, category: true, issuedBy: true, issuedDate: true, number: true } },
                 article: {
-                    include: { regulation: { select: { id: true, title: true } } },
+                    include: { regulation: { select: { id: true, title: true, number: true, issuedBy: true } } },
                 },
-                precedent: { select: { id: true, court: true, caseType: true, summary: true } },
-                folder: { select: { id: true, name: true, color: true } },
+                precedent: { select: { id: true, court: true, caseType: true, summary: true, judgmentDate: true, legalPrinciple: true } },
+                folder: { select: { id: true, name: true, color: true, isPublic: true } },
+                case: { select: { id: true, title: true, caseNumber: true } },
             },
-            orderBy: { createdAt: 'desc' },
+            orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
         });
     }
 
@@ -450,6 +451,9 @@ export class LegalLibraryService {
             precedentId?: string;
             termId?: string;
             notes?: string;
+            highlightedText?: string;
+            tags?: string[];
+            caseId?: string;
             folderId?: string;
         },
     ) {
@@ -461,11 +465,27 @@ export class LegalLibraryService {
                 precedentId: data.precedentId,
                 termId: data.termId,
                 notes: data.notes,
+                highlightedText: data.highlightedText,
+                tags: data.tags || [],
+                caseId: data.caseId,
                 folderId: data.folderId,
                 tenantId,
                 createdBy: userId,
             },
         });
+    }
+
+    async updateBookmark(
+        id: string,
+        tenantId: string,
+        userId: string,
+        data: { notes?: string; tags?: string[]; folderId?: string | null; caseId?: string | null; sortOrder?: number },
+    ) {
+        const bookmark = await this.prisma.legalBookmark.findUnique({ where: { id } });
+        if (!bookmark || bookmark.tenantId !== tenantId || bookmark.createdBy !== userId) {
+            throw new NotFoundException('المفضلة غير موجودة');
+        }
+        return this.prisma.legalBookmark.update({ where: { id }, data });
     }
 
     async removeBookmark(id: string, tenantId: string, userId: string) {
@@ -478,16 +498,69 @@ export class LegalLibraryService {
 
     // ─── BOOKMARK FOLDERS ─────────────────────────
     async getFolders(tenantId: string, userId: string) {
+        // Return user's private folders + all public folders in the tenant
         return this.prisma.bookmarkFolder.findMany({
-            where: { tenantId, createdBy: userId },
-            include: { _count: { select: { bookmarks: true } } },
+            where: {
+                tenantId,
+                OR: [{ createdBy: userId }, { isPublic: true }],
+            },
+            include: {
+                _count: { select: { bookmarks: true, comments: true } },
+                user: { select: { id: true, name: true } },
+            },
+            orderBy: [{ isPublic: 'desc' }, { createdAt: 'asc' }],
         });
     }
 
-    async createFolder(tenantId: string, userId: string, data: { name: string; color?: string }) {
+    async createFolder(tenantId: string, userId: string, data: { name: string; color?: string; isPublic?: boolean; description?: string; icon?: string }) {
         return this.prisma.bookmarkFolder.create({
-            data: { ...data, tenantId, createdBy: userId },
+            data: { name: data.name, color: data.color, isPublic: data.isPublic || false, description: data.description, icon: data.icon, tenantId, createdBy: userId },
         });
+    }
+
+    async updateFolder(id: string, tenantId: string, userId: string, data: { name?: string; color?: string; isPublic?: boolean; description?: string; icon?: string }) {
+        const folder = await this.prisma.bookmarkFolder.findUnique({ where: { id } });
+        if (!folder || folder.tenantId !== tenantId || folder.createdBy !== userId) {
+            throw new NotFoundException('المجلد غير موجود');
+        }
+        return this.prisma.bookmarkFolder.update({ where: { id }, data });
+    }
+
+    async deleteFolder(id: string, tenantId: string, userId: string) {
+        const folder = await this.prisma.bookmarkFolder.findUnique({ where: { id } });
+        if (!folder || folder.tenantId !== tenantId || folder.createdBy !== userId) {
+            throw new NotFoundException('المجلد غير موجود');
+        }
+        // Move bookmarks to no-folder first
+        await this.prisma.legalBookmark.updateMany({ where: { folderId: id }, data: { folderId: null } });
+        return this.prisma.bookmarkFolder.delete({ where: { id } });
+    }
+
+    // ─── FOLDER COMMENTS ──────────────────────────
+    async getFolderComments(folderId: string, tenantId: string) {
+        return this.prisma.folderComment.findMany({
+            where: { folderId, tenantId },
+            include: { author: { select: { id: true, name: true, avatarUrl: true } } },
+            orderBy: { createdAt: 'asc' },
+        });
+    }
+
+    async addFolderComment(folderId: string, tenantId: string, authorId: string, content: string) {
+        // Verify folder exists and is accessible
+        const folder = await this.prisma.bookmarkFolder.findFirst({ where: { id: folderId, tenantId } });
+        if (!folder) throw new NotFoundException('المجلد غير موجود');
+        return this.prisma.folderComment.create({
+            data: { folderId, content, tenantId, authorId },
+            include: { author: { select: { id: true, name: true, avatarUrl: true } } },
+        });
+    }
+
+    async deleteFolderComment(id: string, tenantId: string, authorId: string) {
+        const comment = await this.prisma.folderComment.findUnique({ where: { id } });
+        if (!comment || comment.tenantId !== tenantId || comment.authorId !== authorId) {
+            throw new NotFoundException('التعليق غير موجود');
+        }
+        return this.prisma.folderComment.delete({ where: { id } });
     }
 
     // ─── LINK TO CASE ─────────────────────────────
