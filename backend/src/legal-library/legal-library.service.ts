@@ -540,7 +540,7 @@ export class LegalLibraryService {
     async getFolderComments(folderId: string, tenantId: string) {
         return this.prisma.folderComment.findMany({
             where: { folderId, tenantId },
-            include: { author: { select: { id: true, name: true, avatarUrl: true } } },
+            include: { author: { select: { id: true, name: true, avatar: true } } },
             orderBy: { createdAt: 'asc' },
         });
     }
@@ -551,7 +551,7 @@ export class LegalLibraryService {
         if (!folder) throw new NotFoundException('المجلد غير موجود');
         return this.prisma.folderComment.create({
             data: { folderId, content, tenantId, authorId },
-            include: { author: { select: { id: true, name: true, avatarUrl: true } } },
+            include: { author: { select: { id: true, name: true, avatar: true } } },
         });
     }
 
