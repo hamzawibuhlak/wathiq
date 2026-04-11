@@ -314,8 +314,10 @@ model Tenant {
   tenantRoles TenantRole[]
 
   // Phase 38: Dynamic Forms
-  forms         Form[]
-  formTemplates FormTemplate[]
+  forms              Form[]
+  formTemplates      FormTemplate[]
+  formAnswerNotes    FormAnswerNote[]
+  formAnswerDiscussions FormAnswerDiscussion[]
 
   // Phase 42: Module Control
   moduleSettings   TenantModuleSettings?
@@ -451,7 +453,13 @@ model User {
   // Phase 38: Dynamic Forms
   createdForms        Form[]
   formSubmissions     FormSubmission[]
-  reviewedSubmissions FormSubmission[] @relation("ReviewedSubmissions")
+  reviewedSubmissions FormSubmission[]       @relation("ReviewedSubmissions")
+  allowedForms        Form[]                 @relation("FormAllowedUsers")
+  visibleAnswers      FormFieldAnswer[]      @relation("AnswerVisibility")
+  formAnswerNotes     FormAnswerNote[]
+  startedDiscussions  FormAnswerDiscussion[] @relation("DiscussionCreator")
+  discussionInvites   FormAnswerDiscussion[] @relation("DiscussionParticipants")
+  discussionMessages  FormAnswerMessage[]    @relation("DiscussionMessageAuthor")
 
   @@index([tenantId])
   @@index([email])
@@ -524,6 +532,10 @@ model Client {
   callRecords             CallRecord[]
   whatsappBaileysMessages WhatsappBaileysMessage[]
 
+  // Phase 38: Dynamic Forms linkage
+  linkedFormSubmissions    FormSubmission[] @relation("SubmissionClient")
+  convertedFormSubmissions FormSubmission[] @relation("SubmissionConvertedClient")
+
   @@index([tenantId])
   @@index([phone])
   @@index([nationalId])
@@ -590,7 +602,9 @@ model Case {
   callRecords CallRecord[]
 
   // Phase 38: Dynamic Forms
-  forms Form[]
+  forms                  Form[]
+  linkedFormSubmissions  FormSubmission[] @relation("SubmissionCase")
+  convertedFormSubmissions FormSubmission[] @relation("SubmissionConvertedCase")
 
   @@unique([tenantId, caseNumber])
   @@index([tenantId])
@@ -640,6 +654,9 @@ model Hearing {
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   tasks Task[]
+
+  // Phase 38: Dynamic Forms linkage
+  linkedFormSubmissions FormSubmission[] @relation("SubmissionHearing")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -4158,6 +4175,12 @@ model Form {
   allowMultiple Boolean @default(false)
   requireAuth   Boolean @default(false)
 
+  // Phase 38 upgrade: OTP access gating
+  otpEnabled        Boolean @default(false)
+  otpDeliveryMethod String? // "email" | "sms" | "whatsapp"
+  otpLength         Int     @default(6)
+  otpExpiryMinutes  Int     @default(30)
+
   // Appearance
   theme       String @default("light")
   coverImage  String?
@@ -4182,8 +4205,10 @@ model Form {
   creator User   @relation(fields: [createdBy], references: [id])
   case    Case?  @relation(fields: [caseId], references: [id])
 
-  fields      FormField[]
-  submissions FormSubmission[]
+  fields       FormField[]
+  submissions  FormSubmission[]
+  accessTokens FormAccessToken[]
+  allowedUsers User[]            @relation("FormAllowedUsers")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -4193,6 +4218,27 @@ model Form {
   @@index([slug])
   @@index([caseId])
   @@map("forms")
+}
+
+model FormAccessToken {
+  id             String    @id @default(uuid())
+  formId         String
+  codeHash       String
+  recipientEmail String?
+  recipientPhone String?
+  deliveryMethod String? // "email" | "sms" | "whatsapp"
+  deliveredAt    DateTime?
+  usedAt         DateTime?
+  usedByIp       String?
+  expiresAt      DateTime
+  createdBy      String
+  createdAt      DateTime  @default(now())
+
+  form Form @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  @@index([formId])
+  @@index([expiresAt])
+  @@map("form_access_tokens")
 }
 
 model FormField {
@@ -4245,9 +4291,22 @@ model FormSubmission {
   reviewedAt DateTime?
   notes      String?   @db.Text
 
+  // Phase 38 upgrade: linkage to business entities
+  linkedClientId      String?
+  linkedCaseId        String?
+  linkedHearingId     String?
+  convertedToClientId String?
+  convertedToCaseId   String?
+
   form     Form  @relation(fields: [formId], references: [id], onDelete: Cascade)
   user     User? @relation(fields: [userId], references: [id])
   reviewer User? @relation("ReviewedSubmissions", fields: [reviewedBy], references: [id])
+
+  linkedClient       Client?  @relation("SubmissionClient", fields: [linkedClientId], references: [id])
+  linkedCase         Case?    @relation("SubmissionCase", fields: [linkedCaseId], references: [id])
+  linkedHearing      Hearing? @relation("SubmissionHearing", fields: [linkedHearingId], references: [id])
+  convertedToClient  Client?  @relation("SubmissionConvertedClient", fields: [convertedToClientId], references: [id])
+  convertedToCase    Case?    @relation("SubmissionConvertedCase", fields: [convertedToCaseId], references: [id])
 
   answers FormFieldAnswer[]
 
@@ -4257,6 +4316,9 @@ model FormSubmission {
   @@index([formId])
   @@index([formId, codeNumber])
   @@index([status])
+  @@index([linkedClientId])
+  @@index([linkedCaseId])
+  @@index([linkedHearingId])
   @@map("form_submissions")
 }
 
@@ -4275,11 +4337,67 @@ model FormFieldAnswer {
   submission FormSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
   field      FormField      @relation(fields: [fieldId], references: [id])
 
+  // Phase 38 upgrade: per-answer visibility, notes, discussion
+  visibleToUsers User[]                @relation("AnswerVisibility")
+  notes          FormAnswerNote[]
+  discussion     FormAnswerDiscussion?
+
   createdAt DateTime @default(now())
 
   @@index([submissionId])
   @@index([fieldId])
   @@map("form_field_answers")
+}
+
+model FormAnswerNote {
+  id       String @id @default(uuid())
+  answerId String
+  authorId String
+  tenantId String
+  content  String @db.Text
+
+  answer FormFieldAnswer @relation(fields: [answerId], references: [id], onDelete: Cascade)
+  author User            @relation(fields: [authorId], references: [id])
+  tenant Tenant          @relation(fields: [tenantId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([answerId])
+  @@index([tenantId])
+  @@map("form_answer_notes")
+}
+
+model FormAnswerDiscussion {
+  id        String @id @default(uuid())
+  answerId  String @unique
+  tenantId  String
+  createdBy String
+
+  answer       FormFieldAnswer     @relation(fields: [answerId], references: [id], onDelete: Cascade)
+  creator      User                @relation("DiscussionCreator", fields: [createdBy], references: [id])
+  tenant       Tenant              @relation(fields: [tenantId], references: [id])
+  participants User[]              @relation("DiscussionParticipants")
+  messages     FormAnswerMessage[]
+
+  createdAt DateTime @default(now())
+
+  @@index([tenantId])
+  @@map("form_answer_discussions")
+}
+
+model FormAnswerMessage {
+  id           String @id @default(uuid())
+  discussionId String
+  authorId     String
+  content      String @db.Text
+
+  discussion FormAnswerDiscussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
+  author     User                 @relation("DiscussionMessageAuthor", fields: [authorId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([discussionId])
+  @@map("form_answer_messages")
 }
 
 model FormTemplate {
