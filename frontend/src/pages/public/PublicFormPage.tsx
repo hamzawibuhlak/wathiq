@@ -1,12 +1,19 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { CheckCircle, Star, Upload, AlertCircle, Loader2 } from 'lucide-react';
-import { usePublicForm, useSubmitPublicForm } from '@/hooks/useForms';
+import { CheckCircle, Star, Upload, AlertCircle, Loader2, KeyRound, ArrowRight, ArrowLeft } from 'lucide-react';
+import { usePublicForm, useSubmitPublicForm, useVerifyPublicOtp } from '@/hooks/useForms';
+
+// Helper: read step out of the validation JSON
+const getFieldStep = (f: any): number => {
+    const s = f?.validation?.step;
+    return typeof s === 'number' && s >= 0 ? s : 0;
+};
 
 export default function PublicFormPage() {
     const { slug } = useParams<{ slug: string }>();
     const { data: form, isLoading, error } = usePublicForm(slug || '');
     const submitMutation = useSubmitPublicForm();
+    const verifyOtpMutation = useVerifyPublicOtp();
 
     const [answers, setAnswers] = useState<Record<string, any>>({});
     const [submitterInfo, setSubmitterInfo] = useState({ submitterName: '', submitterEmail: '', submitterPhone: '' });
@@ -14,29 +21,72 @@ export default function PublicFormPage() {
     const [successMessage, setSuccessMessage] = useState('');
     const [errors, setErrors] = useState<Record<string, string>>({});
 
+    const [currentStep, setCurrentStep] = useState(0);
+
+    // OTP gate state
+    const [otpUnlocked, setOtpUnlocked] = useState(false);
+    const [otpCode, setOtpCode] = useState('');
+    const [otpError, setOtpError] = useState('');
+
+    // Group fields by step
+    const { fieldsByStep, stepCount } = useMemo(() => {
+        const map = new Map<number, any[]>();
+        for (const f of form?.fields || []) {
+            const s = getFieldStep(f);
+            if (!map.has(s)) map.set(s, []);
+            map.get(s)!.push(f);
+        }
+        const keys = Array.from(map.keys()).sort((a, b) => a - b);
+        const sorted = new Map<number, any[]>();
+        keys.forEach((k, idx) => sorted.set(idx, map.get(k) || []));
+        return { fieldsByStep: sorted, stepCount: Math.max(1, keys.length) };
+    }, [form?.fields]);
+
+    const currentFields = fieldsByStep.get(currentStep) || [];
+    const isLastStep = currentStep >= stepCount - 1;
+
     const updateAnswer = (fieldId: string, value: any) => {
         setAnswers(prev => ({ ...prev, [fieldId]: value }));
         if (errors[fieldId]) setErrors(prev => { const n = { ...prev }; delete n[fieldId]; return n; });
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-
-        // Validate required
+    const validateCurrentStep = (): boolean => {
         const newErrors: Record<string, string> = {};
-        for (const field of form?.fields || []) {
+        for (const field of currentFields) {
             if (field.required) {
                 const val = answers[field.id];
-                if (val === undefined || val === null || val === '') {
+                if (val === undefined || val === null || val === '' || (Array.isArray(val) && val.length === 0)) {
                     newErrors[field.id] = `الحقل "${field.label}" مطلوب`;
                 }
             }
         }
-
-        if (Object.keys(newErrors).length > 0) {
-            setErrors(newErrors);
-            return;
+        // On first step, also require submitter name
+        if (currentStep === 0) {
+            if (!submitterInfo.submitterName.trim()) {
+                newErrors._name = 'الاسم مطلوب';
+            }
         }
+        if (Object.keys(newErrors).length > 0) {
+            setErrors(prev => ({ ...prev, ...newErrors }));
+            return false;
+        }
+        return true;
+    };
+
+    const goNext = () => {
+        if (!validateCurrentStep()) return;
+        setCurrentStep(s => Math.min(stepCount - 1, s + 1));
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const goBack = () => {
+        setCurrentStep(s => Math.max(0, s - 1));
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!validateCurrentStep()) return;
 
         submitMutation.mutate(
             {
@@ -44,16 +94,34 @@ export default function PublicFormPage() {
                 data: {
                     ...submitterInfo,
                     answers,
+                    otpCode: form?.otpEnabled ? otpCode : undefined,
                 },
             },
             {
-                onSuccess: (res) => {
+                onSuccess: (res: any) => {
                     setSubmitted(true);
                     setSuccessMessage(res.message || 'شكراً لك!');
                 },
                 onError: (err: any) => {
                     const msg = err.response?.data?.message || 'حدث خطأ، حاول مرة أخرى';
                     setErrors({ _form: msg });
+                },
+            },
+        );
+    };
+
+    const handleVerifyOtp = () => {
+        if (!otpCode.trim() || !slug) {
+            setOtpError('يرجى إدخال الرمز');
+            return;
+        }
+        setOtpError('');
+        verifyOtpMutation.mutate(
+            { slug, code: otpCode.trim() },
+            {
+                onSuccess: () => setOtpUnlocked(true),
+                onError: (err: any) => {
+                    setOtpError(err.response?.data?.message || 'رمز غير صحيح');
                 },
             },
         );
@@ -81,16 +149,18 @@ export default function PublicFormPage() {
         );
     }
 
+    const accentColor = form.accentColor || '#4f46e5';
+
     // ─── Success ───
     if (submitted) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <div className="text-center bg-white rounded-2xl shadow-lg p-10 max-w-md mx-4">
+            <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+                <div className="text-center bg-white rounded-2xl shadow-lg p-10 max-w-md mx-auto">
                     <div
                         className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-                        style={{ backgroundColor: form.accentColor + '20' }}
+                        style={{ backgroundColor: accentColor + '20' }}
                     >
-                        <CheckCircle className="w-8 h-8" style={{ color: form.accentColor }} />
+                        <CheckCircle className="w-8 h-8" style={{ color: accentColor }} />
                     </div>
                     <h2 className="text-xl font-bold text-gray-900 mb-2">تم الإرسال بنجاح!</h2>
                     <p className="text-gray-500">{successMessage}</p>
@@ -99,8 +169,60 @@ export default function PublicFormPage() {
         );
     }
 
-    const accentColor = form.accentColor || '#3b82f6';
+    // ─── OTP Gate ───
+    if (form.otpEnabled && !otpUnlocked) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+                <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full border-t-4" style={{ borderColor: accentColor }}>
+                    {form.tenant?.logo && (
+                        <img src={form.tenant.logo} alt={form.tenant.name} className="h-10 mx-auto mb-4" />
+                    )}
+                    <div
+                        className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
+                        style={{ backgroundColor: accentColor + '15' }}
+                    >
+                        <KeyRound className="w-7 h-7" style={{ color: accentColor }} />
+                    </div>
+                    <h1 className="text-xl font-bold text-center text-gray-900 mb-1">{form.title}</h1>
+                    <p className="text-sm text-gray-500 text-center mb-6">
+                        هذا النموذج محمي. يُرجى إدخال الرمز الذي تم إرساله إليك.
+                    </p>
 
+                    <input
+                        value={otpCode}
+                        onChange={e => { setOtpCode(e.target.value); setOtpError(''); }}
+                        placeholder={'●'.repeat(form.otpLength || 6)}
+                        dir="ltr"
+                        maxLength={form.otpLength || 6}
+                        className="w-full px-4 py-3 border border-gray-200 rounded-xl text-center text-2xl tracking-[0.5em] font-mono outline-none focus:ring-2 focus:ring-indigo-500 mb-2"
+                    />
+
+                    {otpError && (
+                        <p className="text-xs text-red-500 text-center mb-2">{otpError}</p>
+                    )}
+
+                    <button
+                        onClick={handleVerifyOtp}
+                        disabled={verifyOtpMutation.isPending || !otpCode.trim()}
+                        className="w-full py-3 rounded-xl font-medium text-white disabled:opacity-50 transition-all"
+                        style={{ backgroundColor: accentColor }}
+                    >
+                        {verifyOtpMutation.isPending ? (
+                            <Loader2 className="w-5 h-5 animate-spin mx-auto" />
+                        ) : (
+                            'التحقق والدخول'
+                        )}
+                    </button>
+
+                    <p className="text-[11px] text-gray-400 text-center mt-3">
+                        لم يصلك الرمز؟ تواصل مع الشخص الذي أرسل إليك الرابط.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    // ─── Main Form (Wizard) ───
     return (
         <div className="min-h-screen bg-gray-50 py-8 px-4">
             <div className="max-w-2xl mx-auto">
@@ -111,16 +233,31 @@ export default function PublicFormPage() {
                     </div>
                 )}
 
-                {/* Form Header */}
+                {/* Form Header + Progress */}
                 <div
-                    className="bg-white rounded-xl shadow-sm p-8 mb-6 border-t-4"
+                    className="bg-white rounded-xl shadow-sm p-6 mb-4 border-t-4"
                     style={{ borderColor: accentColor }}
                 >
-                    <h1 className="text-2xl font-bold text-gray-900 mb-2">{form.title}</h1>
-                    {form.description && <p className="text-gray-500 text-sm">{form.description}</p>}
-                    <p className="text-xs text-gray-400 mt-3">
-                        <span className="text-red-500">*</span> يشير إلى حقل مطلوب
-                    </p>
+                    <h1 className="text-2xl font-bold text-gray-900 mb-1">{form.title}</h1>
+                    {form.description && <p className="text-gray-500 text-sm mb-4">{form.description}</p>}
+
+                    {stepCount > 1 && (
+                        <div className="mt-4">
+                            <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
+                                <span>الخطوة {currentStep + 1} من {stepCount}</span>
+                                <span>{Math.round(((currentStep + 1) / stepCount) * 100)}%</span>
+                            </div>
+                            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                <div
+                                    className="h-full rounded-full transition-all duration-300"
+                                    style={{
+                                        width: `${((currentStep + 1) / stepCount) * 100}%`,
+                                        backgroundColor: accentColor,
+                                    }}
+                                />
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Form Error */}
@@ -131,36 +268,43 @@ export default function PublicFormPage() {
                     </div>
                 )}
 
-                {/* Submitter Info */}
-                <div className="bg-white rounded-xl shadow-sm p-6 mb-4 space-y-4">
-                    <h3 className="text-sm font-semibold text-gray-700">بياناتك</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <input
-                            value={submitterInfo.submitterName}
-                            onChange={e => setSubmitterInfo(prev => ({ ...prev, submitterName: e.target.value }))}
-                            placeholder="الاسم *"
-                            className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"
-                        />
-                        <input
-                            value={submitterInfo.submitterEmail}
-                            onChange={e => setSubmitterInfo(prev => ({ ...prev, submitterEmail: e.target.value }))}
-                            placeholder="البريد الإلكتروني"
-                            type="email"
-                            className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"
-                        />
-                        <input
-                            value={submitterInfo.submitterPhone}
-                            onChange={e => setSubmitterInfo(prev => ({ ...prev, submitterPhone: e.target.value }))}
-                            placeholder="رقم الجوال"
-                            type="tel"
-                            className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"
-                        />
+                {/* Submitter Info (first step only) */}
+                {currentStep === 0 && (
+                    <div className="bg-white rounded-xl shadow-sm p-6 mb-4 space-y-3">
+                        <h3 className="text-sm font-semibold text-gray-700">بياناتك</h3>
+                        <div>
+                            <input
+                                value={submitterInfo.submitterName}
+                                onChange={e => { setSubmitterInfo(prev => ({ ...prev, submitterName: e.target.value })); if (errors._name) setErrors(p => { const n = { ...p }; delete n._name; return n; }); }}
+                                placeholder="الاسم *"
+                                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                            />
+                            {errors._name && <p className="text-xs text-red-500 mt-1">{errors._name}</p>}
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <input
+                                value={submitterInfo.submitterEmail}
+                                onChange={e => setSubmitterInfo(prev => ({ ...prev, submitterEmail: e.target.value }))}
+                                placeholder="البريد الإلكتروني"
+                                type="email"
+                                dir="ltr"
+                                className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                            />
+                            <input
+                                value={submitterInfo.submitterPhone}
+                                onChange={e => setSubmitterInfo(prev => ({ ...prev, submitterPhone: e.target.value }))}
+                                placeholder="رقم الجوال"
+                                type="tel"
+                                dir="ltr"
+                                className="px-4 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                            />
+                        </div>
                     </div>
-                </div>
+                )}
 
-                {/* Fields */}
+                {/* Step Fields */}
                 <form onSubmit={handleSubmit}>
-                    {(form.fields || []).map((field: any) => (
+                    {currentFields.map((field: any) => (
                         <div key={field.id} className="bg-white rounded-xl shadow-sm p-6 mb-4">
                             {field.type !== 'sectionHeader' && field.type !== 'paragraph' && (
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -185,22 +329,53 @@ export default function PublicFormPage() {
                         </div>
                     ))}
 
-                    {/* Submit */}
-                    <button
-                        type="submit"
-                        disabled={submitMutation.isPending}
-                        className="w-full py-3.5 rounded-xl font-medium text-white text-lg disabled:opacity-60 transition-all hover:opacity-90"
-                        style={{ backgroundColor: accentColor }}
-                    >
-                        {submitMutation.isPending ? (
-                            <Loader2 className="w-5 h-5 animate-spin mx-auto" />
+                    {currentFields.length === 0 && (
+                        <div className="bg-white rounded-xl shadow-sm p-10 text-center text-sm text-gray-400 mb-4">
+                            لا توجد حقول في هذه الخطوة
+                        </div>
+                    )}
+
+                    {/* Navigation */}
+                    <div className="flex items-center justify-between gap-3 mt-6">
+                        {currentStep > 0 ? (
+                            <button
+                                type="button"
+                                onClick={goBack}
+                                className="flex items-center gap-2 px-5 py-3 border border-gray-300 bg-white text-gray-700 rounded-xl font-medium text-sm hover:bg-gray-50"
+                            >
+                                <ArrowRight className="w-4 h-4" />
+                                السابق
+                            </button>
+                        ) : <div />}
+
+                        {!isLastStep ? (
+                            <button
+                                type="button"
+                                onClick={goNext}
+                                className="flex items-center gap-2 px-6 py-3 rounded-xl font-medium text-sm text-white shadow-sm hover:shadow-md transition-shadow"
+                                style={{ backgroundColor: accentColor }}
+                            >
+                                التالي
+                                <ArrowLeft className="w-4 h-4" />
+                            </button>
                         ) : (
-                            'إرسال'
+                            <button
+                                type="submit"
+                                disabled={submitMutation.isPending}
+                                className="flex items-center gap-2 px-8 py-3 rounded-xl font-medium text-white shadow-sm hover:shadow-md transition-shadow disabled:opacity-60"
+                                style={{ backgroundColor: accentColor }}
+                            >
+                                {submitMutation.isPending ? (
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                ) : (
+                                    'إرسال'
+                                )}
+                            </button>
                         )}
-                    </button>
+                    </div>
 
                     {form.tenant?.name && (
-                        <p className="text-center text-xs text-gray-400 mt-4">
+                        <p className="text-center text-xs text-gray-400 mt-6">
                             {form.tenant.name}
                         </p>
                     )}

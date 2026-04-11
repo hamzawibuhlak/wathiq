@@ -14,10 +14,13 @@ export default function FormsListPage() {
     const deleteMutation = useDeleteForm();
     const updateMutation = useUpdateForm();
 
-    const handleDelete = (id: string, name: string) => {
-        if (!confirm(`هل أنت متأكد من حذف النموذج "${name}"؟`)) return;
+    const handleDelete = (id: string, name: string, submissionsCount: number) => {
+        const msg = submissionsCount > 0
+            ? `هل أنت متأكد من حذف النموذج "${name}"؟\n\nسيتم حذف ${submissionsCount} إجابة مرتبطة بهذا النموذج نهائياً، بالإضافة إلى جميع الملاحظات والمناقشات. هذا الإجراء لا يمكن التراجع عنه.`
+            : `هل أنت متأكد من حذف النموذج "${name}"؟`;
+        if (!confirm(msg)) return;
         deleteMutation.mutate(id, {
-            onSuccess: () => toast.success('تم حذف النموذج'),
+            onSuccess: () => toast.success('تم حذف النموذج وجميع إجاباته'),
             onError: (err: any) => toast.error(err.response?.data?.message || 'فشل حذف النموذج'),
         });
         setMenuOpen(null);
@@ -161,10 +164,13 @@ export default function FormsListPage() {
                                                     </button>
                                                     <hr className="my-1" />
                                                     <button
-                                                        onClick={() => handleDelete(form.id, form.title)}
+                                                        onClick={() => handleDelete(form.id, form.title, form._count?.submissions || 0)}
                                                         className="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 w-full text-right"
                                                     >
-                                                        <Trash2 className="w-4 h-4" /> حذف
+                                                        <Trash2 className="w-4 h-4" />
+                                                        {(form._count?.submissions || 0) > 0
+                                                            ? `حذف النموذج + ${form._count.submissions} إجابة`
+                                                            : 'حذف'}
                                                     </button>
                                                 </div>
                                             </>
