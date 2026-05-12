@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation, useParams } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth.store';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -25,7 +25,6 @@ import {
     Clock,
     FileEdit,
     Megaphone,
-    Building2,
     Bell,
     User,
     Share2,
@@ -59,7 +58,7 @@ interface NavItem {
     icon: typeof LayoutDashboard;
     label: string;
     moduleKey?: string;
-    roles?: ('SUPER_ADMIN' | 'OWNER' | 'ADMIN' | 'LAWYER' | 'SECRETARY' | 'ACCOUNTANT')[];
+    roles?: ('OWNER' | 'ADMIN' | 'LAWYER' | 'SECRETARY' | 'ACCOUNTANT')[];
     permission?: { resource: string; action: string };
 }
 
@@ -70,7 +69,7 @@ interface NavGroup {
     items: NavItem[];
     collapsible: boolean;
     moduleKey?: string;
-    roles?: ('SUPER_ADMIN' | 'OWNER' | 'ADMIN' | 'LAWYER' | 'SECRETARY' | 'ACCOUNTANT')[];
+    roles?: ('OWNER' | 'ADMIN' | 'LAWYER' | 'SECRETARY' | 'ACCOUNTANT')[];
     permission?: { resource: string; action: string };
 }
 
@@ -188,7 +187,6 @@ const navGroups: NavGroup[] = [
 
 export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
     const location = useLocation();
-    const { slug } = useParams<{ slug: string }>();
     const user = useAuthStore((state) => state.user);
     const userRole = user?.role;
     const { can } = usePermissions();
@@ -197,8 +195,7 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
     // Fetch modules on mount
     useEffect(() => { fetchModules(); }, [fetchModules]);
 
-    // Build slug prefix for all paths
-    const slugPrefix = slug ? `/${slug}` : '';
+    const slugPrefix = '';
 
     // Track expanded groups — default expand the group that contains the active path
     const getInitialExpanded = (): Set<string> => {
@@ -260,9 +257,6 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         if (relativePath === 'analytics') return location.pathname === fullPath;
         return location.pathname === fullPath || location.pathname.startsWith(fullPath + '/');
     };
-
-    // Can see Owner dashboard
-    const canSeeOwnerDashboard = userRole === 'OWNER' || userRole === 'ADMIN';
 
     // Get role display info
     const getRoleInfo = () => {
@@ -440,29 +434,6 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                 })}
             </nav>
 
-            {/* Owner Dashboard Button (bottom) */}
-            {canSeeOwnerDashboard && (
-                <div className={cn('px-3 pb-2', isCollapsed && 'px-2')}>
-                    <Link
-                        to={`${slugPrefix}/owner`}
-                        className={cn(
-                            'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200',
-                            'bg-gradient-to-l from-emerald-500/10 to-teal-500/10 border border-emerald-500/20',
-                            'hover:from-emerald-500/20 hover:to-teal-500/20',
-                            isActive('owner')
-                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm shadow-emerald-500/25'
-                                : 'text-emerald-700 dark:text-emerald-400',
-                            isCollapsed && 'justify-center px-2'
-                        )}
-                        title={isCollapsed ? 'صفحة الشركة' : undefined}
-                    >
-                        <Building2 className="w-5 h-5 flex-shrink-0" />
-                        {!isCollapsed && (
-                            <span className="text-sm font-semibold">صفحة الشركة</span>
-                        )}
-                    </Link>
-                </div>
-            )}
 
             {/* Toggle Button */}
             <button

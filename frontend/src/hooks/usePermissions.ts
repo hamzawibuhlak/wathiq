@@ -1,35 +1,18 @@
-/**
- * Phase 35: usePermissions Hook
- * Fetches and caches user permissions for frontend gating.
- */
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { tenantRolesApi, type MyPermissions } from '@/api/tenantRoles';
 import { useAuthStore } from '@/stores/auth.store';
+import { api } from '@/api';
 
 interface UsePermissionsReturn {
-    /** Check if user can perform an action */
-    can: (resource: string, action: string, level?: 'VIEW' | 'EDIT' | 'FULL') => boolean;
-    /** Whether user is the owner (bypasses all checks) */
+    can: (resource: string, action: string) => boolean;
     isOwner: boolean;
-    /** User's tenant role name */
     roleName: string | null;
-    /** Loading state */
     loading: boolean;
-    /** Error state */
     error: string | null;
-    /** Refresh permissions */
     refresh: () => Promise<void>;
 }
 
-const LEVEL_HIERARCHY: Record<string, number> = {
-    NONE: 0,
-    VIEW: 1,
-    EDIT: 2,
-    FULL: 3,
-};
-
 export function usePermissions(): UsePermissionsReturn {
-    const [permissions, setPermissions] = useState<MyPermissions | null>(null);
+    const [permissions, setPermissions] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const fetchedRef = useRef(false);
@@ -40,23 +23,13 @@ export function usePermissions(): UsePermissionsReturn {
             setLoading(false);
             return;
         }
-
         try {
             setLoading(true);
             setError(null);
-            const data = await tenantRolesApi.getMyPermissions();
-            setPermissions(data);
+            const { data } = await api.get<string[]>('/permissions/my-permissions');
+            setPermissions(Array.isArray(data) ? data : []);
         } catch (err: any) {
             setError(err?.message || 'Failed to load permissions');
-            // If API fails, default to owner behavior on OWNER role
-            if (user?.role === 'OWNER' || user?.role === 'SUPER_ADMIN') {
-                setPermissions({
-                    role: user.role,
-                    tenantRole: null,
-                    isOwner: true,
-                    permissions: {},
-                });
-            }
         } finally {
             setLoading(false);
         }
@@ -70,31 +43,17 @@ export function usePermissions(): UsePermissionsReturn {
     }, [fetchPermissions]);
 
     const can = useCallback(
-        (resource: string, action: string, level: 'VIEW' | 'EDIT' | 'FULL' = 'VIEW'): boolean => {
-            // Owner/Admin system roles bypass everything
-            if (user?.role === 'OWNER' || user?.role === 'SUPER_ADMIN') return true;
-
-            // While loading — deny access (restrictive by default)
-            if (!permissions) return false;
-
-            // Owner via permissions also bypasses
-            if (permissions.isOwner) return true;
-
-            // Check specific permission
-            const key = `${resource}.${action}`;
-            const perm = permissions.permissions[key];
-
-            if (!perm || perm.accessLevel === 'NONE') return false;
-
-            return (LEVEL_HIERARCHY[perm.accessLevel] || 0) >= (LEVEL_HIERARCHY[level] || 0);
+        (resource: string, action: string): boolean => {
+            if (user?.role === 'OWNER') return true;
+            return permissions.includes(`${resource}.${action}`);
         },
-        [permissions],
+        [permissions, user],
     );
 
     return {
         can,
-        isOwner: permissions?.isOwner ?? false,
-        roleName: permissions?.tenantRole?.name ?? null,
+        isOwner: user?.role === 'OWNER',
+        roleName: user?.role ?? null,
         loading,
         error,
         refresh: fetchPermissions,

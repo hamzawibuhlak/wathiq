@@ -7,17 +7,9 @@ interface User {
     email: string;
     name: string;
     phone: string | null;
-    role: 'SUPER_ADMIN' | 'OWNER' | 'ADMIN' | 'LAWYER' | 'SECRETARY' | 'ACCOUNTANT';
+    role: 'OWNER' | 'ADMIN' | 'LAWYER' | 'SECRETARY' | 'ACCOUNTANT';
     avatar: string | null;
     isActive: boolean;
-    tenantId: string;
-    tenant?: {
-        id: string;
-        name: string;
-        slug: string;
-        isActive: boolean;
-        planType?: string;
-    };
 }
 
 // Permission types
@@ -40,9 +32,6 @@ interface AuthState {
     logout: () => void;
     setLoading: (loading: boolean) => void;
     setHasHydrated: (state: boolean) => void;
-
-    // Slug helpers
-    getTenantSlug: () => string | null;
 
     // Role helpers
     isOwner: () => boolean;
@@ -95,9 +84,6 @@ export const useAuthStore = create<AuthState>()(
             setLoading: (isLoading) => set({ isLoading }),
 
             setHasHydrated: (state) => set({ _hasHydrated: state }),
-
-            // Slug helpers
-            getTenantSlug: () => get().user?.tenant?.slug || null,
 
             // Role helpers
             isOwner: () => get().user?.role === 'OWNER',

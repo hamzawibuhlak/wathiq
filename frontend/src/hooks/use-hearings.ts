@@ -3,12 +3,6 @@ import { hearingsApi, HearingsFilters, CalendarFilters, CreateHearingData, Updat
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 
-// Extract tenant slug from current URL path
-function getTenantSlug() {
-    const parts = window.location.pathname.split('/');
-    return parts[1] || '';
-}
-
 // List of hearings
 export function useHearings(filters?: HearingsFilters) {
     return useQuery({
@@ -56,7 +50,7 @@ export function useCreateHearing() {
             queryClient.invalidateQueries({ queryKey: ['hearings'] });
             queryClient.invalidateQueries({ queryKey: ['dashboard'] });
             toast.success('تم إنشاء الجلسة بنجاح');
-            navigate(`/${getTenantSlug()}/hearings`);
+            navigate(`/hearings`);
         },
         onError: () => {
             toast.error('حدث خطأ أثناء إنشاء الجلسة');
