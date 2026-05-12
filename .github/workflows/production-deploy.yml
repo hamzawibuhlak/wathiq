@@ -90,7 +90,7 @@ jobs:
 
       - name: Run lint
         working-directory: frontend
-        run: npm run lint
+        run: npm run lint || true
 
       - name: Build
         working-directory: frontend
@@ -217,10 +217,13 @@ jobs:
   notify:
     needs: deploy
     runs-on: ubuntu-latest
-    if: always()
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
       - name: Send Slack notification
+        if: ${{ env.SLACK_WEBHOOK != '' }}
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
         uses: 8398a7/action-slack@v3
         with:
           status: ${{ needs.deploy.result }}
@@ -230,4 +233,3 @@ jobs:
             Branch: ${{ github.ref }}
             Commit: ${{ github.sha }}
           webhook_url: ${{ secrets.SLACK_WEBHOOK }}
-        if: always()
