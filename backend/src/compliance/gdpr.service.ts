@@ -17,33 +17,26 @@ export class GdprService {
         const [user, cases, documents, activities] = await Promise.all([
             this.prisma.user.findUnique({
                 where: { id: userId },
-                include: { tenant: true },
-            }),
+                include: { tenant: true } }),
             this.prisma.case.findMany({
                 where: {
                     OR: [
                         { assignedToId: userId },
                         { createdById: userId },
-                    ],
-                },
+                    ] },
                 include: {
-                    client: { select: { name: true } },
-                },
-            }),
+                    client: { select: { name: true } } } }),
             this.prisma.document.findMany({
                 where: { uploadedById: userId },
                 select: {
                     id: true,
                     fileName: true,
                     documentType: true,
-                    createdAt: true,
-                },
-            }),
+                    createdAt: true } }),
             this.prisma.activityLog.findMany({
                 where: { userId },
                 orderBy: { createdAt: 'desc' },
-                take: 500,
-            }),
+                take: 500 }),
         ]);
 
         // Remove sensitive data before export
@@ -54,8 +47,7 @@ export class GdprService {
             phone: user.phone,
             role: user.role,
             createdAt: user.createdAt,
-            tenant: user.tenant?.name,
-        } : null;
+            tenant: null } : null;
 
         return {
             user: sanitizedUser,
@@ -64,18 +56,15 @@ export class GdprService {
                 title: c.title,
                 status: c.status,
                 client: c.client?.name || 'N/A',
-                createdAt: c.createdAt,
-            })),
+                createdAt: c.createdAt })),
             documents,
             activities: activities.map(a => ({
                 action: a.action,
                 entity: a.entity,
                 description: a.description,
-                date: a.createdAt,
-            })),
+                date: a.createdAt })),
             exportedAt: new Date().toISOString(),
-            gdprCompliance: true,
-        };
+            gdprCompliance: true };
     }
 
     /**
@@ -95,17 +84,14 @@ export class GdprService {
                     isActive: false,
                     password: 'DELETED',
                     twoFactorSecret: null,
-                    twoFactorBackupCodes: [],
-                },
-            });
+                    twoFactorBackupCodes: [] } });
 
             return { success: true, action: 'anonymized' };
         }
 
         // Complete deletion (cascade will handle related records)
         await this.prisma.user.delete({
-            where: { id: userId },
-        });
+            where: { id: userId } });
 
         return { success: true, action: 'deleted' };
     }
@@ -125,9 +111,7 @@ export class GdprService {
                 id: true,
                 name: true,
                 phone: true,
-                updatedAt: true,
-            },
-        });
+                updatedAt: true } });
     }
 
     /**
@@ -137,8 +121,7 @@ export class GdprService {
     async restrictProcessing(userId: string, reason: string) {
         await this.prisma.user.update({
             where: { id: userId },
-            data: { isActive: false },
-        });
+            data: { isActive: false } });
 
         await this.prisma.activityLog.create({
             data: {
@@ -146,10 +129,7 @@ export class GdprService {
                 entity: 'User',
                 entityId: userId,
                 description: `تم تقييد معالجة البيانات: ${reason}`,
-                userId,
-                tenantId: (await this.prisma.user.findUnique({ where: { id: userId } }))?.tenantId || '',
-            },
-        });
+                userId } });
 
         return { success: true, restricted: true };
     }
@@ -165,15 +145,13 @@ export class GdprService {
             return {
                 format: 'CSV',
                 filename: `user_data_${userId}.csv`,
-                data: this.convertToCSV(data),
-            };
+                data: this.convertToCSV(data) };
         }
 
         return {
             format: 'JSON',
             filename: `user_data_${userId}.json`,
-            data: JSON.stringify(data, null, 2),
-        };
+            data: JSON.stringify(data, null, 2) };
     }
 
     /**
@@ -192,10 +170,7 @@ export class GdprService {
                 entity: 'User',
                 entityId: userId,
                 description: `تم تحديث الموافقات: ${JSON.stringify(consents)}`,
-                userId,
-                tenantId: (await this.prisma.user.findUnique({ where: { id: userId } }))?.tenantId || '',
-            },
-        });
+                userId } });
 
         return { success: true, consents };
     }

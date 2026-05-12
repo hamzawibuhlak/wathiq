@@ -38,9 +38,7 @@ export class CasesService {
      * Get all cases with pagination, search, and filters
      * LAWYER role only sees cases assigned to them
      */
-    async findAll(
-        tenantId: string,
-        filterDto: FilterCasesDto,
+    async findAll(filterDto: FilterCasesDto,
         userId?: string,
         userRole?: UserRole,
     ): Promise<PaginatedResponse<unknown>> {
@@ -53,10 +51,7 @@ export class CasesService {
             clientId,
             assignedToId,
             sortBy = 'createdAt',
-            sortOrder = 'desc',
-        } = filterDto;
-
-        // Build where clause - ALWAYS filter by tenantId for multi-tenancy
+            sortOrder = 'desc' } = filterDto;
         const andConditions: Prisma.CaseWhereInput[] = [];
 
         // LAWYER can only see their own cases (assigned via assignedToId or assignedToIds)
@@ -65,16 +60,14 @@ export class CasesService {
                 OR: [
                     { assignedToId: userId },
                     { assignedToIds: { has: userId } } as any,
-                ],
-            });
+                ] });
         } else if (assignedToId) {
             // For OWNER/ADMIN, allow filter by assignedToId
             andConditions.push({
                 OR: [
                     { assignedToId: assignedToId },
                     { assignedToIds: { has: assignedToId } } as any,
-                ],
-            });
+                ] });
         }
 
         // Search in title, description, and caseNumber
@@ -85,14 +78,11 @@ export class CasesService {
                     { description: { contains: search, mode: 'insensitive' } },
                     { caseNumber: { contains: search, mode: 'insensitive' } },
                     { courtCaseNumber: { contains: search, mode: 'insensitive' } },
-                ],
-            });
+                ] });
         }
 
         const where: Prisma.CaseWhereInput = {
-            tenantId,
-            ...(andConditions.length > 0 && { AND: andConditions }),
-        };
+            ...(andConditions.length > 0 && { AND: andConditions }) };
 
         // Status filter
         if (status) {
@@ -132,12 +122,10 @@ export class CasesService {
                 where,
                 include: {
                     client: { select: { id: true, name: true, phone: true } },
-                    assignedTo: { select: { id: true, name: true, avatar: true } },
-                },
+                    assignedTo: { select: { id: true, name: true, avatar: true } } },
                 orderBy,
                 skip,
-                take: limit,
-            }),
+                take: limit }),
             this.prisma.case.count({ where }),
         ]);
 
@@ -147,36 +135,29 @@ export class CasesService {
                 page,
                 limit,
                 total,
-                totalPages: Math.ceil(total / limit),
-            },
-        };
+                totalPages: Math.ceil(total / limit) } };
     }
 
     /**
      * Get case by ID with all related data
      * LAWYER can only view their own cases
      */
-    async findOne(id: string, tenantId: string, userId?: string, userRole?: UserRole) {
+    async findOne(id: string, userId?: string, userRole?: UserRole) {
         const caseData = await this.prisma.case.findFirst({
-            where: { id, tenantId },
+            where: { id },
             include: {
                 client: true,
                 assignedTo: { select: { id: true, name: true, email: true, phone: true, avatar: true } },
                 createdBy: { select: { id: true, name: true } },
                 hearings: {
                     orderBy: { hearingDate: 'asc' },
-                    take: 10,
-                },
+                    take: 10 },
                 documents: {
                     orderBy: { createdAt: 'desc' },
-                    take: 10,
-                },
+                    take: 10 },
                 invoices: {
                     orderBy: { createdAt: 'desc' },
-                    take: 5,
-                },
-            },
-        });
+                    take: 5 } } });
 
         if (!caseData) {
             throw new NotFoundException('القضية غير موجودة');
@@ -193,24 +174,23 @@ export class CasesService {
     /**
      * Create new case with auto-generated case number
      */
-    async create(dto: CreateCaseDto, tenantId: string, userId: string) {
+    async create(dto: CreateCaseDto, userId: string) {
         // Generate unique case number for this tenant
-        const caseNumber = await this.generateCaseNumber(tenantId);
+        const caseNumber = await this.generateCaseNumber();
 
         // Phase 37: Generate hierarchical case code
         const caseCode = dto.clientId
             ? await this.entityCodeService.generateCaseCode(dto.clientId)
-            : await this.entityCodeService.generateFlatCode(tenantId, 'case');
+            : await this.entityCodeService.generateFlatCode('case');
 
         // Convert date strings to proper DateTime format
         const data: any = {
             ...dto,
             caseNumber,
-            tenantId,
+
             createdById: userId,
             code: caseCode.code,
-            codeNumber: caseCode.codeNumber,
-        };
+            codeNumber: caseCode.codeNumber };
 
         // Convert filingDate to proper DateTime if provided
         if (dto.filingDate) {
@@ -226,9 +206,7 @@ export class CasesService {
             data,
             include: {
                 client: { select: { id: true, name: true, phone: true } },
-                assignedTo: { select: { id: true, name: true } },
-            },
-        });
+                assignedTo: { select: { id: true, name: true } } } });
 
         // Send notification to assigned lawyers (if different from creator)
         const lawyerIdsToNotify = new Set<string>();
@@ -246,15 +224,12 @@ export class CasesService {
                 message: `تم إسناد القضية "${caseData.title}" (${caseNumber}) إليك`,
                 type: 'INFO',
                 link: `/cases/${caseData.id}`,
-                userId: lawyerId,
-                tenantId,
-            });
+                userId: lawyerId });
         }
 
         return {
             data: caseData,
-            message: 'تم إنشاء القضية بنجاح',
-        };
+            message: 'تم إنشاء القضية بنجاح' };
     }
 
     /**
@@ -264,14 +239,12 @@ export class CasesService {
     async update(
         id: string,
         dto: UpdateCaseDto,
-        tenantId: string,
         userId?: string,
         userRole?: UserRole,
     ) {
         // Verify case exists and belongs to tenant
         const existingCase = await this.prisma.case.findFirst({
-            where: { id, tenantId },
-        });
+            where: { id } });
 
         if (!existingCase) {
             throw new NotFoundException('القضية غير موجودة');
@@ -307,24 +280,20 @@ export class CasesService {
             data: updateData,
             include: {
                 client: { select: { id: true, name: true, phone: true } },
-                assignedTo: { select: { id: true, name: true } },
-            },
-        });
+                assignedTo: { select: { id: true, name: true } } } });
 
         return {
             data: caseData,
-            message: 'تم تحديث القضية بنجاح',
-        };
+            message: 'تم تحديث القضية بنجاح' };
     }
 
     /**
      * Delete case (OWNER/ADMIN only)
      */
-    async remove(id: string, tenantId: string) {
+    async remove(id: string) {
         // Verify case exists and belongs to tenant
         const existingCase = await this.prisma.case.findFirst({
-            where: { id, tenantId },
-        });
+            where: { id } });
 
         if (!existingCase) {
             throw new NotFoundException('القضية غير موجودة');
@@ -339,13 +308,11 @@ export class CasesService {
      * Get case statistics for dashboard
      * LAWYER sees stats for their cases only
      */
-    async getStats(
-        tenantId: string,
-        userId?: string,
+    async getStats(userId?: string,
         userRole?: UserRole,
     ): Promise<{ data: CaseStats }> {
         // Build base where clause
-        const baseWhere: Prisma.CaseWhereInput = { tenantId };
+        const baseWhere: Prisma.CaseWhereInput = {};
 
         // LAWYER only sees their own case stats
         if (userRole === UserRole.LAWYER && userId) {
@@ -377,8 +344,7 @@ export class CasesService {
             this.prisma.case.groupBy({
                 by: ['caseType'],
                 where: baseWhere,
-                _count: { id: true },
-            }),
+                _count: { id: true } }),
         ]);
 
         // Transform byType to object
@@ -393,8 +359,7 @@ export class CasesService {
             in_progress: inProgressCount,
             closed: closedCount,
             suspended: suspendedCount,
-            archived: archivedCount,
-        };
+            archived: archivedCount };
 
         // Active = open + in_progress
         const active = openCount + inProgressCount;
@@ -405,27 +370,21 @@ export class CasesService {
                 active,
                 closed: closedCount,
                 byType,
-                byStatus,
-            },
-        };
+                byStatus } };
     }
 
     /**
      * Generate unique case number: CASE-YYYY-XXXX
      */
-    private async generateCaseNumber(tenantId: string): Promise<string> {
+    private async generateCaseNumber(): Promise<string> {
         const year = new Date().getFullYear();
 
         // Count cases for this tenant in current year
         const count = await this.prisma.case.count({
             where: {
-                tenantId,
                 createdAt: {
                     gte: new Date(`${year}-01-01`),
-                    lt: new Date(`${year + 1}-01-01`),
-                },
-            },
-        });
+                    lt: new Date(`${year + 1}-01-01`) } } });
 
         // Format: CASE-2024-0001
         const number = (count + 1).toString().padStart(4, '0');
@@ -435,7 +394,7 @@ export class CasesService {
     /**
      * Bulk update status for multiple cases
      */
-    async bulkUpdateStatus(ids: string[], status: string, tenantId: string) {
+    async bulkUpdateStatus(ids: string[], status: string) {
         // Validate status
         const validStatuses = ['OPEN', 'IN_PROGRESS', 'SUSPENDED', 'CLOSED', 'ARCHIVED'];
         if (!validStatuses.includes(status)) {
@@ -444,32 +403,24 @@ export class CasesService {
 
         const result = await this.prisma.case.updateMany({
             where: {
-                id: { in: ids },
-                tenantId,
-            },
-            data: { status: status as CaseStatus },
-        });
+                id: { in: ids } },
+            data: { status: status as CaseStatus } });
 
         return {
             message: `تم تحديث ${result.count} قضية بنجاح`,
-            count: result.count,
-        };
+            count: result.count };
     }
 
     /**
      * Bulk delete multiple cases
      */
-    async bulkDelete(ids: string[], tenantId: string) {
+    async bulkDelete(ids: string[]) {
         const result = await this.prisma.case.deleteMany({
             where: {
-                id: { in: ids },
-                tenantId,
-            },
-        });
+                id: { in: ids } } });
 
         return {
             message: `تم حذف ${result.count} قضية بنجاح`,
-            count: result.count,
-        };
+            count: result.count };
     }
 }

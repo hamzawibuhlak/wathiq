@@ -1,32 +1,13 @@
-import {
-    Controller,
-    Get,
-    Post,
-    Body,
-    Patch,
-    Param,
-    Delete,
-    Query,
-    UseGuards,
-    Res,
-    NotFoundException,
-    BadRequestException,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Res, NotFoundException, BadRequestException } from '@nestjs/common';
 import { Response } from 'express';
 import { createReadStream, existsSync } from 'fs';
-import {
-    ApiTags,
-    ApiOperation,
-    ApiBearerAuth,
-    ApiQuery,
-    ApiResponse,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { ReportsService } from './reports.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
-import { TenantId } from '../common/decorators/tenant-id.decorator';
+
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { CreateReportDto, UpdateReportDto, ExecuteReportDto } from './dto';
 
@@ -45,23 +26,23 @@ export class ReportsController {
     create(
         @Body() dto: CreateReportDto,
         @CurrentUser('id') userId: string,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.reportsService.create(dto, userId, tenantId);
+        return this.reportsService.create(dto, userId);
     }
 
     @Get('templates')
     @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.LAWYER)
     @ApiOperation({ summary: 'الحصول على جميع قوالب التقارير' })
-    findAllReports(@TenantId() tenantId: string) {
-        return this.reportsService.findAllReports(tenantId);
+    findAllReports() {
+        return this.reportsService.findAllReports();
     }
 
     @Get('templates/:id')
     @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.LAWYER)
     @ApiOperation({ summary: 'الحصول على قالب تقرير بالمعرف' })
-    findOneReport(@Param('id') id: string, @TenantId() tenantId: string) {
-        return this.reportsService.findOneReport(id, tenantId);
+    findOneReport(@Param('id') id: string, ) {
+        return this.reportsService.findOneReport(id);
     }
 
     @Patch('templates/:id')
@@ -70,16 +51,16 @@ export class ReportsController {
     updateReport(
         @Param('id') id: string,
         @Body() dto: UpdateReportDto,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.reportsService.updateReport(id, dto, tenantId);
+        return this.reportsService.updateReport(id, dto);
     }
 
     @Delete('templates/:id')
     @Roles(UserRole.OWNER, UserRole.ADMIN)
     @ApiOperation({ summary: 'حذف قالب تقرير' })
-    removeReport(@Param('id') id: string, @TenantId() tenantId: string) {
-        return this.reportsService.removeReport(id, tenantId);
+    removeReport(@Param('id') id: string, ) {
+        return this.reportsService.removeReport(id);
     }
 
     // ========== Report Execution ==========
@@ -91,16 +72,16 @@ export class ReportsController {
         @Param('id') id: string,
         @Body() dto: ExecuteReportDto,
         @CurrentUser('id') userId: string,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.reportsService.execute(id, dto, userId, tenantId);
+        return this.reportsService.execute(id, dto, userId);
     }
 
     @Get('executions/:id')
     @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.LAWYER)
     @ApiOperation({ summary: 'الحصول على حالة تنفيذ التقرير' })
-    getExecution(@Param('id') id: string, @TenantId() tenantId: string) {
-        return this.reportsService.getExecution(id, tenantId);
+    getExecution(@Param('id') id: string, ) {
+        return this.reportsService.getExecution(id);
     }
 
     @Get('executions/:id/download')
@@ -108,10 +89,10 @@ export class ReportsController {
     @ApiOperation({ summary: 'تحميل ملف التقرير' })
     async download(
         @Param('id') executionId: string,
-        @TenantId() tenantId: string,
+
         @Res() res: Response,
     ) {
-        const execution = await this.reportsService.getExecution(executionId, tenantId);
+        const execution = await this.reportsService.getExecution(executionId);
 
         // Check if report execution completed
         if (execution.status !== 'COMPLETED') {
@@ -128,8 +109,7 @@ export class ReportsController {
 
         res.set({
             'Content-Type': this.getContentType(execution.format),
-            'Content-Disposition': `attachment; filename="${encodeURIComponent(filename || 'report')}"`,
-        });
+            'Content-Disposition': `attachment; filename="${encodeURIComponent(filename || 'report')}"` });
 
         file.pipe(res);
     }
@@ -140,8 +120,8 @@ export class ReportsController {
     @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.LAWYER)
     @ApiOperation({ summary: 'إحصائيات لوحة التحكم الشاملة' })
     @ApiResponse({ status: 200, description: 'إحصائيات لوحة التحكم' })
-    async getDashboardStats(@TenantId() tenantId: string) {
-        return this.reportsService.getDashboardStats(tenantId);
+    async getDashboardStats() {
+        return this.reportsService.getDashboardStats();
     }
 
     @Get('financial')
@@ -153,9 +133,9 @@ export class ReportsController {
     async getFinancialReport(
         @Query('startDate') startDate: string,
         @Query('endDate') endDate: string,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.reportsService.getFinancialReport(tenantId, startDate, endDate);
+        return this.reportsService.getFinancialReport(startDate, endDate);
     }
 
     @Get('cases')
@@ -165,17 +145,17 @@ export class ReportsController {
     @ApiResponse({ status: 200, description: 'تقرير القضايا' })
     async getCasesReport(
         @Query('period') period: string = 'month',
-        @TenantId() tenantId: string,
+
     ) {
-        return this.reportsService.getCasesReport(tenantId, period);
+        return this.reportsService.getCasesReport(period);
     }
 
     @Get('performance')
     @Roles(UserRole.OWNER, UserRole.ADMIN)
     @ApiOperation({ summary: 'تقرير أداء المحامين' })
     @ApiResponse({ status: 200, description: 'تقرير الأداء' })
-    async getPerformanceReport(@TenantId() tenantId: string) {
-        return this.reportsService.getPerformanceReport(tenantId);
+    async getPerformanceReport() {
+        return this.reportsService.getPerformanceReport();
     }
 
     // ========== Helpers ==========

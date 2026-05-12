@@ -37,12 +37,11 @@ export class AnalyticsController {
       startDate = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
     }
 
-    const overview = await this.analyticsService.getOverview(user.tenantId!, {
-      dateRange: { start: startDate, end: now },
-    });
+    const overview = await this.analyticsService.getOverview({
+      dateRange: { start: startDate, end: now } });
 
-    const statsResult = await this.dashboardService.getStats(user.tenantId!, user.id, user.role);
-    const topClientsResult = await this.dashboardService.getTopClients(user.tenantId!);
+    const statsResult = await this.dashboardService.getStats(user.id, user.role);
+    const topClientsResult = await this.dashboardService.getTopClients();
     const s = statsResult?.data;
     const tc = topClientsResult?.data || [];
 
@@ -60,8 +59,7 @@ export class AnalyticsController {
         avgCaseDuration: overview.cases?.averageDuration || 0,
         closureRate: overview.cases?.closureRate || 0,
         totalAllCases: s?.cases?.total || 0,
-        totalClosedCases: s?.cases?.closed || 0,
-      },
+        totalClosedCases: s?.cases?.closed || 0 },
       hearings: {
         total: s?.hearings?.total || 0,
         upcoming: s?.hearings?.upcoming || 0,
@@ -69,27 +67,23 @@ export class AnalyticsController {
         today: s?.hearings?.today || 0,
         thisWeek: s?.hearings?.thisWeek || 0,
         byStatus: [],
-        attendanceRate: 0,
-      },
+        attendanceRate: 0 },
       financial: {
         totalRevenue: s?.invoices?.totalRevenue || 0,
         revenueGrowth: 0,
         pending: s?.invoices?.pendingAmount || 0,
         overdue: 0,
         totalInvoices: s?.invoices?.total || 0,
-        byStatus: [],
-      },
+        byStatus: [] },
       clients: {
         total: s?.clients?.total || 0,
         newClients: 0,
         activeClients: s?.clients?.active || 0,
-        byType: [],
-      },
+        byType: [] },
       trends: {
         cases: overview.trends?.cases || [],
         hearings: [],
-        revenue: overview.trends?.revenue || [],
-      },
+        revenue: overview.trends?.revenue || [] },
       topClients: tc,
       topInvoices: [],
       documents: {
@@ -97,8 +91,7 @@ export class AnalyticsController {
         totalSizeBytes: 0,
         totalSizeMB: 0,
         byType: [],
-        recentDocs: [],
-      },
+        recentDocs: [] },
       tasks: {
         total: 0,
         tasksInPeriod: 0,
@@ -106,9 +99,7 @@ export class AnalyticsController {
         overdueTasks: 0,
         byStatus: [],
         byUser: [],
-        recentTasks: [],
-      },
-    };
+        recentTasks: [] } };
   }
 
   // ── Lawyers Performance ──
@@ -119,7 +110,7 @@ export class AnalyticsController {
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
   ) {
-    return this.dashboardService.getLawyerPerformance(user.tenantId!);
+    return this.dashboardService.getLawyerPerformance();
   }
 
   @Get('overview')
@@ -140,14 +131,13 @@ export class AnalyticsController {
     if (startDate && endDate) {
       filters.dateRange = {
         start: new Date(startDate),
-        end: new Date(endDate),
-      };
+        end: new Date(endDate) };
     }
 
     if (caseType) filters.caseType = caseType;
     if (lawyer) filters.lawyer = lawyer;
 
-    return this.analyticsService.getOverview(user.tenantId!, filters);
+    return this.analyticsService.getOverview(filters);
   }
 
   @Get('cases')
@@ -162,11 +152,10 @@ export class AnalyticsController {
     if (startDate && endDate) {
       filters.dateRange = {
         start: new Date(startDate),
-        end: new Date(endDate),
-      };
+        end: new Date(endDate) };
     }
 
-    const overview = await this.analyticsService.getOverview(user.tenantId!, filters);
+    const overview = await this.analyticsService.getOverview(filters);
     return overview.cases;
   }
 
@@ -182,39 +171,38 @@ export class AnalyticsController {
     if (startDate && endDate) {
       filters.dateRange = {
         start: new Date(startDate),
-        end: new Date(endDate),
-      };
+        end: new Date(endDate) };
     }
 
-    const overview = await this.analyticsService.getOverview(user.tenantId!, filters);
+    const overview = await this.analyticsService.getOverview(filters);
     return overview.financial;
   }
 
   @Get('clients')
   @ApiOperation({ summary: 'Get clients analytics only' })
   async getClientsAnalytics(@CurrentUser() user: User) {
-    const overview = await this.analyticsService.getOverview(user.tenantId!);
+    const overview = await this.analyticsService.getOverview();
     return overview.clients;
   }
 
   @Get('performance')
   @ApiOperation({ summary: 'Get team performance analytics' })
   async getPerformanceAnalytics(@CurrentUser() user: User) {
-    const overview = await this.analyticsService.getOverview(user.tenantId!);
+    const overview = await this.analyticsService.getOverview();
     return overview.performance;
   }
 
   @Get('trends')
   @ApiOperation({ summary: 'Get 12-month trends' })
   async getTrendsAnalytics(@CurrentUser() user: User) {
-    const overview = await this.analyticsService.getOverview(user.tenantId!);
+    const overview = await this.analyticsService.getOverview();
     return overview.trends;
   }
 
   @Get('kpi')
   @ApiOperation({ summary: 'Get key performance indicators summary' })
   async getKPISummary(@CurrentUser() user: User) {
-    const overview = await this.analyticsService.getOverview(user.tenantId!);
+    const overview = await this.analyticsService.getOverview();
 
     return {
       totalCases: overview.cases.total,
@@ -230,7 +218,6 @@ export class AnalyticsController {
       retentionRate: overview.clients.retentionRate,
       averageCasesPerClient: overview.clients.averageCasesPerClient,
       averageRevenuePerClient: overview.clients.averageRevenuePerClient,
-      topPerformer: overview.performance.topPerformer,
-    };
+      topPerformer: overview.performance.topPerformer };
   }
 }

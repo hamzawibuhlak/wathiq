@@ -5,20 +5,19 @@ import { PrismaService } from '../common/prisma/prisma.service';
 export class AttendanceService {
     constructor(private prisma: PrismaService) { }
 
-    async clockIn(employeeId: string, tenantId: string, data?: { location?: string; ipAddress?: string }) {
+    async clockIn(employeeId: string, data?: { location?: string; ipAddress?: string }) {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
         const existing = await this.prisma.attendance.findUnique({
-            where: { employeeId_date: { employeeId, date: today } },
-        });
+            where: { employeeId_date: { employeeId, date: today } } });
 
         if (existing?.checkIn) {
             throw new BadRequestException('تم تسجيل الحضور مسبقاً اليوم');
         }
 
         const now = new Date();
-        const settings = await this.getSettings(tenantId);
+        const settings = await this.getSettings();
         const [startHour, startMinute] = (settings?.workStartTime || '09:00').split(':').map(Number);
         const gracePeriod = settings?.gracePeriodMinutes || 15;
 
@@ -32,27 +31,23 @@ export class AttendanceService {
             return this.prisma.attendance.update({
                 where: { id: existing.id },
                 data: { checkIn: now, status: isLate ? 'LATE' : 'PRESENT', isLate, lateMinutes, location: data?.location, ipAddress: data?.ipAddress },
-                include: { employee: { select: { id: true, firstName: true, lastName: true, employeeNumber: true } } },
-            });
+                include: { employee: { select: { id: true, firstName: true, lastName: true, employeeNumber: true } } } });
         }
 
         return this.prisma.attendance.create({
             data: {
                 employeeId, date: today, checkIn: now,
                 status: isLate ? 'LATE' : 'PRESENT', isLate, lateMinutes,
-                location: data?.location, ipAddress: data?.ipAddress, tenantId,
-            },
-            include: { employee: { select: { id: true, firstName: true, lastName: true, employeeNumber: true } } },
-        });
+                location: data?.location, ipAddress: data?.ipAddress },
+            include: { employee: { select: { id: true, firstName: true, lastName: true, employeeNumber: true } } } });
     }
 
-    async clockOut(employeeId: string, tenantId: string) {
+    async clockOut(employeeId: string) {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
         const attendance = await this.prisma.attendance.findUnique({
-            where: { employeeId_date: { employeeId, date: today } },
-        });
+            where: { employeeId_date: { employeeId, date: today } } });
 
         if (!attendance || !attendance.checkIn) throw new BadRequestException('لم يتم تسجيل الحضور اليوم');
         if (attendance.checkOut) throw new BadRequestException('تم تسجيل الانصراف مسبقاً');
@@ -64,12 +59,11 @@ export class AttendanceService {
         return this.prisma.attendance.update({
             where: { id: attendance.id },
             data: { checkOut: now, workHours },
-            include: { employee: { select: { id: true, firstName: true, lastName: true, employeeNumber: true } } },
-        });
+            include: { employee: { select: { id: true, firstName: true, lastName: true, employeeNumber: true } } } });
     }
 
-    async getAttendance(tenantId: string, filters?: { employeeId?: string; startDate?: string; endDate?: string; date?: string }) {
-        const where: any = { tenantId };
+    async getAttendance(filters?: { employeeId?: string; startDate?: string; endDate?: string; date?: string }) {
+        const where: any = {};
         if (filters?.employeeId) where.employeeId = filters.employeeId;
         if (filters?.date) {
             const d = new Date(filters.date);
@@ -84,44 +78,39 @@ export class AttendanceService {
         return this.prisma.attendance.findMany({
             where,
             include: { employee: { select: { id: true, firstName: true, lastName: true, employeeNumber: true, jobTitle: true } } },
-            orderBy: { date: 'desc' },
-        });
+            orderBy: { date: 'desc' } });
     }
 
     async getTodayStatus(employeeId: string) {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         return this.prisma.attendance.findUnique({
-            where: { employeeId_date: { employeeId, date: today } },
-        });
+            where: { employeeId_date: { employeeId, date: today } } });
     }
 
-    async markAbsent(tenantId: string, date: string) {
+    async markAbsent(date: string) {
         const targetDate = new Date(date);
         targetDate.setHours(0, 0, 0, 0);
 
         const employees = await this.prisma.employee.findMany({
-            where: { tenantId, isActive: true }, select: { id: true },
-        });
+            where: { isActive: true }, select: { id: true } });
 
         const existing = await this.prisma.attendance.findMany({
-            where: { tenantId, date: targetDate }, select: { employeeId: true },
-        });
+            where: { date: targetDate }, select: { employeeId: true } });
 
         const existingIds = new Set(existing.map(r => r.employeeId));
         const absent = employees.filter(e => !existingIds.has(e.id));
 
         if (absent.length > 0) {
             await this.prisma.attendance.createMany({
-                data: absent.map(e => ({ employeeId: e.id, date: targetDate, status: 'ABSENT' as const, tenantId })),
-            });
+                data: absent.map(e => ({ employeeId: e.id, date: targetDate, status: 'ABSENT' as const })) });
         }
 
         return { marked: absent.length };
     }
 
-    async getAttendanceReport(tenantId: string, startDate: string, endDate: string) {
-        const records = await this.getAttendance(tenantId, { startDate, endDate });
+    async getAttendanceReport(startDate: string, endDate: string) {
+        const records = await this.getAttendance({ startDate, endDate });
         const stats = new Map<string, any>();
 
         records.forEach(r => {
@@ -141,15 +130,14 @@ export class AttendanceService {
         return Array.from(stats.values());
     }
 
-    async getSettings(tenantId: string) {
-        return this.prisma.attendanceSettings.findUnique({ where: { tenantId } });
+    async getSettings() {
+        return this.prisma.attendanceSettings.findUnique({ where: {} });
     }
 
-    async updateSettings(tenantId: string, data: any) {
+    async updateSettings(data: any) {
         return this.prisma.attendanceSettings.upsert({
-            where: { tenantId },
+            where: {},
             update: data,
-            create: { ...data, tenantId },
-        });
+            create: { ...data } });
     }
 }

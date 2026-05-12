@@ -17,10 +17,7 @@ describe('AuthService', () => {
       create: jest.fn(),
       update: jest.fn(),
     },
-    tenant: {
-      findUnique: jest.fn(),
-      create: jest.fn(),
-    },
+
     $transaction: jest.fn(),
   };
 
@@ -69,16 +66,12 @@ describe('AuthService', () => {
       name: 'Test User',
       phone: '0501234567',
       role: UserRole.LAWYER,
-      tenantId: 'tenant-1',
+
       isActive: true,
       lastLoginAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
-      tenant: {
-        id: 'tenant-1',
-        name: 'Test Firm',
-        isActive: true,
-      },
+
     };
 
     it('should return access token for valid credentials', async () => {
@@ -123,7 +116,7 @@ describe('AuthService', () => {
       const userWithInactiveTenant = {
         ...mockUser,
         password: hashedPassword,
-        tenant: { ...mockUser.tenant, isActive: false },
+
       };
 
       mockPrismaService.user.findUnique.mockResolvedValue(userWithInactiveTenant);
@@ -170,7 +163,7 @@ describe('AuthService', () => {
 
     it('should create new tenant and user successfully', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
-      mockPrismaService.tenant.findUnique.mockResolvedValue(null);
+      null.mockResolvedValue(null);
 
       const mockTenant = { id: 'tenant-new', name: registerDto.officeName };
       const mockUser = {
@@ -178,15 +171,12 @@ describe('AuthService', () => {
         email: registerDto.email,
         name: registerDto.name,
         role: UserRole.OWNER,
-        tenantId: 'tenant-new',
-        tenant: { id: 'tenant-new', name: registerDto.officeName, isActive: true },
+
       };
 
       mockPrismaService.$transaction.mockImplementation(async (callback) => {
         const txMock = {
-          tenant: {
-            create: jest.fn().mockResolvedValue(mockTenant),
-          },
+
           user: {
             create: jest.fn().mockResolvedValue({ ...mockUser, password: 'hashed' }),
           },
@@ -211,7 +201,7 @@ describe('AuthService', () => {
 
     it('should throw ConflictException if email exists as tenant', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
-      mockPrismaService.tenant.findUnique.mockResolvedValue({ id: 'existing-tenant' });
+      null.mockResolvedValue({ id: 'existing-tenant' });
 
       await expect(service.register(registerDto)).rejects.toThrow(ConflictException);
       await expect(service.register(registerDto)).rejects.toThrow('البريد الإلكتروني مستخدم بالفعل');
@@ -219,7 +209,7 @@ describe('AuthService', () => {
 
     it('should hash password before saving', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
-      mockPrismaService.tenant.findUnique.mockResolvedValue(null);
+      null.mockResolvedValue(null);
 
       let capturedPassword = '';
       mockPrismaService.$transaction.mockImplementation(async (callback) => {
@@ -233,7 +223,7 @@ describe('AuthService', () => {
               return Promise.resolve({
                 id: 'user-new',
                 ...args.data,
-                tenant: { id: 'tenant-new', name: 'Test', isActive: true },
+
               });
             }),
           },
@@ -263,15 +253,7 @@ describe('AuthService', () => {
       isActive: true,
       lastLoginAt: new Date(),
       createdAt: new Date(),
-      tenant: {
-        id: 'tenant-1',
-        name: 'Test Firm',
-        nameEn: 'Test Firm EN',
-        email: 'firm@example.com',
-        phone: '0501234567',
-        logo: null,
-        isActive: true,
-      },
+
     };
 
     it('should return user data', async () => {
@@ -327,11 +309,7 @@ describe('AuthService', () => {
       name: 'Test User',
       role: UserRole.LAWYER,
       isActive: true,
-      tenant: {
-        id: 'tenant-1',
-        name: 'Test Firm',
-        isActive: true,
-      },
+
     };
 
     it('should return user without password for valid user', async () => {
@@ -365,7 +343,7 @@ describe('AuthService', () => {
     it('should return null for inactive tenant', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue({
         ...mockUser,
-        tenant: { ...mockUser.tenant, isActive: false },
+
       });
 
       const result = await service.validateUser(userId);

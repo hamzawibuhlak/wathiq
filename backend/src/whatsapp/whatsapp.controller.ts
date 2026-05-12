@@ -1,17 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Patch,
-  Body,
-  Query,
-  Param,
-  UseGuards,
-  DefaultValuePipe,
-  ParseIntPipe,
-  HttpCode,
-  HttpStatus,
-} from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Query, Param, UseGuards, DefaultValuePipe, ParseIntPipe, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -38,7 +25,7 @@ export class WhatsAppController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'الحصول على إعدادات الواتساب' })
   async getSettings(@CurrentUser() user: any) {
-    const settings = await this.whatsAppService.getSettings(user.tenantId);
+    const settings = await this.whatsAppService.getSettings();
     return { data: settings };
   }
 
@@ -58,7 +45,7 @@ export class WhatsAppController {
     },
     @CurrentUser() user: any,
   ) {
-    const settings = await this.whatsAppService.updateSettings(user.tenantId, body);
+    const settings = await this.whatsAppService.updateSettings(body);
     return { message: 'تم تحديث الإعدادات بنجاح', data: settings };
   }
 
@@ -68,7 +55,7 @@ export class WhatsAppController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'اختبار اتصال الواتساب' })
   async testConnection(@CurrentUser() user: any) {
-    const result = await this.whatsAppService.testConnection(user.tenantId);
+    const result = await this.whatsAppService.testConnection();
     return result;
   }
 
@@ -106,10 +93,9 @@ export class WhatsAppController {
     const message = await this.whatsAppService.sendTextMessage({
       to: phoneNumber,
       body: messageText,
-      tenantId: user.tenantId,
+
       clientId: body.clientId,
-      caseId: body.caseId,
-    });
+      caseId: body.caseId });
 
     return { message: 'تم إرسال الرسالة بنجاح', data: message };
   }
@@ -123,7 +109,7 @@ export class WhatsAppController {
     @Param('hearingId') hearingId: string,
     @CurrentUser() user: any,
   ) {
-    await this.whatsAppService.sendHearingReminder(hearingId, user.tenantId);
+    await this.whatsAppService.sendHearingReminder(hearingId);
     return { message: 'تم إرسال التذكير بنجاح' };
   }
 
@@ -136,7 +122,7 @@ export class WhatsAppController {
     @Param('invoiceId') invoiceId: string,
     @CurrentUser() user: any,
   ) {
-    await this.whatsAppService.sendInvoiceReminder(invoiceId, user.tenantId);
+    await this.whatsAppService.sendInvoiceReminder(invoiceId);
     return { message: 'تم إرسال التذكير بنجاح' };
   }
 
@@ -151,11 +137,10 @@ export class WhatsAppController {
     @CurrentUser() user: any,
   ) {
     return this.whatsAppService.getMessages({
-      tenantId: user.tenantId,
+
       clientId,
       page,
-      limit,
-    });
+      limit });
   }
 
   @Get('conversation/:clientId')
@@ -168,7 +153,7 @@ export class WhatsAppController {
   ) {
     const conversation = await this.whatsAppService.getConversation(
       clientId,
-      user.tenantId,
+
     );
     return { data: conversation };
   }
@@ -179,7 +164,7 @@ export class WhatsAppController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'إحصائيات واتساب' })
   async getStats(@CurrentUser() user: any) {
-    const stats = await this.whatsAppService.getStats(user.tenantId);
+    const stats = await this.whatsAppService.getStats();
     return { data: stats };
   }
 
@@ -218,7 +203,7 @@ export class WhatsAppController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'بدء جلسة واتساب عبر QR (Baileys)' })
   async qrConnect(@CurrentUser() user: any) {
-    return this.baileysService.initSession(user.tenantId);
+    return this.baileysService.initSession();
   }
 
   @Post('qr/disconnect')
@@ -227,7 +212,7 @@ export class WhatsAppController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'قطع اتصال واتساب QR' })
   async qrDisconnect(@CurrentUser() user: any) {
-    return this.baileysService.disconnect(user.tenantId);
+    return this.baileysService.disconnect();
   }
 
   @Get('qr/status')
@@ -235,7 +220,7 @@ export class WhatsAppController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'حالة جلسة واتساب QR' })
   async qrStatus(@CurrentUser() user: any) {
-    const status = await this.baileysService.getSessionStatus(user.tenantId);
+    const status = await this.baileysService.getSessionStatus();
     return { data: status };
   }
 
@@ -248,7 +233,7 @@ export class WhatsAppController {
     @CurrentUser() user: any,
   ) {
     return this.baileysService.sendMessage(
-      user.tenantId,
+
       body.phone,
       body.message,
       user.id,
@@ -265,10 +250,9 @@ export class WhatsAppController {
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @CurrentUser() user: any,
   ) {
-    return this.baileysService.getMessages(user.tenantId, {
+    return this.baileysService.getMessages({
       phone,
       clientId,
-      page,
-    });
+      page });
   }
 }

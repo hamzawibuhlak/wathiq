@@ -1,15 +1,4 @@
-import {
-    Controller,
-    Get,
-    Post,
-    Patch,
-    Delete,
-    Body,
-    Param,
-    Query,
-    UseGuards,
-    Request,
-} from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { SipExtensionService } from './sip-extension.service';
@@ -32,14 +21,14 @@ export class CallCenterController {
     async getMyExtension(@Request() req: any) {
         return this.sipExtService.getExtensionForUser(
             req.user.id,
-            req.user.tenantId,
+
         );
     }
 
     @Get('extensions')
     @ApiOperation({ summary: 'جميع Extensions المكتب' })
     async getExtensions(@Request() req: any) {
-        return this.sipExtService.getExtensions(req.user.tenantId);
+        return this.sipExtService.getExtensions();
     }
 
     @Post('extension')
@@ -52,7 +41,7 @@ export class CallCenterController {
         ucmPort?: number;
         displayName: string;
     }) {
-        return this.sipExtService.assignExtension(req.user.tenantId, body);
+        return this.sipExtService.assignExtension(body);
     }
 
     @Patch('extension/:id')
@@ -69,13 +58,13 @@ export class CallCenterController {
             isActive?: boolean;
         },
     ) {
-        return this.sipExtService.updateExtension(id, req.user.tenantId, body);
+        return this.sipExtService.updateExtension(id, body);
     }
 
     @Delete('extension/:id')
     @ApiOperation({ summary: 'حذف Extension' })
     async deleteExtension(@Request() req: any, @Param('id') id: string) {
-        return this.sipExtService.deleteExtension(id, req.user.tenantId);
+        return this.sipExtService.deleteExtension(id);
     }
 
     // ── Call Records ────────────────────────────────
@@ -90,7 +79,7 @@ export class CallCenterController {
         status: string;
     }) {
         return this.callRecordService.logCall(
-            req.user.tenantId,
+
             req.user.id,
             body,
         );
@@ -110,7 +99,7 @@ export class CallCenterController {
     ) {
         return this.callRecordService.updateCallStatus(
             callId,
-            req.user.tenantId,
+
             body,
         );
     }
@@ -124,7 +113,7 @@ export class CallCenterController {
     ) {
         return this.callRecordService.addNotes(
             callId,
-            req.user.tenantId,
+
             body.notes,
             body.caseId,
         );
@@ -141,19 +130,18 @@ export class CallCenterController {
         @Query('to') to?: string,
         @Query('page') page?: string,
     ) {
-        return this.callRecordService.getCallHistory(req.user.tenantId, {
+        return this.callRecordService.getCallHistory({
             agentId,
             clientId,
             direction,
             from: from ? new Date(from) : undefined,
             to: to ? new Date(to) : undefined,
-            page: page ? parseInt(page) : 1,
-        });
+            page: page ? parseInt(page) : 1 });
     }
 
     @Get('stats')
     @ApiOperation({ summary: 'إحصائيات المكالمات' })
     async getStats(@Request() req: any) {
-        return this.callRecordService.getStats(req.user.tenantId);
+        return this.callRecordService.getStats();
     }
 }

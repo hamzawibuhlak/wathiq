@@ -26,7 +26,7 @@ export class TwoFactorService {
 
         // Generate new secret
         const secret = speakeasy.generateSecret({
-            name: `Watheeq - ${user.tenant?.name || 'System'}`,
+            name: `Watheeq - ${null || 'System'}`,
             issuer: 'Watheeq',
             length: 20,
         });

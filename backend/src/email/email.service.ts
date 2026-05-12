@@ -18,8 +18,7 @@ export class EmailService {
     private async getSystemSmtpConfig(): Promise<Record<string, string>> {
         try {
             const configs = await this.prisma.systemConfig.findMany({
-                where: { category: 'smtp' },
-            });
+                where: { category: 'smtp' } });
             const map: Record<string, string> = {};
             configs.forEach(c => { map[c.key] = c.value; });
             return map;
@@ -32,32 +31,17 @@ export class EmailService {
      * Get transporter for a specific tenant (uses tenant SMTP settings if available)
      * Priority: 1) Tenant SMTP → 2) SystemConfig SMTP → 3) env vars
      */
-    private async getTransporter(tenantId?: string): Promise<nodemailer.Transporter> {
-        // 1. Try tenant-specific SMTP settings
-        if (tenantId) {
-            const tenant = await this.prisma.tenant.findUnique({
-                where: { id: tenantId },
-                select: {
-                    smtpHost: true,
-                    smtpPort: true,
-                    smtpUser: true,
-                    smtpPass: true,
-                    smtpSecure: true,
-                    smtpEnabled: true,
-                },
-            });
-
-            if (tenant?.smtpEnabled && tenant.smtpHost && tenant.smtpUser && tenant.smtpPass) {
-                return nodemailer.createTransport({
-                    host: tenant.smtpHost,
-                    port: tenant.smtpPort || 587,
-                    secure: tenant.smtpSecure || false,
-                    auth: {
-                        user: tenant.smtpUser,
-                        pass: tenant.smtpPass,
-                    },
-                });
-            }
+    private async getTransporter(): Promise<nodemailer.Transporter> {
+        // 1. Try CompanySettings SMTP
+        const company = await this.prisma.companySettings.findFirst();
+        if (company?.smtpEnabled && company.smtpHost && company.smtpUser && company.smtpPass) {
+            return nodemailer.createTransport({
+                host: company.smtpHost,
+                port: company.smtpPort || 587,
+                secure: company.smtpSecure || false,
+                auth: {
+                    user: company.smtpUser,
+                    pass: company.smtpPass } });
         }
 
         // 2. Try SystemConfig SMTP (set via Super Admin UI)
@@ -69,9 +53,7 @@ export class EmailService {
                 secure: sysSmtp['SMTP_SECURE'] === 'true',
                 auth: {
                     user: sysSmtp['SMTP_USER'],
-                    pass: sysSmtp['SMTP_PASS'],
-                },
-            });
+                    pass: sysSmtp['SMTP_PASS'] } });
         }
 
         // 3. Fallback to default SMTP from environment variables
@@ -81,33 +63,19 @@ export class EmailService {
             secure: false,
             auth: {
                 user: this.configService.get('SMTP_USER'),
-                pass: this.configService.get('SMTP_PASS'),
-            },
-        });
+                pass: this.configService.get('SMTP_PASS') } });
     }
 
     /**
      * Get "from" address for a tenant
      * Priority: 1) Tenant → 2) SystemConfig → 3) env vars
      */
-    private async getFromAddress(tenantId?: string): Promise<string> {
-        if (tenantId) {
-            const tenant = await this.prisma.tenant.findUnique({
-                where: { id: tenantId },
-                select: {
-                    name: true,
-                    smtpFrom: true,
-                    smtpFromName: true,
-                    smtpUser: true,
-                    smtpEnabled: true,
-                },
-            });
-
-            if (tenant?.smtpEnabled && (tenant.smtpFrom || tenant.smtpUser)) {
-                const fromName = tenant.smtpFromName || tenant.name || 'وثيق';
-                const fromEmail = tenant.smtpFrom || tenant.smtpUser;
-                return `"${fromName}" <${fromEmail}>`;
-            }
+    private async getFromAddress(): Promise<string> {
+        const company = await this.prisma.companySettings.findFirst();
+        if (company?.smtpEnabled && (company.smtpFrom || company.smtpUser)) {
+            const fromName = company.smtpFromName || company.name || 'وثيق';
+            const fromEmail = company.smtpFrom || company.smtpUser;
+            return `"${fromName}" <${fromEmail}>`;
         }
 
         // Check SystemConfig
@@ -128,18 +96,17 @@ export class EmailService {
         to: string;
         subject: string;
         body: string;
-        tenantId?: string;
+
     }): Promise<{ success: boolean; error?: string }> {
         try {
-            const transporter = await this.getTransporter(data.tenantId);
-            const from = await this.getFromAddress(data.tenantId);
+            const transporter = await this.getTransporter();
+            const from = await this.getFromAddress();
 
             const mailOptions = {
                 from,
                 to: data.to,
                 subject: data.subject,
-                html: data.body,
-            };
+                html: data.body };
 
             await transporter.sendMail(mailOptions);
             this.logger.log(`Email sent to ${data.to}`);
@@ -160,30 +127,24 @@ export class EmailService {
         courtName: string;
         caseTitle: string;
         caseNumber: string;
-        tenantId?: string;
+
     }): Promise<{ success: boolean; error?: string }> {
         try {
-            const transporter = await this.getTransporter(data.tenantId);
-            const from = await this.getFromAddress(data.tenantId);
+            const transporter = await this.getTransporter();
+            const from = await this.getFromAddress();
 
             const formattedDate = new Intl.DateTimeFormat('ar-SA', {
                 dateStyle: 'full',
-                timeStyle: 'short',
-            }).format(new Date(data.hearingDate));
+                timeStyle: 'short' }).format(new Date(data.hearingDate));
 
-            // Get tenant logo
+            // Company branding
             let logoHtml = '';
             let firmName = 'وثيق';
-            if (data.tenantId) {
-                const tenant = await this.prisma.tenant.findUnique({
-                    where: { id: data.tenantId },
-                    select: { logo: true, name: true },
-                });
-                if (tenant?.name) firmName = tenant.name;
-                if (tenant?.logo) {
-                    const logoUrl = tenant.logo.startsWith('http') ? tenant.logo : `https://bewathiq.com${tenant.logo}`;
-                    logoHtml = `<img src="${logoUrl}" alt="${tenant.name}" style="max-height:50px;max-width:150px;margin-bottom:10px;">`;
-                }
+            const company = await this.prisma.companySettings.findFirst();
+            if (company?.name) firmName = company.name;
+            if (company?.logo) {
+                const logoUrl = company.logo.startsWith('http') ? company.logo : `https://bewathiq.com${company.logo}`;
+                logoHtml = `<img src="${logoUrl}" alt="${company.name}" style="max-height:50px;max-width:150px;margin-bottom:10px;">`;
             }
 
             const htmlContent = `<!DOCTYPE html>
@@ -263,8 +224,7 @@ ${logoHtml}
                 from,
                 to: data.to,
                 subject: `تذكير بجلسة قضائية - ${data.caseTitle}`,
-                html: htmlContent,
-            };
+                html: htmlContent };
 
             await transporter.sendMail(mailOptions);
             this.logger.log(`Hearing reminder sent to ${data.to}`);
@@ -286,7 +246,7 @@ ${logoHtml}
         dueDate: Date | null;
         firmName: string;
         caseTitle?: string;
-        tenantId?: string;
+
     }): Promise<{ success: boolean; error?: string }> {
         return this.sendInvoiceEmail({
             to: data.to,
@@ -295,9 +255,7 @@ ${logoHtml}
             amount: data.amount,
             dueDate: data.dueDate || new Date(),
             firmName: data.firmName,
-            caseTitle: data.caseTitle,
-            tenantId: data.tenantId,
-        });
+            caseTitle: data.caseTitle });
     }
 
     /**
@@ -311,23 +269,18 @@ ${logoHtml}
         dueDate: Date;
         firmName?: string;
         caseTitle?: string;
-        tenantId?: string;
+
     }): Promise<{ success: boolean; error?: string }> {
         try {
-            const transporter = await this.getTransporter(data.tenantId);
-            const from = await this.getFromAddress(data.tenantId);
+            const transporter = await this.getTransporter();
+            const from = await this.getFromAddress();
 
-            // Get tenant logo
+            // Company logo
             let logoHtml = '';
-            if (data.tenantId) {
-                const tenant = await this.prisma.tenant.findUnique({
-                    where: { id: data.tenantId },
-                    select: { logo: true, name: true },
-                });
-                if (tenant?.logo) {
-                    const logoUrl = tenant.logo.startsWith('http') ? tenant.logo : `https://bewathiq.com${tenant.logo}`;
-                    logoHtml = `<img src="${logoUrl}" alt="${tenant.name}" style="max-height:50px;max-width:150px;margin-bottom:10px;">`;
-                }
+            const company = await this.prisma.companySettings.findFirst();
+            if (company?.logo) {
+                const logoUrl = company.logo.startsWith('http') ? company.logo : `https://bewathiq.com${company.logo}`;
+                logoHtml = `<img src="${logoUrl}" alt="${company.name}" style="max-height:50px;max-width:150px;margin-bottom:10px;">`;
             }
 
             const formattedDueDate = new Intl.DateTimeFormat('ar-SA', { dateStyle: 'long' }).format(new Date(data.dueDate));
@@ -407,8 +360,7 @@ ${formattedAmount} ر.س
                 from,
                 to: data.to,
                 subject: `فاتورة جديدة - ${data.invoiceNumber} - ${firmName}`,
-                html: htmlContent,
-            };
+                html: htmlContent };
 
             await transporter.sendMail(mailOptions);
             this.logger.log(`Invoice email sent to ${data.to}`);
@@ -424,11 +376,11 @@ ${formattedAmount} ر.س
     async sendPasswordReset(data: {
         to: string;
         resetToken: string;
-        tenantId?: string;
+
     }): Promise<{ success: boolean; error?: string }> {
         try {
-            const transporter = await this.getTransporter(data.tenantId);
-            const from = await this.getFromAddress(data.tenantId);
+            const transporter = await this.getTransporter();
+            const from = await this.getFromAddress();
 
             // In a real app, this would link to the frontend reset page
             // For MVP/Demo, we might just send a temporary password or a link
@@ -452,8 +404,7 @@ ${formattedAmount} ر.س
                 from,
                 to: data.to,
                 subject: 'إعادة تعيين كلمة المرور - وثيق',
-                html: htmlContent,
-            };
+                html: htmlContent };
 
             await transporter.sendMail(mailOptions);
             this.logger.log(`Password reset email sent to ${data.to}`);
@@ -473,18 +424,17 @@ ${formattedAmount} ر.س
         tenantName: string;
         role: string;
         token: string;
-        tenantId?: string;
+
     }): Promise<{ success: boolean; error?: string }> {
         try {
-            const transporter = await this.getTransporter(data.tenantId);
-            const from = await this.getFromAddress(data.tenantId);
+            const transporter = await this.getTransporter();
+            const from = await this.getFromAddress();
 
             const roleLabels: Record<string, string> = {
                 OWNER: 'مالك',
                 ADMIN: 'مدير',
                 LAWYER: 'محامي',
-                SECRETARY: 'سكرتير',
-            };
+                SECRETARY: 'سكرتير' };
 
             const roleLabel = roleLabels[data.role] || data.role;
             const invitationLink = `${this.configService.get('FRONTEND_URL', 'https://bewathiq.com')}/invitation/${data.token}`;
@@ -543,8 +493,7 @@ ${formattedAmount} ر.س
                 from,
                 to: data.to,
                 subject: `دعوة للانضمام إلى ${data.tenantName} على منصة وثيق`,
-                html: htmlContent,
-            };
+                html: htmlContent };
 
             await transporter.sendMail(mailOptions);
             this.logger.log(`Invitation email sent to ${data.to}`);

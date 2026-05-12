@@ -15,11 +15,8 @@ describe('ClientsService', () => {
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
-      count: jest.fn(),
-    },
-  };
+      count: jest.fn() } };
 
-  const tenantId = 'tenant-1';
   const userId = 'user-1';
 
   const mockClient = {
@@ -32,12 +29,11 @@ describe('ClientsService', () => {
     city: 'الرياض',
     address: 'شارع الملك فهد',
     isActive: true,
-    tenantId,
+
     createdAt: new Date(),
     updatedAt: new Date(),
     _count: { cases: 5 },
-    visibleToUsers: [],
-  };
+    visibleToUsers: [] };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -45,10 +41,8 @@ describe('ClientsService', () => {
         ClientsService,
         {
           provide: PrismaService,
-          useValue: mockPrismaService,
-        },
-      ],
-    }).compile();
+          useValue: mockPrismaService },
+      ] }).compile();
 
     service = module.get<ClientsService>(ClientsService);
     prisma = module.get<PrismaService>(PrismaService);
@@ -67,7 +61,7 @@ describe('ClientsService', () => {
       mockPrismaService.client.findMany.mockResolvedValue(mockClients);
       mockPrismaService.client.count.mockResolvedValue(1);
 
-      const result = await service.findAll(tenantId, { page: 1, limit: 10 });
+      const result = await service.findAll({ page: 1, limit: 10 });
 
       expect(result).toHaveProperty('data');
       expect(result).toHaveProperty('meta');
@@ -79,19 +73,16 @@ describe('ClientsService', () => {
       mockPrismaService.client.findMany.mockResolvedValue([]);
       mockPrismaService.client.count.mockResolvedValue(0);
 
-      await service.findAll(tenantId, { search: 'أحمد' });
+      await service.findAll({ search: 'أحمد' });
 
       expect(mockPrismaService.client.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            tenantId,
             OR: expect.arrayContaining([
               { name: { contains: 'أحمد', mode: 'insensitive' } },
               { phone: { contains: 'أحمد', mode: 'insensitive' } },
               { email: { contains: 'أحمد', mode: 'insensitive' } },
-            ]),
-          }),
-        })
+            ]) }) })
       );
     });
 
@@ -99,15 +90,12 @@ describe('ClientsService', () => {
       mockPrismaService.client.findMany.mockResolvedValue([]);
       mockPrismaService.client.count.mockResolvedValue(0);
 
-      await service.findAll(tenantId, { isActive: true });
+      await service.findAll({ isActive: true });
 
       expect(mockPrismaService.client.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            tenantId,
-            isActive: true,
-          }),
-        })
+            isActive: true }) })
       );
     });
 
@@ -115,15 +103,12 @@ describe('ClientsService', () => {
       mockPrismaService.client.findMany.mockResolvedValue([]);
       mockPrismaService.client.count.mockResolvedValue(0);
 
-      await service.findAll(tenantId, { city: 'الرياض' });
+      await service.findAll({ city: 'الرياض' });
 
       expect(mockPrismaService.client.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            tenantId,
-            city: { contains: 'الرياض', mode: 'insensitive' },
-          }),
-        })
+            city: { contains: 'الرياض', mode: 'insensitive' } }) })
       );
     });
 
@@ -131,17 +116,13 @@ describe('ClientsService', () => {
       mockPrismaService.client.findMany.mockResolvedValue([]);
       mockPrismaService.client.count.mockResolvedValue(0);
 
-      await service.findAll(tenantId, {}, userId, 'LAWYER');
+      await service.findAll({}, userId, 'LAWYER');
 
       expect(mockPrismaService.client.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            tenantId,
             visibleToUsers: {
-              some: { id: userId },
-            },
-          }),
-        })
+              some: { id: userId } } }) })
       );
     });
 
@@ -149,13 +130,12 @@ describe('ClientsService', () => {
       mockPrismaService.client.findMany.mockResolvedValue([]);
       mockPrismaService.client.count.mockResolvedValue(50);
 
-      const result = await service.findAll(tenantId, { page: 2, limit: 10 });
+      const result = await service.findAll({ page: 2, limit: 10 });
 
       expect(mockPrismaService.client.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           skip: 10, // (2-1) * 10
-          take: 10,
-        })
+          take: 10 })
       );
       expect(result.meta.totalPages).toBe(5);
     });
@@ -167,11 +147,10 @@ describe('ClientsService', () => {
       const clientWithRelations = {
         ...mockClient,
         cases: [],
-        invoices: [],
-      };
+        invoices: [] };
       mockPrismaService.client.findFirst.mockResolvedValue(clientWithRelations);
 
-      const result = await service.findOne('client-1', tenantId);
+      const result = await service.findOne('client-1');
 
       expect(result).toHaveProperty('data');
       expect(result.data.id).toBe('client-1');
@@ -180,8 +159,8 @@ describe('ClientsService', () => {
     it('should throw NotFoundException for non-existent client', async () => {
       mockPrismaService.client.findFirst.mockResolvedValue(null);
 
-      await expect(service.findOne('non-existent', tenantId)).rejects.toThrow(NotFoundException);
-      await expect(service.findOne('non-existent', tenantId)).rejects.toThrow('العميل غير موجود');
+      await expect(service.findOne('non-existent')).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('non-existent')).rejects.toThrow('العميل غير موجود');
     });
   });
 
@@ -190,26 +169,21 @@ describe('ClientsService', () => {
     const createDto = {
       name: 'عميل جديد',
       phone: '0509876543',
-      email: 'new@example.com',
-    };
+      email: 'new@example.com' };
 
     it('should create client successfully', async () => {
       mockPrismaService.client.create.mockResolvedValue({
         ...mockClient,
         ...createDto,
-        id: 'client-new',
-      });
+        id: 'client-new' });
 
-      const result = await service.create(createDto as any, tenantId);
+      const result = await service.create(createDto as any);
 
       expect(result).toHaveProperty('data');
       expect(result).toHaveProperty('message', 'تم إنشاء العميل بنجاح');
       expect(mockPrismaService.client.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
-          ...createDto,
-          tenantId,
-        }),
-      });
+          ...createDto }) });
     });
   });
 
@@ -217,14 +191,13 @@ describe('ClientsService', () => {
   describe('update', () => {
     const updateDto = {
       name: 'اسم محدث',
-      phone: '0551234567',
-    };
+      phone: '0551234567' };
 
     it('should update client', async () => {
       mockPrismaService.client.findFirst.mockResolvedValue(mockClient);
       mockPrismaService.client.update.mockResolvedValue({ ...mockClient, ...updateDto });
 
-      const result = await service.update('client-1', updateDto as any, tenantId);
+      const result = await service.update('client-1', updateDto as any);
 
       expect(result).toHaveProperty('data');
       expect(result).toHaveProperty('message', 'تم تحديث بيانات العميل بنجاح');
@@ -234,7 +207,7 @@ describe('ClientsService', () => {
       mockPrismaService.client.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.update('non-existent', updateDto as any, tenantId)
+        service.update('non-existent', updateDto as any)
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -245,7 +218,7 @@ describe('ClientsService', () => {
       mockPrismaService.client.findFirst.mockResolvedValue(mockClient);
       mockPrismaService.client.delete.mockResolvedValue(mockClient);
 
-      const result = await service.remove('client-1', tenantId);
+      const result = await service.remove('client-1');
 
       expect(result).toEqual({ message: 'تم حذف العميل بنجاح' });
     });
@@ -253,7 +226,7 @@ describe('ClientsService', () => {
     it('should throw NotFoundException for non-existent client', async () => {
       mockPrismaService.client.findFirst.mockResolvedValue(null);
 
-      await expect(service.remove('non-existent', tenantId)).rejects.toThrow(NotFoundException);
+      await expect(service.remove('non-existent')).rejects.toThrow(NotFoundException);
     });
   });
 });

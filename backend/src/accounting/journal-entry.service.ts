@@ -9,7 +9,7 @@ export class JournalEntryService {
     /**
      * Create journal entry with double-entry validation
      */
-    async create(tenantId: string, userId: string, dto: {
+    async create(userId: string, dto: {
         date: Date; description: string; reference?: string;
         type: any; lines: Array<{ accountId: string; description?: string; debit?: number; credit?: number; costCenterId?: string }>;
         notes?: string;
@@ -30,28 +30,24 @@ export class JournalEntryService {
             }
         }
 
-        const entryNumber = await this.generateEntryNumber(tenantId);
+        const entryNumber = await this.generateEntryNumber();
 
         return this.prisma.journalEntry.create({
             data: {
                 entryNumber, date: dto.date, description: dto.description,
                 reference: dto.reference, type: dto.type, status: 'DRAFT',
-                isPosted: false, createdBy: userId, notes: dto.notes, tenantId,
+                isPosted: false, createdBy: userId, notes: dto.notes,
                 lines: {
                     create: dto.lines.map(l => ({
                         accountId: l.accountId, description: l.description,
                         debit: new Prisma.Decimal(l.debit || 0),
                         credit: new Prisma.Decimal(l.credit || 0),
-                        costCenterId: l.costCenterId,
-                    })),
-                },
-            },
-            include: { lines: { include: { account: true, costCenter: true } } },
-        });
+                        costCenterId: l.costCenterId })) } },
+            include: { lines: { include: { account: true, costCenter: true } } } });
     }
 
-    async findAll(tenantId: string, filters?: { status?: string; startDate?: Date; endDate?: Date; page?: number; limit?: number }) {
-        const where: any = { tenantId };
+    async findAll(filters?: { status?: string; startDate?: Date; endDate?: Date; page?: number; limit?: number }) {
+        const where: any = {};
         if (filters?.status) where.status = filters.status;
         if (filters?.startDate || filters?.endDate) {
             where.date = {};
@@ -64,62 +60,55 @@ export class JournalEntryService {
         const [entries, total] = await Promise.all([
             this.prisma.journalEntry.findMany({
                 where, include: { lines: { include: { account: true } }, creator: { select: { id: true, name: true } } },
-                orderBy: { date: 'desc' }, skip: (page - 1) * limit, take: limit,
-            }),
+                orderBy: { date: 'desc' }, skip: (page - 1) * limit, take: limit }),
             this.prisma.journalEntry.count({ where }),
         ]);
         return { entries, total, page, totalPages: Math.ceil(total / limit) };
     }
 
-    async findOne(id: string, tenantId: string) {
+    async findOne(id: string) {
         return this.prisma.journalEntry.findFirst({
-            where: { id, tenantId },
-            include: { lines: { include: { account: true, costCenter: true } }, creator: { select: { id: true, name: true } } },
-        });
+            where: { id },
+            include: { lines: { include: { account: true, costCenter: true } }, creator: { select: { id: true, name: true } } } });
     }
 
-    async approve(id: string, userId: string, tenantId: string) {
-        const entry = await this.prisma.journalEntry.findFirst({ where: { id, tenantId } });
+    async approve(id: string, userId: string) {
+        const entry = await this.prisma.journalEntry.findFirst({ where: { id } });
         if (!entry) throw new BadRequestException('القيد غير موجود');
         if (entry.status !== 'DRAFT' && entry.status !== 'PENDING_APPROVAL') throw new BadRequestException('لا يمكن الموافقة على هذا القيد');
 
         return this.prisma.journalEntry.update({
-            where: { id }, data: { status: 'APPROVED', approvedBy: userId, approvedAt: new Date() },
-        });
+            where: { id }, data: { status: 'APPROVED', approvedBy: userId, approvedAt: new Date() } });
     }
 
-    async post(id: string, userId: string, tenantId: string) {
-        const entry = await this.prisma.journalEntry.findFirst({ where: { id, tenantId } });
+    async post(id: string, userId: string) {
+        const entry = await this.prisma.journalEntry.findFirst({ where: { id } });
         if (!entry) throw new BadRequestException('القيد غير موجود');
         if (entry.isPosted) throw new BadRequestException('القيد مرحل بالفعل');
 
         return this.prisma.journalEntry.update({
             where: { id },
             data: { isPosted: true, postedAt: new Date(), postedBy: userId, status: 'POSTED' },
-            include: { lines: { include: { account: true } } },
-        });
+            include: { lines: { include: { account: true } } } });
     }
 
-    async reverse(id: string, userId: string, tenantId: string, reason: string) {
+    async reverse(id: string, userId: string, reason: string) {
         const original = await this.prisma.journalEntry.findFirst({
-            where: { id, tenantId }, include: { lines: true },
-        });
+            where: { id }, include: { lines: true } });
         if (!original) throw new BadRequestException('القيد غير موجود');
         if (!original.isPosted) throw new BadRequestException('لا يمكن عكس قيد غير مرحل');
 
-        const reversalEntry = await this.create(tenantId, userId, {
+        const reversalEntry = await this.create(userId, {
             date: new Date(),
             description: `عكس قيد ${original.entryNumber}: ${reason}`,
             reference: original.entryNumber, type: original.type,
             lines: original.lines.map(l => ({
                 accountId: l.accountId, description: `عكس: ${l.description || ''}`,
-                debit: Number(l.credit), credit: Number(l.debit), costCenterId: l.costCenterId || undefined,
-            })),
-            notes: reason,
-        });
+                debit: Number(l.credit), credit: Number(l.debit), costCenterId: l.costCenterId || undefined })),
+            notes: reason });
 
         await this.prisma.journalEntry.update({ where: { id: reversalEntry.id }, data: { status: 'APPROVED' } });
-        await this.post(reversalEntry.id, userId, tenantId);
+        await this.post(reversalEntry.id, userId);
         await this.prisma.journalEntry.update({ where: { id }, data: { status: 'REVERSED' } });
         return reversalEntry;
     }
@@ -127,8 +116,8 @@ export class JournalEntryService {
     /**
      * General Ledger for an account
      */
-    async getGeneralLedger(tenantId: string, accountId: string, startDate?: Date, endDate?: Date) {
-        const where: any = { accountId, journalEntry: { tenantId, isPosted: true } };
+    async getGeneralLedger(accountId: string, startDate?: Date, endDate?: Date) {
+        const where: any = { accountId, journalEntry: { isPosted: true } };
         if (startDate || endDate) {
             where.journalEntry.date = {};
             if (startDate) where.journalEntry.date.gte = startDate;
@@ -138,8 +127,7 @@ export class JournalEntryService {
         const lines = await this.prisma.journalEntryLine.findMany({
             where,
             include: { journalEntry: { select: { entryNumber: true, date: true, description: true, reference: true } }, account: true },
-            orderBy: { journalEntry: { date: 'asc' } },
-        });
+            orderBy: { journalEntry: { date: 'asc' } } });
 
         let balance = 0;
         const ledger = lines.map(l => {
@@ -156,21 +144,19 @@ export class JournalEntryService {
     /**
      * Trial Balance
      */
-    async getTrialBalance(tenantId: string, date: Date) {
-        const accounts = await this.prisma.account.findMany({ where: { tenantId, isActive: true }, orderBy: { accountNumber: 'asc' } });
+    async getTrialBalance(date: Date) {
+        const accounts = await this.prisma.account.findMany({ where: { isActive: true }, orderBy: { accountNumber: 'asc' } });
         const balances = await Promise.all(
             accounts.map(async account => {
                 const lines = await this.prisma.journalEntryLine.findMany({
-                    where: { accountId: account.id, journalEntry: { isPosted: true, date: { lte: date } } },
-                });
+                    where: { accountId: account.id, journalEntry: { isPosted: true, date: { lte: date } } } });
                 const totalDebit = lines.reduce((s, l) => s + Number(l.debit), 0);
                 const totalCredit = lines.reduce((s, l) => s + Number(l.credit), 0);
                 let balance = ['ASSET', 'EXPENSE'].includes(account.accountType) ? totalDebit - totalCredit : totalCredit - totalDebit;
                 return {
                     accountNumber: account.accountNumber, accountName: account.nameAr, accountType: account.accountType,
                     debit: balance > 0 && ['ASSET', 'EXPENSE'].includes(account.accountType) ? balance : (balance < 0 && ['LIABILITY', 'EQUITY', 'REVENUE'].includes(account.accountType) ? Math.abs(balance) : 0),
-                    credit: balance > 0 && ['LIABILITY', 'EQUITY', 'REVENUE'].includes(account.accountType) ? balance : (balance < 0 && ['ASSET', 'EXPENSE'].includes(account.accountType) ? Math.abs(balance) : 0),
-                };
+                    credit: balance > 0 && ['LIABILITY', 'EQUITY', 'REVENUE'].includes(account.accountType) ? balance : (balance < 0 && ['ASSET', 'EXPENSE'].includes(account.accountType) ? Math.abs(balance) : 0) };
             })
         );
         const totalDebit = balances.reduce((s, b) => s + b.debit, 0);
@@ -181,14 +167,14 @@ export class JournalEntryService {
     /**
      * Create automatic JE from invoice
      */
-    async createFromInvoice(invoiceId: string, tenantId: string) {
+    async createFromInvoice(invoiceId: string) {
         const invoice = await this.prisma.invoice.findUnique({ where: { id: invoiceId }, include: { client: true } });
-        if (!invoice || invoice.tenantId !== tenantId) throw new BadRequestException('الفاتورة غير موجودة');
+        if (!invoice) throw new BadRequestException('الفاتورة غير موجودة');
 
         const [arAcc, revAcc, vatAcc] = await Promise.all([
-            this.prisma.account.findUnique({ where: { tenantId_accountNumber: { tenantId, accountNumber: '1140' } } }),
-            this.prisma.account.findUnique({ where: { tenantId_accountNumber: { tenantId, accountNumber: '4100' } } }),
-            this.prisma.account.findUnique({ where: { tenantId_accountNumber: { tenantId, accountNumber: '2130' } } }),
+            this.prisma.account.findUnique({ where: {  } }),
+            this.prisma.account.findUnique({ where: {  } }),
+            this.prisma.account.findUnique({ where: {  } }),
         ]);
         if (!arAcc || !revAcc || !vatAcc) throw new BadRequestException('الحسابات الأساسية غير موجودة');
 
@@ -197,20 +183,18 @@ export class JournalEntryService {
         if (subtotal > 0) lines.push({ accountId: revAcc.id, description: 'إيرادات', debit: 0, credit: subtotal });
         if (vat > 0) lines.push({ accountId: vatAcc.id, description: 'ضريبة قيمة مضافة', debit: 0, credit: vat });
 
-        const entry = await this.create(tenantId, 'system', {
+        const entry = await this.create('system', {
             date: invoice.issueDate, description: `فاتورة ${invoice.invoiceNumber} - ${invoice.client.name}`,
-            reference: invoice.invoiceNumber, type: 'INVOICE', lines,
-        });
+            reference: invoice.invoiceNumber, type: 'INVOICE', lines });
         await this.prisma.journalEntry.update({ where: { id: entry.id }, data: { status: 'APPROVED' } });
-        await this.post(entry.id, 'system', tenantId);
+        await this.post(entry.id, 'system');
         return entry;
     }
 
-    private async generateEntryNumber(tenantId: string): Promise<string> {
+    private async generateEntryNumber(): Promise<string> {
         const year = new Date().getFullYear();
         const count = await this.prisma.journalEntry.count({
-            where: { tenantId, entryNumber: { startsWith: `JE-${year}` } },
-        });
+            where: { entryNumber: { startsWith: `JE-${year}` } } });
         return `JE-${year}-${String(count + 1).padStart(4, '0')}`;
     }
 }

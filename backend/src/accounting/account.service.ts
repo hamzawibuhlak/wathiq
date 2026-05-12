@@ -8,7 +8,7 @@ export class AccountService {
     /**
      * Create account
      */
-    async create(tenantId: string, dto: {
+    async create(dto: {
         accountNumber: string;
         nameEn: string;
         nameAr: string;
@@ -19,38 +19,34 @@ export class AccountService {
         description?: string;
     }) {
         const exists = await this.prisma.account.findUnique({
-            where: { tenantId_accountNumber: { tenantId, accountNumber: dto.accountNumber } },
-        });
+            where: {  } });
         if (exists) throw new BadRequestException(`الحساب ${dto.accountNumber} موجود مسبقاً`);
 
         return this.prisma.account.create({
-            data: { ...dto, tenantId },
-        });
+            data: { ...dto } });
     }
 
     /**
      * Get all accounts for tenant (with hierarchy)
      */
-    async findAll(tenantId: string, filters?: { type?: string; isActive?: boolean }) {
-        const where: any = { tenantId };
+    async findAll(filters?: { type?: string; isActive?: boolean }) {
+        const where: any = {};
         if (filters?.type) where.accountType = filters.type;
         if (filters?.isActive !== undefined) where.isActive = filters.isActive;
 
         return this.prisma.account.findMany({
             where,
             include: { childAccounts: true, parentAccount: true },
-            orderBy: { accountNumber: 'asc' },
-        });
+            orderBy: { accountNumber: 'asc' } });
     }
 
     /**
      * Get account by number
      */
-    async findByNumber(tenantId: string, accountNumber: string) {
+    async findByNumber(accountNumber: string) {
         const account = await this.prisma.account.findUnique({
-            where: { tenantId_accountNumber: { tenantId, accountNumber } },
-            include: { childAccounts: true },
-        });
+            where: {  },
+            include: { childAccounts: true } });
         if (!account) throw new NotFoundException(`الحساب ${accountNumber} غير موجود`);
         return account;
     }
@@ -58,38 +54,33 @@ export class AccountService {
     /**
      * Update account
      */
-    async update(tenantId: string, accountId: string, dto: Partial<{
+    async update(accountId: string, dto: Partial<{
         nameEn: string; nameAr: string; description: string; isActive: boolean;
     }>) {
         return this.prisma.account.update({
             where: { id: accountId },
-            data: dto,
-        });
+            data: dto });
     }
 
     /**
      * Get account hierarchy (tree structure)
      */
-    async getHierarchy(tenantId: string) {
+    async getHierarchy() {
         const accounts = await this.prisma.account.findMany({
-            where: { tenantId, parentAccountId: null },
+            where: { parentAccountId: null },
             include: {
                 childAccounts: {
                     include: {
-                        childAccounts: true,
-                    },
-                },
-            },
-            orderBy: { accountNumber: 'asc' },
-        });
+                        childAccounts: true } } },
+            orderBy: { accountNumber: 'asc' } });
         return accounts;
     }
 
     /**
      * Seed default Saudi Chart of Accounts
      */
-    async seedDefaultAccounts(tenantId: string) {
-        const existing = await this.prisma.account.count({ where: { tenantId } });
+    async seedDefaultAccounts() {
+        const existing = await this.prisma.account.count({ where: {} });
         if (existing > 0) return { message: 'الحسابات موجودة مسبقاً', count: existing };
 
         const defaultAccounts = [
@@ -150,8 +141,7 @@ export class AccountService {
         // First pass: create parent accounts (level 1)
         for (const acc of defaultAccounts.filter(a => a.level === 1)) {
             const created = await this.prisma.account.create({
-                data: { ...acc, tenantId },
-            });
+                data: { ...acc } });
             parentMap[acc.accountNumber] = created.id;
             createdAccounts.push(created);
         }
@@ -163,8 +153,7 @@ export class AccountService {
             const parentId = parentMap[parentPrefix];
 
             const created = await this.prisma.account.create({
-                data: { ...acc, tenantId, parentAccountId: parentId || undefined },
-            });
+                data: { ...acc, parentAccountId: parentId || undefined } });
             createdAccounts.push(created);
         }
 
@@ -174,11 +163,10 @@ export class AccountService {
     /**
      * Get account balance
      */
-    async getBalance(tenantId: string, accountId: string, endDate?: Date) {
+    async getBalance(accountId: string, endDate?: Date) {
         const where: any = {
             accountId,
-            journalEntry: { tenantId, isPosted: true },
-        };
+            journalEntry: { isPosted: true } };
         if (endDate) {
             where.journalEntry.date = { lte: endDate };
         }

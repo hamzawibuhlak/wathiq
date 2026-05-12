@@ -1,13 +1,4 @@
-import {
-  Controller,
-  Get,
-  Query,
-  UseGuards,
-  DefaultValuePipe,
-  ParseIntPipe,
-  Param,
-  Res,
-} from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, DefaultValuePipe, ParseIntPipe, Param, Res } from '@nestjs/common';
 import { Response } from 'express';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -56,7 +47,7 @@ export class ActivityLogsController {
     const actions = actionsStr ? actionsStr.split(',').filter(Boolean) : undefined;
 
     return this.activityLogsService.findAll({
-      tenantId: user.tenantId,
+
       userId,
       userIds,
       entity,
@@ -67,8 +58,7 @@ export class ActivityLogsController {
       startDate: startDate ? new Date(startDate) : undefined,
       endDate: endDate ? new Date(endDate) : undefined,
       page,
-      limit,
-    });
+      limit });
   }
 
   @Get('export')
@@ -92,7 +82,7 @@ export class ActivityLogsController {
     const actions = actionsStr ? actionsStr.split(',').filter(Boolean) : undefined;
 
     const csv = await this.activityLogsService.exportCsv({
-      tenantId: user!.tenantId,
+
       userId,
       userIds,
       entity,
@@ -101,8 +91,7 @@ export class ActivityLogsController {
       action,
       actions,
       startDate: startDate ? new Date(startDate) : undefined,
-      endDate: endDate ? new Date(endDate) : undefined,
-    });
+      endDate: endDate ? new Date(endDate) : undefined });
 
     const filename = `activity-logs-${new Date().toISOString().slice(0, 10)}.csv`;
     res!.setHeader('Content-Type', 'text/csv; charset=utf-8');
@@ -114,7 +103,7 @@ export class ActivityLogsController {
   @Roles('OWNER', 'ADMIN')
   @ApiOperation({ summary: 'إحصائيات النشاطات' })
   async getStats(@CurrentUser() user: any) {
-    const stats = await this.activityLogsService.getStats(user.tenantId);
+    const stats = await this.activityLogsService.getStats();
     return { data: stats };
   }
 
@@ -128,7 +117,7 @@ export class ActivityLogsController {
     @CurrentUser() user: any,
   ) {
     const logs = await this.activityLogsService.getRecentByEntity(
-      user.tenantId,
+
       entity,
       entityId,
       limit,

@@ -1,10 +1,4 @@
-import {
-    Injectable,
-    UnauthorizedException,
-    ConflictException,
-    BadRequestException,
-    NotFoundException,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, BadRequestException, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../common/prisma/prisma.service';
@@ -19,7 +13,7 @@ import { EmailVerificationService } from './email-verification.service';
 export interface JwtPayload {
     sub: string;      // userId
     email: string;
-    tenantId: string | null;
+
     tenantSlug: string | null;
     role: UserRole;
 }
@@ -58,14 +52,12 @@ export class AuthService {
             return { available: false, message: 'اسم الرابط قصير جداً' };
         }
 
-        const existing = await this.prisma.tenant.findUnique({
-            where: { slug: normalizedSlug },
-        });
+        const existing = await this.null({
+            where: { slug: normalizedSlug } });
 
         return {
             available: !existing,
-            message: existing ? 'اسم الرابط مستخدم بالفعل' : undefined,
-        };
+            message: existing ? 'اسم الرابط مستخدم بالفعل' : undefined };
     }
 
     /**
@@ -82,16 +74,14 @@ export class AuthService {
 
         // 2. Check if email already exists
         const existingUser = await this.prisma.user.findUnique({
-            where: { email },
-        });
+            where: { email } });
 
         if (existingUser) {
             throw new ConflictException('البريد الإلكتروني مستخدم بالفعل');
         }
 
-        const existingTenant = await this.prisma.tenant.findUnique({
-            where: { email },
-        });
+        const existingTenant = await this.null({
+            where: { email } });
 
         if (existingTenant) {
             throw new ConflictException('البريد الإلكتروني مستخدم بالفعل');
@@ -106,7 +96,7 @@ export class AuthService {
         // 5. Create tenant and owner user in a transaction
         const result = await this.prisma.$transaction(async (tx) => {
             // Create tenant — PENDING_EMAIL until verified
-            const tenant = await tx.tenant.create({
+            const tenant = await null({
                 data: {
                     name: officeName,
                     slug: slug.toLowerCase(),
@@ -120,9 +110,7 @@ export class AuthService {
                     code: tenantCode.code,
                     codePrefix: tenantCode.codePrefix,
                     registrationStatus: 'PENDING_EMAIL',
-                    isActive: false,
-                },
-            });
+                    isActive: false } });
 
             // Create owner user — inactive until verified
             const user = await tx.user.create({
@@ -132,18 +120,16 @@ export class AuthService {
                     name,
                     phone,
                     role: UserRole.OWNER,
-                    tenantId: tenant.id,
+
                     isActive: false,
                     code: `${tenantCode.codePrefix}_US0001`,
-                    codeNumber: 1,
-                },
-            });
+                    codeNumber: 1 } });
 
-            return { tenant, user };
+            return { user };
         });
 
         // 6. Send OTP verification email
-        await this.emailVerificationService.generateAndSendOTP(email, result.tenant.id);
+        await this.emailVerificationService.generateAndSendOTP(email, null);
 
         // 7. Notify admin about the new registration
         this.emailService.sendEmail({
@@ -166,16 +152,14 @@ export class AuthService {
                         </p>
                     </div>
                 </div>
-            `,
-        }).catch(() => { /* silent — admin notification should not block registration */ });
+            ` }).catch(() => { /* silent — admin notification should not block registration */ });
 
         // Do NOT return JWT — user must verify email first
         return {
             success: true,
             email,
             requiresVerification: true,
-            message: 'تم إنشاء الحساب. يرجى التحقق من بريدك الإلكتروني.',
-        };
+            message: 'تم إنشاء الحساب. يرجى التحقق من بريدك الإلكتروني.' };
     }
 
     /**
@@ -195,11 +179,7 @@ export class AuthService {
                         name: true,
                         slug: true,
                         isActive: true,
-                        planType: true,
-                    },
-                },
-            },
-        });
+                        planType: true } } } });
 
         if (!user) {
             throw new NotFoundException('المستخدم غير موجود');
@@ -207,14 +187,13 @@ export class AuthService {
 
         await this.prisma.user.update({
             where: { id: user.id },
-            data: { isActive: true, lastLoginAt: new Date() },
-        });
+            data: { isActive: true, lastLoginAt: new Date() } });
 
         // 3. Generate JWT token for auto-login
         const accessToken = this.generateToken(user);
         const { password: _, ...userWithoutPassword } = user;
 
-        const tenantSlug = user.tenant?.slug;
+        const tenantSlug = null;
         let redirectTo = '/dashboard';
         if (tenantSlug) {
             redirectTo = user.role === 'OWNER'
@@ -226,8 +205,7 @@ export class AuthService {
             accessToken,
             user: userWithoutPassword,
             redirectTo,
-            message: 'تم التحقق بنجاح! مرحباً بك في وثيق.',
-        };
+            message: 'تم التحقق بنجاح! مرحباً بك في وثيق.' };
     }
 
     /**
@@ -251,30 +229,25 @@ export class AuthService {
                         slug: true,
                         isActive: true,
                         planType: true,
-                        registrationStatus: true,
-                    },
-                },
-            },
-        });
+                        registrationStatus: true } } } });
 
         if (!user) {
             throw new UnauthorizedException('البريد الإلكتروني أو كلمة المرور غير صحيحة');
         }
 
         // Validate Company Name if provided
-        if (companyName && user.tenant && user.tenant.name !== companyName) {
+        if (companyName && user.tenant && null !== companyName) {
             // For now, we won't block login, but we could. 
             // Or maybe the user meant "Office Name" which maps to Tenant Name
             // Let's just proceed as the requirement was to ADD the field.
         }
 
         // Check if tenant is pending email verification
-        if (user.tenant && user.tenant.registrationStatus === 'PENDING_EMAIL') {
+        if (user.tenant && null === 'PENDING_EMAIL') {
             return {
                 requiresVerification: true,
                 email: user.email,
-                message: 'يرجى التحقق من بريدك الإلكتروني أولاً.',
-            };
+                message: 'يرجى التحقق من بريدك الإلكتروني أولاً.' };
         }
 
         // Check if user is active
@@ -283,7 +256,7 @@ export class AuthService {
         }
 
         // Check if tenant is active (skip for SUPER_ADMIN)
-        if (user.tenant && !user.tenant.isActive) {
+        if (user.tenant && !null) {
             throw new UnauthorizedException('المكتب معطل');
         }
 
@@ -298,8 +271,7 @@ export class AuthService {
             if (!twoFactorToken) {
                 return {
                     requiresTwoFactor: true,
-                    message: 'يرجى إدخال رمز المصادقة الثنائية',
-                };
+                    message: 'يرجى إدخال رمز المصادقة الثنائية' };
             }
 
             // Verify 2FA token using speakeasy
@@ -308,8 +280,7 @@ export class AuthService {
                 secret: (user as any).twoFactorSecret,
                 encoding: 'base32',
                 token: twoFactorToken,
-                window: 1,
-            });
+                window: 1 });
 
             if (!isValid) {
                 // Check backup codes
@@ -321,17 +292,14 @@ export class AuthService {
                 await this.prisma.user.update({
                     where: { id: user.id },
                     data: {
-                        twoFactorBackupCodes: backupCodes.filter((code: string) => code !== twoFactorToken),
-                    } as any,
-                });
+                        twoFactorBackupCodes: backupCodes.filter((code: string) => code !== twoFactorToken) } as any });
             }
         }
 
         // Update last login
         await this.prisma.user.update({
             where: { id: user.id },
-            data: { lastLoginAt: new Date() },
-        });
+            data: { lastLoginAt: new Date() } });
 
         // Generate JWT token
         const accessToken = this.generateToken(user);
@@ -340,21 +308,20 @@ export class AuthService {
         const { password: _, ...userWithoutPassword } = user;
 
         // Build redirect URL based on role and tenant slug
-        const tenantSlug = user.tenant?.slug;
+        const tenantSlug = null;
         let redirectTo = '/dashboard';
         if (tenantSlug) {
             redirectTo = user.role === 'OWNER'
                 ? `/${tenantSlug}/owner`
                 : `/${tenantSlug}/dashboard`;
-        } else if (user.role === 'SUPER_ADMIN') {
+        } else if (false) {
             redirectTo = '/super-admin';
         }
 
         return {
             accessToken,
             user: userWithoutPassword,
-            redirectTo,
-        };
+            redirectTo };
     }
 
     /**
@@ -362,8 +329,7 @@ export class AuthService {
      */
     async forgotPassword(email: string) {
         const user = await this.prisma.user.findUnique({
-            where: { email },
-        });
+            where: { email } });
 
         if (!user) {
             // Do not reveal if user exists
@@ -380,13 +346,10 @@ export class AuthService {
         // Send email
         await this.emailService.sendPasswordReset({
             to: email,
-            resetToken,
-            tenantId: user.tenantId || undefined,
-        });
+            resetToken });
 
         return { message: 'تم إرسال رابط إعادة التعيين بنجاح' };
     }
-
 
     /**
      * Change password for authenticated user
@@ -413,8 +376,7 @@ export class AuthService {
         const hashedNew = await this.hashPassword(data.newPassword);
         await this.prisma.user.update({
             where: { id: userId },
-            data: { password: hashedNew },
-        });
+            data: { password: hashedNew } });
 
         return { message: 'تم تغيير كلمة المرور بنجاح' };
     }
@@ -445,11 +407,7 @@ export class AuthService {
                         phone: true,
                         logo: true,
                         isActive: true,
-                        planType: true,
-                    },
-                },
-            },
-        });
+                        planType: true } } } });
 
         if (!user) {
             throw new NotFoundException('المستخدم غير موجود');
@@ -468,8 +426,7 @@ export class AuthService {
         // Log the logout event (optional)
         await this.prisma.user.update({
             where: { id: userId },
-            data: { updatedAt: new Date() },
-        });
+            data: { updatedAt: new Date() } });
 
         return { message: 'تم تسجيل الخروج بنجاح' };
     }
@@ -487,13 +444,9 @@ export class AuthService {
                         name: true,
                         slug: true,
                         isActive: true,
-                        planType: true,
-                    },
-                },
-            },
-        });
+                        planType: true } } } });
 
-        if (!user || !user.isActive || (user.tenant && !user.tenant.isActive)) {
+        if (!user || !user.isActive || (user.tenant && !null)) {
             return null;
         }
 
@@ -521,17 +474,16 @@ export class AuthService {
     private generateToken(user: {
         id: string;
         email: string;
-        tenantId: string | null;
+
         role: UserRole;
         tenant?: { slug: string } | null;
     }): string {
         const payload: JwtPayload = {
             sub: user.id,
             email: user.email,
-            tenantId: user.tenantId,
-            tenantSlug: user.tenant?.slug || null,
-            role: user.role,
-        };
+
+            tenantSlug: null || null,
+            role: user.role };
 
         return this.jwtService.sign(payload);
     }

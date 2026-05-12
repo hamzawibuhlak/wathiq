@@ -48,7 +48,6 @@ import { MessagingModule } from './messaging/messaging.module';
 import { AccountingModule } from './accounting/accounting.module';
 import { HrModule } from './hr/hr.module';
 import { ChatModule } from './chat/chat.module';
-import { OwnerModule } from './owner/owner.module';
 import { LegalDocumentsModule } from './legal-documents/legal-documents.module';
 import { MarketingModule } from './marketing/marketing.module';
 import { LegalLibraryModule } from './legal-library/legal-library.module';
@@ -116,7 +115,6 @@ import { AppController } from './app.controller';
         AccountingModule,
         HrModule,
         ChatModule,
-        OwnerModule,
         LegalDocumentsModule,
         MarketingModule,
         LegalLibraryModule,

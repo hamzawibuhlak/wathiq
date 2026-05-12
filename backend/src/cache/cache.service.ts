@@ -66,8 +66,8 @@ export class CacheService implements OnModuleInit {
     /**
      * Build tenant-specific key
      */
-    tenantKey(tenantId: string, namespace: string, ...parts: string[]): string {
-        return this.buildKey('tenant', tenantId, namespace, ...parts);
+    tenantKey(namespace: string, ...parts: string[]): string {
+        return this.buildKey('tenant', namespace, ...parts);
     }
 
     /**
@@ -132,47 +132,43 @@ export class CacheService implements OnModuleInit {
     /**
      * Invalidate all cache for a tenant
      */
-    async invalidateTenant(tenantId: string): Promise<void> {
-        await this.invalidatePattern(`tenant:${tenantId}:*`);
+    async invalidateTenant(): Promise<void> {
+        await this.invalidatePattern(`tenant::*`);
     }
 
     /**
      * Invalidate entity cache
      */
-    async invalidateEntity(tenantId: string, entity: string, id?: string): Promise<void> {
+    async invalidateEntity(entity: string, id?: string): Promise<void> {
         if (id) {
-            await this.del(this.tenantKey(tenantId, entity, id));
+            await this.del(this.tenantKey(entity, id));
         }
-        await this.invalidatePattern(this.tenantKey(tenantId, entity, '*'));
+        await this.invalidatePattern(this.tenantKey(entity, '*'));
         // Also invalidate list caches
-        await this.invalidatePattern(this.tenantKey(tenantId, `${entity}-list`, '*'));
+        await this.invalidatePattern(this.tenantKey(`${entity}-list`, '*'));
     }
 
     /**
      * Cache decorator helper
      */
-    async cached<T>(
-        tenantId: string,
-        entity: string,
+    async cached<T>(entity: string,
         id: string,
         fn: () => Promise<T>,
         ttl = 300
     ): Promise<T> {
-        const key = this.tenantKey(tenantId, entity, id);
+        const key = this.tenantKey(entity, id);
         return this.getOrSet(key, fn, ttl);
     }
 
     /**
      * Cache list with pagination info
      */
-    async cacheList<T>(
-        tenantId: string,
-        entity: string,
+    async cacheList<T>(entity: string,
         queryHash: string,
         fn: () => Promise<T>,
         ttl = 60 // Shorter TTL for lists
     ): Promise<T> {
-        const key = this.tenantKey(tenantId, `${entity}-list`, queryHash);
+        const key = this.tenantKey(`${entity}-list`, queryHash);
         return this.getOrSet(key, fn, ttl);
     }
 
@@ -185,7 +181,6 @@ export class CacheService implements OnModuleInit {
     }> {
         return {
             isConnected: this.isRedisConnected,
-            type: this.isRedisConnected ? 'redis' : 'memory',
-        };
+            type: this.isRedisConnected ? 'redis' : 'memory' };
     }
 }

@@ -6,7 +6,7 @@ import { PrismaService } from '../prisma/prisma.service';
  */
 export interface AuditContext {
     userId: string;
-    tenantId: string;
+
     ipAddress?: string;
     userAgent?: string;
 }
@@ -37,7 +37,7 @@ export class AuditService {
                 entityId,
                 description,
                 userId: context.userId,
-                tenantId: context.tenantId,
+
                 ipAddress: context.ipAddress,
                 userAgent: context.userAgent,
             },
@@ -70,7 +70,7 @@ export class AuditService {
                 entityId,
                 description,
                 userId: context.userId,
-                tenantId: context.tenantId,
+
                 ipAddress: context.ipAddress,
                 userAgent: context.userAgent,
             },
@@ -95,7 +95,7 @@ export class AuditService {
                 entityId,
                 description,
                 userId: context.userId,
-                tenantId: context.tenantId,
+
                 ipAddress: context.ipAddress,
                 userAgent: context.userAgent,
             },
@@ -117,7 +117,7 @@ export class AuditService {
                 entityId,
                 description: `تم عرض ${this.getEntityName(entity)}`,
                 userId: context.userId,
-                tenantId: context.tenantId,
+
                 ipAddress: context.ipAddress,
                 userAgent: context.userAgent,
             },
@@ -141,7 +141,7 @@ export class AuditService {
                 entityId,
                 description,
                 userId: context.userId,
-                tenantId: context.tenantId,
+
                 ipAddress: context.ipAddress,
                 userAgent: context.userAgent,
             },
@@ -154,13 +154,12 @@ export class AuditService {
     async getEntityHistory(
         entity: string,
         entityId: string,
-        tenantId: string,
     ) {
         return this.prisma.activityLog.findMany({
             where: {
                 entity,
                 entityId,
-                tenantId,
+
             },
             include: {
                 user: {
@@ -177,7 +176,6 @@ export class AuditService {
      */
     async getUserActivity(
         userId: string,
-        tenantId: string,
         days = 30,
     ) {
         const startDate = new Date();
@@ -186,7 +184,7 @@ export class AuditService {
         return this.prisma.activityLog.findMany({
             where: {
                 userId,
-                tenantId,
+
                 createdAt: { gte: startDate },
             },
             orderBy: { createdAt: 'desc' },
@@ -197,14 +195,13 @@ export class AuditService {
     /**
      * Get activity summary for dashboard
      */
-    async getActivitySummary(tenantId: string, days = 7) {
+    async getActivitySummary(days = 7) {
         const startDate = new Date();
         startDate.setDate(startDate.getDate() - days);
 
         const activities = await this.prisma.activityLog.groupBy({
             by: ['action'],
             where: {
-                tenantId,
                 createdAt: { gte: startDate },
             },
             _count: true,

@@ -1,8 +1,4 @@
-import {
-    Injectable,
-    BadRequestException,
-    Logger,
-} from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { EmailService } from '../email/email.service';
@@ -96,11 +92,10 @@ export class EmailVerificationService {
     /**
      * Generate and send OTP to email
      */
-    async generateAndSendOTP(email: string, tenantId?: string): Promise<void> {
+    async generateAndSendOTP(email: string): Promise<void> {
         // Delete any existing unused tokens for this email
         await this.prisma.emailVerificationToken.deleteMany({
-            where: { email, isUsed: false },
-        });
+            where: { email, isUsed: false } });
 
         // Generate 6-digit OTP
         const otpCode = this.generateOTPCode();
@@ -113,19 +108,16 @@ export class EmailVerificationService {
         await this.prisma.emailVerificationToken.create({
             data: {
                 email,
-                tenantId,
+
                 token: hashedToken,
-                expiresAt: new Date(Date.now() + this.OTP_EXPIRY_MINUTES * 60 * 1000),
-            },
-        });
+                expiresAt: new Date(Date.now() + this.OTP_EXPIRY_MINUTES * 60 * 1000) } });
 
         // Send email
         const html = this.getOTPEmailHtml(otpCode);
         const result = await this.emailService.sendEmail({
             to: email,
             subject: 'رمز التحقق من وثيق — Wathiq Verification Code',
-            body: html,
-        });
+            body: html });
 
         if (!result.success) {
             this.logger.error(`Failed to send OTP email to ${email}: ${result.error}`);
@@ -143,10 +135,8 @@ export class EmailVerificationService {
             where: {
                 email,
                 isUsed: false,
-                expiresAt: { gt: new Date() },
-            },
-            orderBy: { createdAt: 'desc' },
-        });
+                expiresAt: { gt: new Date() } },
+            orderBy: { createdAt: 'desc' } });
 
         if (!verificationToken) {
             throw new BadRequestException('الرمز غير صالح أو منتهي الصلاحية. يرجى طلب رمز جديد.');
@@ -156,8 +146,7 @@ export class EmailVerificationService {
         if (verificationToken.attempts >= this.MAX_ATTEMPTS) {
             // Delete the token — force resend
             await this.prisma.emailVerificationToken.delete({
-                where: { id: verificationToken.id },
-            });
+                where: { id: verificationToken.id } });
             throw new BadRequestException('تم تجاوز الحد الأقصى للمحاولات. يرجى طلب رمز جديد.');
         }
 
@@ -168,14 +157,12 @@ export class EmailVerificationService {
             // Increment attempts
             const updated = await this.prisma.emailVerificationToken.update({
                 where: { id: verificationToken.id },
-                data: { attempts: { increment: 1 } },
-            });
+                data: { attempts: { increment: 1 } } });
 
             const remaining = this.MAX_ATTEMPTS - updated.attempts;
             if (remaining <= 0) {
                 await this.prisma.emailVerificationToken.delete({
-                    where: { id: verificationToken.id },
-                });
+                    where: { id: verificationToken.id } });
                 throw new BadRequestException('تم تجاوز الحد الأقصى للمحاولات. يرجى طلب رمز جديد.');
             }
 
@@ -185,20 +172,7 @@ export class EmailVerificationService {
         // Mark as used
         await this.prisma.emailVerificationToken.update({
             where: { id: verificationToken.id },
-            data: { isUsed: true },
-        });
-
-        // Activate the tenant if tenantId exists
-        if (verificationToken.tenantId) {
-            await this.prisma.tenant.update({
-                where: { id: verificationToken.tenantId },
-                data: {
-                    registrationStatus: 'ACTIVE',
-                    isActive: true,
-                    emailVerifiedAt: new Date(),
-                },
-            });
-        }
+            data: { isUsed: true } });
 
         return true;
     }
@@ -210,8 +184,7 @@ export class EmailVerificationService {
         // Find the latest token for this email
         const lastToken = await this.prisma.emailVerificationToken.findFirst({
             where: { email },
-            orderBy: { createdAt: 'desc' },
-        });
+            orderBy: { createdAt: 'desc' } });
 
         if (lastToken) {
             const secondsSinceCreated = Math.floor(
@@ -223,15 +196,8 @@ export class EmailVerificationService {
                 return { waitSeconds };
             }
         }
-
-        // Find tenantId from the pending tenant with this email
-        const tenant = await this.prisma.tenant.findFirst({
-            where: { email, registrationStatus: 'PENDING_EMAIL' },
-            select: { id: true },
-        });
-
         // Delete old tokens and send new one
-        await this.generateAndSendOTP(email, tenant?.id);
+        await this.generateAndSendOTP(email);
 
         return { waitSeconds: 0 };
     }

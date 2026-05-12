@@ -28,7 +28,6 @@ try {
 @Injectable()
 export class WhatsappBaileysService implements OnModuleInit {
     private readonly logger = new Logger(WhatsappBaileysService.name);
-    // tenantId → socket
     private sessions = new Map<string, any>();
 
     constructor(
@@ -46,29 +45,28 @@ export class WhatsappBaileysService implements OnModuleInit {
     }
 
     // ── إنشاء أو استعادة Session ─────────────────
-    async initSession(tenantId: string) {
+    async initSession() {
         if (!makeWASocket) {
             throw new Error('WhatsApp QR service not available — install @whiskeysockets/baileys');
         }
 
         // إذا كانت session موجودة بالفعل
-        if (this.sessions.has(tenantId)) {
+        if (this.sessions.has()) {
             return { status: 'ALREADY_CONNECTED' };
         }
 
         // مسار حفظ ملفات الـ Session
         const sessionsBase = process.env.WHATSAPP_SESSIONS_PATH || './whatsapp-sessions';
-        const sessionDir = path.join(process.cwd(), sessionsBase, tenantId);
+        const sessionDir = path.join(process.cwd(), sessionsBase);
         if (!fs.existsSync(sessionDir)) {
             fs.mkdirSync(sessionDir, { recursive: true });
         }
 
         // تحديث حالة الـ DB
         await this.prisma.whatsappSession.upsert({
-            where: { tenantId },
-            create: { tenantId, status: 'QR_PENDING', sessionPath: sessionDir },
-            update: { status: 'QR_PENDING' },
-        });
+            where: {},
+            create: { status: 'QR_PENDING', sessionPath: sessionDir },
+            update: { status: 'QR_PENDING' } });
 
         const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
         const { version } = await fetchLatestBaileysVersion();
@@ -77,12 +75,10 @@ export class WhatsappBaileysService implements OnModuleInit {
             version,
             auth: {
                 creds: state.creds,
-                keys: makeCacheableSignalKeyStore(state.keys, this.logger as any),
-            },
+                keys: makeCacheableSignalKeyStore(state.keys, this.logger as any) },
             browser: Browsers.macOS('Chrome'),
             printQRInTerminal: false,
-            logger: { level: 'silent', child: () => ({ level: 'silent', child: () => ({}), info: () => { }, warn: () => { }, error: () => { }, debug: () => { }, trace: () => { }, fatal: () => { } }), info: () => { }, warn: () => { }, error: () => { }, debug: () => { }, trace: () => { }, fatal: () => { } },
-        });
+            logger: { level: 'silent', child: () => ({ level: 'silent', child: () => ({}), info: () => { }, warn: () => { }, error: () => { }, debug: () => { }, trace: () => { }, fatal: () => { } }), info: () => { }, warn: () => { }, error: () => { }, debug: () => { }, trace: () => { }, fatal: () => { } } });
 
         // ── معالجة تحديثات الاتصال ──────────────────
         sock.ev.on('connection.update', async (update: any) => {
@@ -92,8 +88,8 @@ export class WhatsappBaileysService implements OnModuleInit {
             if (qr) {
                 try {
                     const qrImageUrl = await QRCode.toDataURL(qr);
-                    this.wsGateway.broadcastWhatsAppQR(tenantId, qrImageUrl);
-                    this.logger.log(`QR generated for tenant: ${tenantId}`);
+                    this.wsGateway.broadcastWhatsAppQR(qrImageUrl);
+                    this.logger.log(`QR generated for tenant: `);
                 } catch (err) {
                     this.logger.error('QR generation failed', err);
                 }
@@ -104,35 +100,32 @@ export class WhatsappBaileysService implements OnModuleInit {
                 const shouldReconnect = statusCode !== DisconnectReason?.loggedOut;
 
                 await this.prisma.whatsappSession.update({
-                    where: { tenantId },
-                    data: { status: shouldReconnect ? 'RECONNECTING' : 'DISCONNECTED' },
-                }).catch(() => { });
+                    where: {},
+                    data: { status: shouldReconnect ? 'RECONNECTING' : 'DISCONNECTED' } }).catch(() => { });
 
-                this.sessions.delete(tenantId);
-                this.wsGateway.broadcastWhatsAppStatus(tenantId, shouldReconnect ? 'RECONNECTING' : 'DISCONNECTED');
+                this.sessions.delete();
+                this.wsGateway.broadcastWhatsAppStatus(shouldReconnect ? 'RECONNECTING' : 'DISCONNECTED');
 
                 if (shouldReconnect) {
                     // أعد المحاولة بعد 5 ثواني
-                    setTimeout(() => this.initSession(tenantId), 5000);
+                    setTimeout(() => this.initSession(), 5000);
                 }
             }
 
             if (connection === 'open') {
                 const phoneNumber = sock.user?.id?.split(':')[0] || '';
-                this.sessions.set(tenantId, sock);
+                this.sessions.set(sock);
 
                 await this.prisma.whatsappSession.update({
-                    where: { tenantId },
+                    where: {},
                     data: {
                         status: 'CONNECTED',
                         phoneNumber,
                         connectedAt: new Date(),
-                        lastSeen: new Date(),
-                    },
-                });
+                        lastSeen: new Date() } });
 
-                this.wsGateway.broadcastWhatsAppStatus(tenantId, 'CONNECTED', phoneNumber);
-                this.logger.log(`WhatsApp connected: tenant=${tenantId}, phone=${phoneNumber}`);
+                this.wsGateway.broadcastWhatsAppStatus('CONNECTED', phoneNumber);
+                this.logger.log(`WhatsApp connected: tenant=, phone=${phoneNumber}`);
             }
         });
 
@@ -151,19 +144,15 @@ export class WhatsappBaileysService implements OnModuleInit {
                 // ابحث عن العميل تلقائياً
                 const client = await this.prisma.client.findFirst({
                     where: {
-                        tenantId,
                         OR: [
                             { phone: from },
                             { phone: `0${from.slice(-9)}` },
                             { phone: from.replace(/^966/, '0') },
-                        ],
-                    },
-                });
+                        ] } });
 
                 // احفظ الرسالة
                 const dbSession = await this.prisma.whatsappSession.findUnique({
-                    where: { tenantId },
-                });
+                    where: {} });
 
                 if (dbSession) {
                     await this.prisma.whatsappBaileysMessage.create({
@@ -175,21 +164,18 @@ export class WhatsappBaileysService implements OnModuleInit {
                             content,
                             sentAt: new Date((msg.messageTimestamp as number) * 1000),
                             sessionId: dbSession.id,
-                            tenantId,
-                            clientId: client?.id,
-                        },
-                    });
+
+                            clientId: client?.id } });
                 }
 
                 // أرسل الرسالة للـ Frontend live
-                this.wsGateway.broadcastWhatsAppMessage(tenantId, {
+                this.wsGateway.broadcastWhatsAppMessage({
                     type: 'WA_QR_MESSAGE_RECEIVED',
                     from,
                     content,
                     clientName: client?.name,
                     clientId: client?.id,
-                    timestamp: msg.messageTimestamp,
-                });
+                    timestamp: msg.messageTimestamp });
             }
         });
 
@@ -198,8 +184,8 @@ export class WhatsappBaileysService implements OnModuleInit {
     }
 
     // ── إرسال رسالة ─────────────────────────────
-    async sendMessage(tenantId: string, phone: string, message: string, agentId?: string) {
-        const sock = this.sessions.get(tenantId);
+    async sendMessage(phone: string, message: string, agentId?: string) {
+        const sock = this.sessions.get();
         if (!sock) {
             throw new Error('واتساب غير متصل — يرجى مسح الباركود أولاً');
         }
@@ -219,18 +205,14 @@ export class WhatsappBaileysService implements OnModuleInit {
 
         // احفظ الرسالة
         const dbSession = await this.prisma.whatsappSession.findUnique({
-            where: { tenantId },
-        });
+            where: {} });
 
         const client = await this.prisma.client.findFirst({
             where: {
-                tenantId,
                 OR: [
                     { phone: cleanPhone },
                     { phone: `0${cleanPhone.slice(-9)}` },
-                ],
-            },
-        });
+                ] } });
 
         if (dbSession) {
             await this.prisma.whatsappBaileysMessage.create({
@@ -241,68 +223,62 @@ export class WhatsappBaileysService implements OnModuleInit {
                     content: message,
                     sentAt: new Date(),
                     sessionId: dbSession.id,
-                    tenantId,
+
                     clientId: client?.id,
-                    agentId,
-                },
-            });
+                    agentId } });
         }
 
         return { success: true };
     }
 
     // ── قطع الاتصال ──────────────────────────────
-    async disconnect(tenantId: string) {
-        const sock = this.sessions.get(tenantId);
+    async disconnect() {
+        const sock = this.sessions.get();
         if (sock) {
             try {
                 await sock.logout();
             } catch (e) {
                 this.logger.warn('Logout error (may already be disconnected)', e);
             }
-            this.sessions.delete(tenantId);
+            this.sessions.delete();
         }
 
         // احذف ملفات الـ Session
         const sessionsBase = process.env.WHATSAPP_SESSIONS_PATH || './whatsapp-sessions';
-        const sessionDir = path.join(process.cwd(), sessionsBase, tenantId);
+        const sessionDir = path.join(process.cwd(), sessionsBase);
         if (fs.existsSync(sessionDir)) {
             fs.rmSync(sessionDir, { recursive: true, force: true });
         }
 
         await this.prisma.whatsappSession.update({
-            where: { tenantId },
+            where: {},
             data: {
                 status: 'DISCONNECTED',
                 phoneNumber: null,
-                connectedAt: null,
-            },
-        }).catch(() => { });
+                connectedAt: null } }).catch(() => { });
 
         return { success: true };
     }
 
     // ── حالة الجلسة ──────────────────────────────
-    async getSessionStatus(tenantId: string) {
+    async getSessionStatus() {
         const session = await this.prisma.whatsappSession.findUnique({
-            where: { tenantId },
-        });
+            where: {} });
         return {
             status: session?.status || 'DISCONNECTED',
             phone: session?.phoneNumber,
             connectedAt: session?.connectedAt,
-            isLive: this.sessions.has(tenantId),
-        };
+            isLive: this.sessions.has() };
     }
 
     // ── سجل الرسائل ──────────────────────────────
-    async getMessages(tenantId: string, filters?: {
+    async getMessages(filters?: {
         phone?: string;
         clientId?: string;
         page?: number;
     }) {
         const { page = 1 } = filters || {};
-        const where: any = { tenantId };
+        const where: any = {};
         if (filters?.phone) where.phone = { contains: filters.phone };
         if (filters?.clientId) where.clientId = filters.clientId;
 
@@ -310,32 +286,28 @@ export class WhatsappBaileysService implements OnModuleInit {
             this.prisma.whatsappBaileysMessage.findMany({
                 where,
                 include: {
-                    client: { select: { id: true, name: true, phone: true } },
-                },
+                    client: { select: { id: true, name: true, phone: true } } },
                 orderBy: { sentAt: 'desc' },
                 skip: (page - 1) * 30,
-                take: 30,
-            }),
+                take: 30 }),
             this.prisma.whatsappBaileysMessage.count({ where }),
         ]);
 
         return {
             data: messages,
-            meta: { page, total, totalPages: Math.ceil(total / 30) },
-        };
+            meta: { page, total, totalPages: Math.ceil(total / 30) } };
     }
 
     // ── استعادة Sessions عند بدء تشغيل الـ Backend ─
     async restoreActiveSessions() {
         try {
             const connectedSessions = await this.prisma.whatsappSession.findMany({
-                where: { status: { in: ['CONNECTED', 'RECONNECTING'] } },
-            });
+                where: { status: { in: ['CONNECTED', 'RECONNECTING'] } } });
 
             for (const session of connectedSessions) {
-                this.logger.log(`Restoring WA session for tenant: ${session.tenantId}`);
-                await this.initSession(session.tenantId).catch((err) => {
-                    this.logger.error(`Failed to restore session: ${session.tenantId}`, err);
+                this.logger.log(`Restoring WA session for tenant: ${session.id}`);
+                await this.initSession(session.id).catch((err) => {
+                    this.logger.error(`Failed to restore session: ${session.id}`, err);
                 });
             }
         } catch (err) {

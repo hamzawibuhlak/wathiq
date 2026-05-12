@@ -1,16 +1,4 @@
-import {
-    Controller,
-    Get,
-    Post,
-    Param,
-    Body,
-    Query,
-    UseGuards,
-    UseInterceptors,
-    UploadedFile,
-    BadRequestException,
-    Req,
-} from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, Query, UseGuards, UseInterceptors, UploadedFile, BadRequestException, Req } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -59,12 +47,12 @@ export class ChatController {
         @Param('id') conversationId: string,
         @CurrentUser() user: any,
     ) {
-        return this.chatService.markAsRead(conversationId, user.id, user.tenantId);
+        return this.chatService.markAsRead(conversationId, user.id);
     }
     // Get all conversations for current user
     @Get('conversations')
     getConversations(@CurrentUser() user: any) {
-        return this.chatService.getUserConversations(user.id, user.tenantId);
+        return this.chatService.getUserConversations(user.id);
     }
 
     // Get or create DM
@@ -73,7 +61,7 @@ export class ChatController {
         @Body('userId') targetUserId: string,
         @CurrentUser() user: any,
     ) {
-        return this.chatService.getOrCreateDM(user.id, targetUserId, user.tenantId);
+        return this.chatService.getOrCreateDM(user.id, targetUserId);
     }
 
     // Create group
@@ -82,7 +70,7 @@ export class ChatController {
         @Body() data: { name: string; description?: string; memberIds: string[] },
         @CurrentUser() user: any,
     ) {
-        return this.chatService.createGroup(user.id, user.tenantId, data);
+        return this.chatService.createGroup(user.id, data);
     }
 
     // Get messages
@@ -93,10 +81,9 @@ export class ChatController {
         @Query('cursor') cursor?: string,
         @Query('limit') limit?: number,
     ) {
-        return this.chatService.getMessages(id, user.id, user.tenantId, {
+        return this.chatService.getMessages(id, user.id, {
             cursor,
-            limit: limit ? Number(limit) : undefined,
-        });
+            limit: limit ? Number(limit) : undefined });
     }
 
     // Send message via REST (fallback for WebSocket)
@@ -114,7 +101,7 @@ export class ChatController {
         },
         @CurrentUser() user: any,
     ) {
-        return this.chatService.sendMessage(conversationId, user.id, user.tenantId, data as any);
+        return this.chatService.sendMessage(conversationId, user.id, data as any);
     }
 
     // Upload file for chat
@@ -126,8 +113,7 @@ export class ChatController {
                 filename: (_req, file, cb) => {
                     const uniqueName = `${randomUUID()}${extname(file.originalname)}`;
                     cb(null, uniqueName);
-                },
-            }),
+                } }),
             limits: { fileSize: 25 * 1024 * 1024 }, // 25MB
         }),
     )
@@ -140,8 +126,7 @@ export class ChatController {
             url: `/uploads/chat/${file.filename}`,
             fileName: file.originalname,
             fileSize: file.size,
-            mimeType: file.mimetype,
-        };
+            mimeType: file.mimetype };
     }
 
     // Search messages
@@ -150,6 +135,6 @@ export class ChatController {
         @Query('q') query: string,
         @CurrentUser() user: any,
     ) {
-        return this.chatService.searchMessages(query, user.id, user.tenantId);
+        return this.chatService.searchMessages(query, user.id);
     }
 }

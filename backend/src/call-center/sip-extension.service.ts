@@ -20,16 +20,14 @@ export class SipExtensionService {
         return bytes.toString(CryptoJS.enc.Utf8);
     }
 
-    async getExtensions(tenantId: string) {
+    async getExtensions() {
         return this.prisma.sipExtension.findMany({
-            where: { tenantId },
+            where: {},
             include: {
-                user: { select: { id: true, name: true, email: true, avatar: true } },
-            },
-        });
+                user: { select: { id: true, name: true, email: true, avatar: true } } } });
     }
 
-    async assignExtension(tenantId: string, data: {
+    async assignExtension(data: {
         userId: string;
         extension: string;
         password: string;
@@ -39,16 +37,14 @@ export class SipExtensionService {
     }) {
         // تحقق من عدم التكرار
         const existing = await this.prisma.sipExtension.findFirst({
-            where: { tenantId, extension: data.extension },
-        });
+            where: { extension: data.extension } });
         if (existing) {
             throw new BadRequestException(`الـ Extension ${data.extension} مستخدم مسبقاً`);
         }
 
         // تحقق إن المستخدم ما عنده extension
         const userExt = await this.prisma.sipExtension.findUnique({
-            where: { userId: data.userId },
-        });
+            where: { userId: data.userId } });
         if (userExt) {
             throw new BadRequestException('هذا المستخدم لديه Extension مسبقاً');
         }
@@ -63,16 +59,12 @@ export class SipExtensionService {
                 password: encryptedPassword,
                 ucmHost: data.ucmHost,
                 ucmPort: data.ucmPort || 8089,
-                userId: data.userId,
-                tenantId,
-            },
+                userId: data.userId },
             include: {
-                user: { select: { id: true, name: true, email: true } },
-            },
-        });
+                user: { select: { id: true, name: true, email: true } } } });
     }
 
-    async updateExtension(id: string, tenantId: string, data: {
+    async updateExtension(id: string, data: {
         extension?: string;
         displayName?: string;
         password?: string;
@@ -80,7 +72,7 @@ export class SipExtensionService {
         ucmPort?: number;
         isActive?: boolean;
     }) {
-        const ext = await this.prisma.sipExtension.findFirst({ where: { id, tenantId } });
+        const ext = await this.prisma.sipExtension.findFirst({ where: { id } });
         if (!ext) throw new NotFoundException('Extension غير موجود');
 
         const updateData: any = {};
@@ -93,15 +85,13 @@ export class SipExtensionService {
 
         return this.prisma.sipExtension.update({
             where: { id },
-            data: updateData,
-        });
+            data: updateData });
     }
 
     // يُرجع بيانات الاتصال للـ Frontend مع password مفكوك
-    async getExtensionForUser(userId: string, tenantId: string) {
+    async getExtensionForUser(userId: string) {
         const ext = await this.prisma.sipExtension.findFirst({
-            where: { userId, tenantId, isActive: true },
-        });
+            where: { userId, isActive: true } });
         if (!ext) return null;
 
         return {
@@ -113,13 +103,12 @@ export class SipExtensionService {
             ucmPort: ext.ucmPort,
             isActive: ext.isActive,
             userId: ext.userId,
-            tenantId: ext.tenantId,
-            wsUrl: `wss://${ext.ucmHost}:${ext.ucmPort}/ws`,
-        };
+
+            wsUrl: `wss://${ext.ucmHost}:${ext.ucmPort}/ws` };
     }
 
-    async deleteExtension(id: string, tenantId: string) {
-        const ext = await this.prisma.sipExtension.findFirst({ where: { id, tenantId } });
+    async deleteExtension(id: string) {
+        const ext = await this.prisma.sipExtension.findFirst({ where: { id } });
         if (!ext) throw new NotFoundException('Extension غير موجود');
         return this.prisma.sipExtension.delete({ where: { id } });
     }

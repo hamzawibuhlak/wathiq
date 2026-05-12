@@ -1,22 +1,5 @@
-import {
-    Controller,
-    Get,
-    Post,
-    Patch,
-    Delete,
-    Body,
-    Param,
-    Query,
-    UseGuards,
-    ParseUUIDPipe,
-    ForbiddenException,
-} from '@nestjs/common';
-import {
-    ApiTags,
-    ApiOperation,
-    ApiBearerAuth,
-    ApiResponse,
-} from '@nestjs/swagger';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards, ParseUUIDPipe, ForbiddenException } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { CasesService } from './cases.service';
 import { CreateCaseDto } from './dto/create-case.dto';
@@ -25,7 +8,7 @@ import { FilterCasesDto } from './dto/filter-cases.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
-import { TenantId } from '../common/decorators/tenant-id.decorator';
+
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 
 @ApiTags('Cases')
@@ -39,23 +22,23 @@ export class CasesController {
     @ApiOperation({ summary: 'الحصول على جميع القضايا مع pagination و filters' })
     @ApiResponse({ status: 200, description: 'قائمة القضايا' })
     async findAll(
-        @TenantId() tenantId: string,
+
         @Query() filterDto: FilterCasesDto,
         @CurrentUser('id') userId: string,
         @CurrentUser('role') userRole: UserRole,
     ) {
-        return this.casesService.findAll(tenantId, filterDto, userId, userRole);
+        return this.casesService.findAll(filterDto, userId, userRole);
     }
 
     @Get('stats')
     @ApiOperation({ summary: 'إحصائيات القضايا' })
     @ApiResponse({ status: 200, description: 'إحصائيات القضايا' })
     async getStats(
-        @TenantId() tenantId: string,
+
         @CurrentUser('id') userId: string,
         @CurrentUser('role') userRole: UserRole,
     ) {
-        return this.casesService.getStats(tenantId, userId, userRole);
+        return this.casesService.getStats(userId, userRole);
     }
 
     @Get(':id')
@@ -64,11 +47,11 @@ export class CasesController {
     @ApiResponse({ status: 404, description: 'القضية غير موجودة' })
     async findOne(
         @Param('id', ParseUUIDPipe) id: string,
-        @TenantId() tenantId: string,
+
         @CurrentUser('id') userId: string,
         @CurrentUser('role') userRole: UserRole,
     ) {
-        return this.casesService.findOne(id, tenantId, userId, userRole);
+        return this.casesService.findOne(id, userId, userRole);
     }
 
     @Post()
@@ -78,10 +61,10 @@ export class CasesController {
     @ApiResponse({ status: 400, description: 'بيانات غير صالحة' })
     async create(
         @Body() createCaseDto: CreateCaseDto,
-        @TenantId() tenantId: string,
+
         @CurrentUser('id') userId: string,
     ) {
-        return this.casesService.create(createCaseDto, tenantId, userId);
+        return this.casesService.create(createCaseDto, userId);
     }
 
     @Patch(':id')
@@ -92,11 +75,11 @@ export class CasesController {
     async update(
         @Param('id', ParseUUIDPipe) id: string,
         @Body() updateCaseDto: UpdateCaseDto,
-        @TenantId() tenantId: string,
+
         @CurrentUser('id') userId: string,
         @CurrentUser('role') userRole: UserRole,
     ) {
-        return this.casesService.update(id, updateCaseDto, tenantId, userId, userRole);
+        return this.casesService.update(id, updateCaseDto, userId, userRole);
     }
 
     @Delete(':id')
@@ -106,9 +89,9 @@ export class CasesController {
     @ApiResponse({ status: 404, description: 'القضية غير موجودة' })
     async remove(
         @Param('id', ParseUUIDPipe) id: string,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.casesService.remove(id, tenantId);
+        return this.casesService.remove(id);
     }
 
     @Patch('bulk/status')
@@ -117,9 +100,9 @@ export class CasesController {
     @ApiResponse({ status: 200, description: 'تم تحديث القضايا بنجاح' })
     async bulkUpdateStatus(
         @Body() body: { ids: string[]; status: string },
-        @TenantId() tenantId: string,
+
     ) {
-        return this.casesService.bulkUpdateStatus(body.ids, body.status, tenantId);
+        return this.casesService.bulkUpdateStatus(body.ids, body.status);
     }
 
     @Delete('bulk/delete')
@@ -128,8 +111,8 @@ export class CasesController {
     @ApiResponse({ status: 200, description: 'تم حذف القضايا بنجاح' })
     async bulkDelete(
         @Body() body: { ids: string[] },
-        @TenantId() tenantId: string,
+
     ) {
-        return this.casesService.bulkDelete(body.ids, tenantId);
+        return this.casesService.bulkDelete(body.ids);
     }
 }

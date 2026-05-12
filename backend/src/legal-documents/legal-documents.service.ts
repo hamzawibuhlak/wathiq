@@ -9,7 +9,7 @@ export class LegalDocumentsService {
     // CRUD
     // =============================================
 
-    async findAll(tenantId: string, filters?: {
+    async findAll(filters?: {
         type?: string;
         status?: string;
         caseId?: string;
@@ -20,7 +20,7 @@ export class LegalDocumentsService {
         const page = filters?.page || 1;
         const limit = filters?.limit || 20;
 
-        const where: any = { tenantId };
+        const where: any = {};
         if (filters?.type) where.type = filters.type;
         if (filters?.status) where.status = filters.status;
         if (filters?.caseId) where.caseId = filters.caseId;
@@ -45,22 +45,19 @@ export class LegalDocumentsService {
                     aiGenerated: true,
                     creator: { select: { id: true, name: true } },
                     case: { select: { id: true, caseNumber: true, title: true } },
-                    client: { select: { id: true, name: true } },
-                },
+                    client: { select: { id: true, name: true } } },
                 orderBy: { updatedAt: 'desc' },
                 skip: (page - 1) * limit,
-                take: limit,
-            }),
+                take: limit }),
             this.prisma.legalDocument.count({ where }),
         ]);
 
         return {
             data: documents,
-            meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
-        };
+            meta: { page, limit, total, totalPages: Math.ceil(total / limit) } };
     }
 
-    async findOne(id: string, tenantId: string) {
+    async findOne(id: string) {
         const doc = await this.prisma.legalDocument.findUnique({
             where: { id },
             include: {
@@ -71,22 +68,16 @@ export class LegalDocumentsService {
                     orderBy: { version: 'desc' },
                     take: 10,
                     include: {
-                        user: { select: { id: true, name: true } },
-                    },
-                },
-            },
-        });
+                        user: { select: { id: true, name: true } } } } } });
 
-        if (!doc || doc.tenantId !== tenantId) {
+        if (!doc) {
             throw new NotFoundException('الوثيقة غير موجودة');
         }
 
         return doc;
     }
 
-    async create(
-        tenantId: string,
-        userId: string,
+    async create(userId: string,
         data: {
             title: string;
             type: string;
@@ -102,14 +93,12 @@ export class LegalDocumentsService {
         // If using a template
         if (data.templateId) {
             const template = await this.prisma.legalDocTemplate.findUnique({
-                where: { id: data.templateId },
-            });
+                where: { id: data.templateId } });
             if (template) {
                 content = template.content;
                 await this.prisma.legalDocTemplate.update({
                     where: { id: data.templateId },
-                    data: { usageCount: { increment: 1 } },
-                });
+                    data: { usageCount: { increment: 1 } } });
             }
         }
 
@@ -122,15 +111,11 @@ export class LegalDocumentsService {
                 caseId: data.caseId || undefined,
                 clientId: data.clientId || undefined,
                 settings: data.settings || this.getDefaultSettings(),
-                createdBy: userId,
-                tenantId,
-            },
-        });
+                createdBy: userId } });
     }
 
     async update(
         id: string,
-        tenantId: string,
         userId: string,
         data: {
             title?: string;
@@ -142,7 +127,7 @@ export class LegalDocumentsService {
             changeNote?: string;
         },
     ) {
-        const doc = await this.findOne(id, tenantId);
+        const doc = await this.findOne(id);
 
         // Save version before update (only if content changed)
         if (data.content && data.content !== doc.content) {
@@ -152,9 +137,7 @@ export class LegalDocumentsService {
                     version: doc.version,
                     content: doc.content,
                     savedBy: userId,
-                    changeNote: data.changeNote,
-                },
-            });
+                    changeNote: data.changeNote } });
         }
 
         return this.prisma.legalDocument.update({
@@ -166,24 +149,21 @@ export class LegalDocumentsService {
                     contentText: this.stripHtml(data.content),
                     pdfUrl: null,
                     wordUrl: null,
-                    version: { increment: 1 },
-                } : {}),
+                    version: { increment: 1 } } : {}),
                 ...(data.status !== undefined ? { status: data.status as any } : {}),
                 ...(data.caseId !== undefined ? { caseId: data.caseId || null } : {}),
                 ...(data.clientId !== undefined ? { clientId: data.clientId || null } : {}),
-                ...(data.settings !== undefined ? { settings: data.settings } : {}),
-            },
-        });
+                ...(data.settings !== undefined ? { settings: data.settings } : {}) } });
     }
 
-    async delete(id: string, tenantId: string) {
-        await this.findOne(id, tenantId);
+    async delete(id: string) {
+        await this.findOne(id);
         await this.prisma.legalDocument.delete({ where: { id } });
         return { success: true };
     }
 
-    async duplicate(id: string, tenantId: string, userId: string) {
-        const original = await this.findOne(id, tenantId);
+    async duplicate(id: string, userId: string) {
+        const original = await this.findOne(id);
 
         return this.prisma.legalDocument.create({
             data: {
@@ -194,10 +174,7 @@ export class LegalDocumentsService {
                 settings: original.settings as any,
                 caseId: original.caseId,
                 clientId: original.clientId,
-                createdBy: userId,
-                tenantId,
-            },
-        });
+                createdBy: userId } });
     }
 
     // =============================================
@@ -207,31 +184,28 @@ export class LegalDocumentsService {
     async restoreVersion(
         documentId: string,
         versionId: string,
-        tenantId: string,
         userId: string,
     ) {
-        await this.findOne(documentId, tenantId);
+        await this.findOne(documentId);
 
         const version = await this.prisma.legalDocumentVersion.findUnique({
-            where: { id: versionId },
-        });
+            where: { id: versionId } });
 
         if (!version || version.documentId !== documentId) {
             throw new NotFoundException('الإصدار غير موجود');
         }
 
-        return this.update(documentId, tenantId, userId, {
+        return this.update(documentId, userId, {
             content: version.content,
-            changeNote: `استعادة الإصدار ${version.version}`,
-        });
+            changeNote: `استعادة الإصدار ${version.version}` });
     }
 
     // =============================================
     // EXPORT (simplified — uses HTML download for now)
     // =============================================
 
-    async getExportHtml(id: string, tenantId: string) {
-        const doc = await this.findOne(id, tenantId);
+    async getExportHtml(id: string) {
+        const doc = await this.findOne(id);
         const settings = (doc.settings as any) || this.getDefaultSettings();
 
         return `<!DOCTYPE html>
@@ -273,16 +247,15 @@ export class LegalDocumentsService {
     // TEMPLATES
     // =============================================
 
-    async getTemplates(tenantId: string, type?: string) {
+    async getTemplates(type?: string) {
         return this.prisma.legalDocTemplate.findMany({
             where: {
                 OR: [
                     { isSystem: true },
-                    { tenantId },
+                    {},
                 ],
                 isActive: true,
-                ...(type ? { type: type as any } : {}),
-            },
+                ...(type ? { type: type as any } : {}) },
             select: {
                 id: true,
                 name: true,
@@ -292,18 +265,14 @@ export class LegalDocumentsService {
                 isSystem: true,
                 usageCount: true,
                 variables: true,
-                content: true,
-            },
+                content: true },
             orderBy: [
                 { isSystem: 'desc' },
                 { usageCount: 'desc' },
-            ],
-        });
+            ] });
     }
 
-    async createTemplate(
-        tenantId: string,
-        data: {
+    async createTemplate(data: {
             name: string;
             nameAr: string;
             type: string;
@@ -319,19 +288,14 @@ export class LegalDocumentsService {
                 type: data.type as any,
                 content: data.content,
                 description: data.description,
-                variables: data.variables || [],
-                tenantId,
-            },
-        });
+                variables: data.variables || [] } });
     }
 
     // =============================================
     // AI ASSISTANCE (uses existing AiService)
     // =============================================
 
-    async generateWithAI(
-        tenantId: string,
-        data: {
+    async generateWithAI(data: {
             type: string;
             prompt: string;
             caseContext?: string;
@@ -345,32 +309,27 @@ export class LegalDocumentsService {
         return {
             content: generatedContent,
             typeName,
-            message: 'تم إنشاء المحتوى الأولي. يمكنك تعديله حسب احتياجاتك.',
-        };
+            message: 'تم إنشاء المحتوى الأولي. يمكنك تعديله حسب احتياجاتك.' };
     }
 
     // =============================================
     // SEARCH
     // =============================================
 
-    async search(query: string, tenantId: string) {
+    async search(query: string) {
         return this.prisma.legalDocument.findMany({
             where: {
-                tenantId,
                 OR: [
                     { title: { contains: query, mode: 'insensitive' } },
                     { contentText: { contains: query, mode: 'insensitive' } },
-                ],
-            },
+                ] },
             select: {
                 id: true,
                 title: true,
                 type: true,
                 status: true,
-                updatedAt: true,
-            },
-            take: 10,
-        });
+                updatedAt: true },
+            take: 10 });
     }
 
     // =============================================
@@ -384,8 +343,7 @@ export class LegalDocumentsService {
             CONTRACT: `<div dir="rtl"><h1 style="text-align:center;">عقد</h1><p>تم هذا العقد في تاريخ: [التاريخ]</p><p><strong>الطرف الأول:</strong> [اسم الطرف الأول]</p><p><strong>الطرف الثاني:</strong> [اسم الطرف الثاني]</p><h3>البند الأول: موضوع العقد</h3><p>[اكتب موضوع العقد]</p><h3>البند الثاني: المدة</h3><p>[اكتب المدة]</p><h3>البند الثالث: المقابل المالي</h3><p>[اكتب المبلغ والشروط]</p></div>`,
             POWER_OF_ATTORNEY: `<div dir="rtl"><p style="text-align:center; font-weight:bold;">بسم الله الرحمن الرحيم</p><h1 style="text-align:center;">توكيل رسمي</h1><hr/><p>أنا الموكّل / <strong>[اسم الموكّل]</strong></p><p>أوكّل وأفوّض / <strong>[اسم الوكيل]</strong></p><p>ليقوم عني وبالنيابة عني بـ: [نطاق التوكيل]</p></div>`,
             APPEAL: `<div dir="rtl"><p style="text-align:center; font-weight:bold;">بسم الله الرحمن الرحيم</p><h1 style="text-align:center;">لائحة اعتراضية</h1><p>المحكمة الموقرة،</p><h3>أولاً: ملخص الحكم</h3><p>[ملخص الحكم المعترض عليه]</p><h3>ثانياً: أسباب الاعتراض</h3><p>[اكتب الأسباب]</p><h3>ثالثاً: الطلبات</h3><p>[اكتب الطلبات]</p></div>`,
-            LEGAL_OPINION: `<div dir="rtl"><h1 style="text-align:center;">رأي قانوني</h1><h3>أولاً: تحديد المسألة القانونية</h3><p>[وصف المسألة]</p><h3>ثانياً: الإطار القانوني</h3><p>[النصوص ذات الصلة]</p><h3>ثالثاً: التحليل القانوني</h3><p>[التحليل]</p><h3>رابعاً: الرأي والتوصية</h3><p>[الرأي]</p></div>`,
-        };
+            LEGAL_OPINION: `<div dir="rtl"><h1 style="text-align:center;">رأي قانوني</h1><h3>أولاً: تحديد المسألة القانونية</h3><p>[وصف المسألة]</p><h3>ثانياً: الإطار القانوني</h3><p>[النصوص ذات الصلة]</p><h3>ثالثاً: التحليل القانوني</h3><p>[التحليل]</p><h3>رابعاً: الرأي والتوصية</h3><p>[الرأي]</p></div>` };
 
         return templates[type] || '<div dir="rtl"><p>ابدأ الكتابة هنا...</p></div>';
     }
@@ -400,8 +358,7 @@ export class LegalDocumentsService {
             headerText: '',
             footerText: '',
             showPageNumbers: true,
-            rtl: true,
-        };
+            rtl: true };
     }
 
     getDocTypeName(type: string): string {
@@ -415,8 +372,7 @@ export class LegalDocumentsService {
             LEGAL_OPINION: 'رأي قانوني',
             SETTLEMENT: 'اتفاقية تسوية',
             LETTER: 'خطاب رسمي',
-            OTHER: 'أخرى',
-        };
+            OTHER: 'أخرى' };
         return names[type] || 'وثيقة قانونية';
     }
 

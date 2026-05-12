@@ -5,15 +5,14 @@ import { PrismaService } from '../common/prisma/prisma.service';
 export class PayrollService {
     constructor(private prisma: PrismaService) { }
 
-    async generateMonthlyPayroll(tenantId: string, month: number, year: number) {
+    async generateMonthlyPayroll(month: number, year: number) {
         const employees = await this.prisma.employee.findMany({
-            where: { tenantId, isActive: true, employmentStatus: { in: ['ACTIVE', 'PROBATION'] } },
-        });
+            where: { isActive: true, employmentStatus: { in: ['ACTIVE', 'PROBATION'] } } });
 
         const payrolls = [];
         for (const emp of employees) {
             try {
-                const p = await this.generateEmployeePayroll(tenantId, emp.id, month, year);
+                const p = await this.generateEmployeePayroll(emp.id, month, year);
                 payrolls.push(p);
             } catch { /* skip if already exists */ }
         }
@@ -23,20 +22,18 @@ export class PayrollService {
             totalGrossSalary: payrolls.reduce((s, p) => s + Number(p.grossSalary), 0),
             totalNetSalary: payrolls.reduce((s, p) => s + Number(p.netSalary), 0),
             totalDeductions: payrolls.reduce((s, p) => s + Number(p.totalDeductions), 0),
-            payrolls,
-        };
+            payrolls };
     }
 
-    async generateEmployeePayroll(tenantId: string, employeeId: string, month: number, year: number) {
+    async generateEmployeePayroll(employeeId: string, month: number, year: number) {
         const existing = await this.prisma.payroll.findUnique({
-            where: { employeeId_payrollMonth_payrollYear: { employeeId, payrollMonth: month, payrollYear: year } },
-        });
+            where: { employeeId_payrollMonth_payrollYear: { employeeId, payrollMonth: month, payrollYear: year } } });
         if (existing) throw new BadRequestException('الراتب موجود بالفعل لهذا الشهر');
 
         const employee = await this.prisma.employee.findUnique({ where: { id: employeeId } });
         if (!employee) throw new BadRequestException('الموظف غير موجود');
 
-        const settings = await this.getSettings(tenantId);
+        const settings = await this.getSettings();
         const payPeriodStart = new Date(year, month - 1, 1);
         const payPeriodEnd = new Date(year, month, 0);
 
@@ -65,14 +62,12 @@ export class PayrollService {
                 employeeId, payrollMonth: month, payrollYear: year, payPeriodStart, payPeriodEnd,
                 basicSalary, housingAllowance, transportAllowance, overtimeHours, overtimeAmount,
                 grossSalary, gosiEmployee, gosiEmployer, absenceDeduction, lateDeduction,
-                totalDeductions, netSalary, status: 'PAYROLL_DRAFT', tenantId,
-            },
-            include: { employee: { select: { id: true, firstName: true, lastName: true, employeeNumber: true, jobTitle: true } } },
-        });
+                totalDeductions, netSalary, status: 'PAYROLL_DRAFT' },
+            include: { employee: { select: { id: true, firstName: true, lastName: true, employeeNumber: true, jobTitle: true } } } });
     }
 
-    async getPayrolls(tenantId: string, filters?: { month?: number; year?: number; status?: string; employeeId?: string }) {
-        const where: any = { tenantId };
+    async getPayrolls(filters?: { month?: number; year?: number; status?: string; employeeId?: string }) {
+        const where: any = {};
         if (filters?.month) where.payrollMonth = filters.month;
         if (filters?.year) where.payrollYear = filters.year;
         if (filters?.status) where.status = filters.status;
@@ -81,38 +76,34 @@ export class PayrollService {
         return this.prisma.payroll.findMany({
             where,
             include: { employee: { select: { id: true, firstName: true, lastName: true, employeeNumber: true, jobTitle: true, department: true } } },
-            orderBy: { createdAt: 'desc' },
-        });
+            orderBy: { createdAt: 'desc' } });
     }
 
-    async approvePayroll(payrollId: string, userId: string, tenantId: string) {
+    async approvePayroll(payrollId: string, userId: string) {
         const payroll = await this.prisma.payroll.findUnique({ where: { id: payrollId } });
-        if (!payroll || payroll.tenantId !== tenantId) throw new BadRequestException('الراتب غير موجود');
+        if (!payroll) throw new BadRequestException('الراتب غير موجود');
         if (payroll.status !== 'PAYROLL_DRAFT') throw new BadRequestException('الراتب تمت معالجته بالفعل');
 
         return this.prisma.payroll.update({
             where: { id: payrollId },
-            data: { status: 'PAYROLL_APPROVED', processedAt: new Date(), processedBy: userId },
-        });
+            data: { status: 'PAYROLL_APPROVED', processedAt: new Date(), processedBy: userId } });
     }
 
-    async markAsPaid(payrollId: string, tenantId: string, data: { paymentMethod: string; paymentReference?: string }) {
+    async markAsPaid(payrollId: string, data: { paymentMethod: string; paymentReference?: string }) {
         const payroll = await this.prisma.payroll.findUnique({ where: { id: payrollId } });
-        if (!payroll || payroll.tenantId !== tenantId) throw new BadRequestException('الراتب غير موجود');
+        if (!payroll) throw new BadRequestException('الراتب غير موجود');
 
         return this.prisma.payroll.update({
             where: { id: payrollId },
-            data: { status: 'PAYROLL_PAID', paidAt: new Date(), paymentMethod: data.paymentMethod, paymentReference: data.paymentReference },
-        });
+            data: { status: 'PAYROLL_PAID', paidAt: new Date(), paymentMethod: data.paymentMethod, paymentReference: data.paymentReference } });
     }
 
-    async getPayrollReport(tenantId: string, month: number, year: number) {
-        const payrolls = await this.getPayrolls(tenantId, { month, year });
+    async getPayrollReport(month: number, year: number) {
+        const payrolls = await this.getPayrolls({ month, year });
         const summary = {
             totalEmployees: payrolls.length,
             totalBasicSalary: 0, totalAllowances: 0, totalGrossSalary: 0,
-            totalDeductions: 0, totalNetSalary: 0, totalGOSIEmployee: 0, totalGOSIEmployer: 0,
-        };
+            totalDeductions: 0, totalNetSalary: 0, totalGOSIEmployee: 0, totalGOSIEmployer: 0 };
 
         payrolls.forEach(p => {
             summary.totalBasicSalary += Number(p.basicSalary);
@@ -127,11 +118,10 @@ export class PayrollService {
         return { payrolls, summary };
     }
 
-    async generateBankFile(tenantId: string, month: number, year: number) {
+    async generateBankFile(month: number, year: number) {
         const payrolls = await this.prisma.payroll.findMany({
-            where: { tenantId, payrollMonth: month, payrollYear: year, status: 'PAYROLL_APPROVED' },
-            include: { employee: true },
-        });
+            where: { payrollMonth: month, payrollYear: year, status: 'PAYROLL_APPROVED' },
+            include: { employee: true } });
 
         let csv = 'رقم,رقم الموظف,الاسم,IBAN,المبلغ,العملة,البنك\n';
         payrolls.forEach((p, i) => {
@@ -153,8 +143,7 @@ export class PayrollService {
         const whpd = Number(settings.workingHoursPerDay);
         const wdpm = Number(settings.workingDaysPerMonth);
         const records = await this.prisma.attendance.findMany({
-            where: { employeeId, date: { gte: start, lte: end }, checkIn: { not: null }, checkOut: { not: null } },
-        });
+            where: { employeeId, date: { gte: start, lte: end }, checkIn: { not: null }, checkOut: { not: null } } });
 
         let totalOT = 0;
         records.forEach(r => { const wh = Number(r.workHours); if (wh > whpd) totalOT += wh - whpd; });
@@ -164,14 +153,12 @@ export class PayrollService {
 
         return {
             overtimeHours: Math.round(totalOT * 100) / 100,
-            overtimeAmount: Math.round(totalOT * hourlyRate * otRate * 100) / 100,
-        };
+            overtimeAmount: Math.round(totalOT * hourlyRate * otRate * 100) / 100 };
     }
 
     private async calculateAbsenceDeduction(employeeId: string, start: Date, end: Date, basicSalary: number, settings: any) {
         const absences = await this.prisma.attendance.count({
-            where: { employeeId, date: { gte: start, lte: end }, status: 'ABSENT' },
-        });
+            where: { employeeId, date: { gte: start, lte: end }, status: 'ABSENT' } });
         if (absences === 0) return 0;
         const dailyRate = basicSalary / Number(settings.workingDaysPerMonth);
         return Math.round(absences * dailyRate * Number(settings.absenceDeductionRate) * 100) / 100;
@@ -179,8 +166,7 @@ export class PayrollService {
 
     private async calculateLateDeduction(employeeId: string, start: Date, end: Date, basicSalary: number, settings: any) {
         const lateRecords = await this.prisma.attendance.findMany({
-            where: { employeeId, date: { gte: start, lte: end }, isLate: true },
-        });
+            where: { employeeId, date: { gte: start, lte: end }, isLate: true } });
         if (lateRecords.length === 0) return 0;
 
         const totalLateMin = lateRecords.reduce((s, r) => {
@@ -193,9 +179,9 @@ export class PayrollService {
         return Math.round((totalLateMin / 60) * hourlyRate * Number(settings.lateDeductionRate) * 100) / 100;
     }
 
-    private async getSettings(tenantId: string) {
-        let s = await this.prisma.payrollSettings.findUnique({ where: { tenantId } });
-        if (!s) s = await this.prisma.payrollSettings.create({ data: { tenantId } });
+    private async getSettings() {
+        let s = await this.prisma.payrollSettings.findUnique({ where: {} });
+        if (!s) s = await this.prisma.payrollSettings.create({ data: {} });
         return s;
     }
 }

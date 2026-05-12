@@ -8,16 +8,14 @@ export class FinancialStatementsService {
     /**
      * Income Statement (قائمة الدخل)
      */
-    async getIncomeStatement(tenantId: string, startDate: Date, endDate: Date) {
+    async getIncomeStatement(startDate: Date, endDate: Date) {
         const accounts = await this.prisma.account.findMany({
-            where: { tenantId, accountType: { in: ['REVENUE', 'EXPENSE'] }, isActive: true },
-            orderBy: { accountNumber: 'asc' },
-        });
+            where: { accountType: { in: ['REVENUE', 'EXPENSE'] }, isActive: true },
+            orderBy: { accountNumber: 'asc' } });
 
         const totals = await Promise.all(accounts.map(async a => {
             const lines = await this.prisma.journalEntryLine.findMany({
-                where: { accountId: a.id, journalEntry: { isPosted: true, date: { gte: startDate, lte: endDate } } },
-            });
+                where: { accountId: a.id, journalEntry: { isPosted: true, date: { gte: startDate, lte: endDate } } } });
             const debit = lines.reduce((s, l) => s + Number(l.debit), 0);
             const credit = lines.reduce((s, l) => s + Number(l.credit), 0);
             const amount = a.accountType === 'REVENUE' ? credit - debit : debit - credit;
@@ -32,23 +30,20 @@ export class FinancialStatementsService {
 
         return {
             period: { startDate, endDate }, revenues, totalRevenue, expenses, totalExpenses, netIncome,
-            netIncomePercentage: totalRevenue > 0 ? (netIncome / totalRevenue) * 100 : 0,
-        };
+            netIncomePercentage: totalRevenue > 0 ? (netIncome / totalRevenue) * 100 : 0 };
     }
 
     /**
      * Balance Sheet (الميزانية العمومية)
      */
-    async getBalanceSheet(tenantId: string, date: Date) {
+    async getBalanceSheet(date: Date) {
         const accounts = await this.prisma.account.findMany({
-            where: { tenantId, accountType: { in: ['ASSET', 'LIABILITY', 'EQUITY'] }, isActive: true },
-            orderBy: { accountNumber: 'asc' },
-        });
+            where: { accountType: { in: ['ASSET', 'LIABILITY', 'EQUITY'] }, isActive: true },
+            orderBy: { accountNumber: 'asc' } });
 
         const balances = await Promise.all(accounts.map(async a => {
             const lines = await this.prisma.journalEntryLine.findMany({
-                where: { accountId: a.id, journalEntry: { isPosted: true, date: { lte: date } } },
-            });
+                where: { accountId: a.id, journalEntry: { isPosted: true, date: { lte: date } } } });
             const debit = lines.reduce((s, l) => s + Number(l.debit), 0);
             const credit = lines.reduce((s, l) => s + Number(l.credit), 0);
             const balance = a.accountType === 'ASSET' ? debit - credit : credit - debit;
@@ -75,37 +70,31 @@ export class FinancialStatementsService {
                 totalCurrentAssets: currentAssets.reduce((s, a) => s + a.balance, 0),
                 fixedAssets: fixedAssets.filter(a => a.balance !== 0),
                 totalFixedAssets: fixedAssets.reduce((s, a) => s + a.balance, 0),
-                totalAssets,
-            },
+                totalAssets },
             liabilities: {
                 currentLiabilities: currentLiabilities.filter(l => l.balance !== 0),
                 totalCurrentLiabilities: currentLiabilities.reduce((s, l) => s + l.balance, 0),
                 longTermLiabilities: longTermLiabilities.filter(l => l.balance !== 0),
                 totalLongTermLiabilities: longTermLiabilities.reduce((s, l) => s + l.balance, 0),
-                totalLiabilities,
-            },
+                totalLiabilities },
             equity: { items: equity.filter(e => e.balance !== 0), totalEquity },
             totalLiabilitiesAndEquity: totalLiabilities + totalEquity,
-            isBalanced: Math.abs(totalAssets - (totalLiabilities + totalEquity)) < 0.01,
-        };
+            isBalanced: Math.abs(totalAssets - (totalLiabilities + totalEquity)) < 0.01 };
     }
 
     /**
      * Cash Flow Statement (قائمة التدفقات النقدية)
      */
-    async getCashFlowStatement(tenantId: string, startDate: Date, endDate: Date) {
+    async getCashFlowStatement(startDate: Date, endDate: Date) {
         const cashAccounts = await this.prisma.account.findMany({
-            where: { tenantId, accountNumber: { in: ['1110', '1120', '1130'] } },
-        });
+            where: { accountNumber: { in: ['1110', '1120', '1130'] } } });
         const cashIds = cashAccounts.map(a => a.id);
 
         const cashLines = await this.prisma.journalEntryLine.findMany({
             where: {
                 accountId: { in: cashIds },
-                journalEntry: { isPosted: true, date: { gte: startDate, lte: endDate } },
-            },
-            include: { journalEntry: { include: { lines: { include: { account: true } } } } },
-        });
+                journalEntry: { isPosted: true, date: { gte: startDate, lte: endDate } } },
+            include: { journalEntry: { include: { lines: { include: { account: true } } } } } });
 
         const operating: any[] = []; const investing: any[] = []; const financing: any[] = [];
 
@@ -124,7 +113,7 @@ export class FinancialStatementsService {
         const netInv = investing.reduce((s, a) => s + a.amount, 0);
         const netFin = financing.reduce((s, a) => s + a.amount, 0);
 
-        const openingBalance = await this.getCashBalance(tenantId, startDate);
+        const openingBalance = await this.getCashBalance(startDate);
 
         return {
             period: { startDate, endDate },
@@ -133,16 +122,15 @@ export class FinancialStatementsService {
             financingActivities: financing, netFinancingCash: netFin,
             netCashChange: netOp + netInv + netFin,
             openingCashBalance: openingBalance,
-            closingCashBalance: openingBalance + netOp + netInv + netFin,
-        };
+            closingCashBalance: openingBalance + netOp + netInv + netFin };
     }
 
     /**
      * Financial Ratios (النسب المالية)
      */
-    async getFinancialRatios(tenantId: string, date: Date) {
-        const bs = await this.getBalanceSheet(tenantId, date);
-        const is = await this.getIncomeStatement(tenantId, new Date(date.getFullYear(), 0, 1), date);
+    async getFinancialRatios(date: Date) {
+        const bs = await this.getBalanceSheet(date);
+        const is = await this.getIncomeStatement(new Date(date.getFullYear(), 0, 1), date);
 
         const ca = bs.assets.totalCurrentAssets;
         const cl = bs.liabilities.totalCurrentLiabilities;
@@ -159,32 +147,29 @@ export class FinancialStatementsService {
             returnOnEquity: te > 0 ? +((ni / te) * 100).toFixed(2) : 0,
             debtToEquity: te > 0 ? +(tl / te).toFixed(2) : 0,
             debtToAssets: ta > 0 ? +((tl / ta) * 100).toFixed(2) : 0,
-            equityRatio: ta > 0 ? +((te / ta) * 100).toFixed(2) : 0,
-        };
+            equityRatio: ta > 0 ? +((te / ta) * 100).toFixed(2) : 0 };
     }
 
     /**
      * VAT Report (تقرير الضريبة)
      */
-    async getVATReport(tenantId: string, startDate: Date, endDate: Date) {
+    async getVATReport(startDate: Date, endDate: Date) {
         const [inputAcc, outputAcc] = await Promise.all([
-            this.prisma.account.findUnique({ where: { tenantId_accountNumber: { tenantId, accountNumber: '1160' } } }),
-            this.prisma.account.findUnique({ where: { tenantId_accountNumber: { tenantId, accountNumber: '2130' } } }),
+            this.prisma.account.findUnique({ where: {  } }),
+            this.prisma.account.findUnique({ where: {  } }),
         ]);
 
         let vatInput = 0, vatOutput = 0;
 
         if (inputAcc) {
             const lines = await this.prisma.journalEntryLine.findMany({
-                where: { accountId: inputAcc.id, journalEntry: { isPosted: true, date: { gte: startDate, lte: endDate } } },
-            });
+                where: { accountId: inputAcc.id, journalEntry: { isPosted: true, date: { gte: startDate, lte: endDate } } } });
             vatInput = lines.reduce((s, l) => s + Number(l.debit) - Number(l.credit), 0);
         }
 
         if (outputAcc) {
             const lines = await this.prisma.journalEntryLine.findMany({
-                where: { accountId: outputAcc.id, journalEntry: { isPosted: true, date: { gte: startDate, lte: endDate } } },
-            });
+                where: { accountId: outputAcc.id, journalEntry: { isPosted: true, date: { gte: startDate, lte: endDate } } } });
             vatOutput = lines.reduce((s, l) => s + Number(l.credit) - Number(l.debit), 0);
         }
 
@@ -194,18 +179,15 @@ export class FinancialStatementsService {
             vatInput, vatOutput,
             netVAT: vatOutput - vatInput,
             vatPayable: Math.max(0, vatOutput - vatInput),
-            vatRefundable: Math.max(0, vatInput - vatOutput),
-        };
+            vatRefundable: Math.max(0, vatInput - vatOutput) };
     }
 
-    private async getCashBalance(tenantId: string, date: Date): Promise<number> {
+    private async getCashBalance(date: Date): Promise<number> {
         const cashAccounts = await this.prisma.account.findMany({
-            where: { tenantId, accountNumber: { in: ['1110', '1120', '1130'] } },
-        });
+            where: { accountNumber: { in: ['1110', '1120', '1130'] } } });
         const balances = await Promise.all(cashAccounts.map(async a => {
             const lines = await this.prisma.journalEntryLine.findMany({
-                where: { accountId: a.id, journalEntry: { isPosted: true, date: { lt: date } } },
-            });
+                where: { accountId: a.id, journalEntry: { isPosted: true, date: { lt: date } } } });
             return lines.reduce((s, l) => s + Number(l.debit) - Number(l.credit), 0);
         }));
         return balances.reduce((s, b) => s + b, 0);

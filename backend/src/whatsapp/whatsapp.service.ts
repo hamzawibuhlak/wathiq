@@ -26,58 +26,38 @@ export class WhatsAppService {
   /**
    * Get WhatsApp config for a tenant
    */
-  private async getConfig(tenantId: string): Promise<WhatsAppConfig> {
-    const tenant = await this.prisma.tenant.findUnique({
-      where: { id: tenantId },
-      select: {
-        whatsappAccessToken: true,
-        whatsappPhoneNumberId: true,
-        whatsappBusinessId: true,
-        whatsappEnabled: true,
-      },
-    });
+  private async getConfig(): Promise<WhatsAppConfig> {
+    const settings = await this.prisma.companySettings.findFirst();
 
     return {
       apiUrl: this.defaultApiUrl,
-      accessToken: tenant?.whatsappAccessToken || '',
-      phoneNumberId: tenant?.whatsappPhoneNumberId || '',
-      businessAccountId: tenant?.whatsappBusinessId || '',
-      enabled: tenant?.whatsappEnabled || false,
-    };
+      accessToken: settings?.whatsappAccessToken || '',
+      phoneNumberId: settings?.whatsappPhoneNumberId || '',
+      businessAccountId: settings?.whatsappBusinessId || '',
+      enabled: settings?.whatsappEnabled || false };
   }
 
   /**
    * Get WhatsApp settings for a tenant
    */
-  async getSettings(tenantId: string) {
-    const tenant = await this.prisma.tenant.findUnique({
-      where: { id: tenantId },
-      select: {
-        whatsappAccessToken: true,
-        whatsappPhoneNumberId: true,
-        whatsappBusinessId: true,
-        whatsappWebhookToken: true,
-        whatsappEnabled: true,
-      },
-    });
+  async getSettings() {
+    const settings = await this.prisma.companySettings.findFirst();
 
     return {
-      // Mask token for security (show only last 10 chars)
-      whatsappAccessToken: tenant?.whatsappAccessToken
-        ? '••••••••' + tenant.whatsappAccessToken.slice(-10)
+      whatsappAccessToken: settings?.whatsappAccessToken
+        ? '••••••••' + settings.whatsappAccessToken.slice(-10)
         : '',
-      whatsappPhoneNumberId: tenant?.whatsappPhoneNumberId || '',
-      whatsappBusinessId: tenant?.whatsappBusinessId || '',
-      whatsappWebhookToken: tenant?.whatsappWebhookToken || '',
-      whatsappEnabled: tenant?.whatsappEnabled || false,
-      isConfigured: !!(tenant?.whatsappAccessToken && tenant?.whatsappPhoneNumberId),
-    };
+      whatsappPhoneNumberId: settings?.whatsappPhoneNumberId || '',
+      whatsappBusinessId: settings?.whatsappBusinessId || '',
+      whatsappWebhookToken: settings?.whatsappWebhookToken || '',
+      whatsappEnabled: settings?.whatsappEnabled || false,
+      isConfigured: !!(settings?.whatsappAccessToken && settings?.whatsappPhoneNumberId) };
   }
 
   /**
    * Update WhatsApp settings for a tenant
    */
-  async updateSettings(tenantId: string, data: {
+  async updateSettings(data: {
     whatsappAccessToken?: string;
     whatsappPhoneNumberId?: string;
     whatsappBusinessId?: string;
@@ -103,25 +83,29 @@ export class WhatsAppService {
       updateData.whatsappEnabled = data.whatsappEnabled;
     }
 
-    await this.prisma.tenant.update({
-      where: { id: tenantId },
-      data: updateData,
-    });
+    const current = await this.prisma.companySettings.findFirst();
+    if (current) {
+      await this.prisma.companySettings.update({
+        where: { id: current.id },
+        data: updateData });
+    } else {
+      await this.prisma.companySettings.create({
+        data: { name: 'My Law Office', ...updateData } });
+    }
 
-    return this.getSettings(tenantId);
+    return this.getSettings();
   }
 
   /**
    * Test WhatsApp connection
    */
-  async testConnection(tenantId: string) {
-    const config = await this.getConfig(tenantId);
+  async testConnection() {
+    const config = await this.getConfig();
 
     if (!config.accessToken || !config.phoneNumberId) {
       return {
         success: false,
-        message: 'الرجاء إدخال Access Token و Phone Number ID أولاً',
-      };
+        message: 'الرجاء إدخال Access Token و Phone Number ID أولاً' };
     }
 
     try {
@@ -130,9 +114,7 @@ export class WhatsAppService {
           `${config.apiUrl}/${config.phoneNumberId}`,
           {
             headers: {
-              Authorization: `Bearer ${config.accessToken}`,
-            },
-          },
+              Authorization: `Bearer ${config.accessToken}` } },
         ),
       );
 
@@ -140,15 +122,13 @@ export class WhatsAppService {
         success: true,
         message: 'تم الاتصال بنجاح!',
         phoneNumber: response.data.display_phone_number,
-        verifiedName: response.data.verified_name,
-      };
+        verifiedName: response.data.verified_name };
     } catch (error) {
       this.logger.error('WhatsApp connection test failed:', error.response?.data || error.message);
       return {
         success: false,
         message: error.response?.data?.error?.message || 'فشل الاتصال - تحقق من البيانات',
-        error: error.response?.data?.error,
-      };
+        error: error.response?.data?.error };
     }
   }
 
@@ -182,12 +162,12 @@ export class WhatsAppService {
   async sendTextMessage(params: {
     to: string;
     body: string;
-    tenantId: string;
+
     clientId?: string;
     caseId?: string;
   }) {
-    const { to, body, tenantId, clientId, caseId } = params;
-    const config = await this.getConfig(tenantId);
+    const { to, body, clientId, caseId } = params;
+    const config = await this.getConfig();
 
     try {
       const formattedPhone = this.formatPhoneNumber(to);
@@ -203,11 +183,9 @@ export class WhatsAppService {
             type: 'text',
             status: 'SENT',
             direction: 'OUTBOUND',
-            tenantId,
+
             clientId,
-            caseId,
-          },
-        });
+            caseId } });
 
         this.logger.log(`WhatsApp message saved (demo mode) to ${formattedPhone}`);
         return message;
@@ -221,14 +199,11 @@ export class WhatsAppService {
             recipient_type: 'individual',
             to: formattedPhone,
             type: 'text',
-            text: { body },
-          },
+            text: { body } },
           {
             headers: {
               Authorization: `Bearer ${config.accessToken}`,
-              'Content-Type': 'application/json',
-            },
-          },
+              'Content-Type': 'application/json' } },
         ),
       );
 
@@ -242,11 +217,9 @@ export class WhatsAppService {
           type: 'text',
           status: 'SENT',
           direction: 'OUTBOUND',
-          tenantId,
+
           clientId,
-          caseId,
-        },
-      });
+          caseId } });
 
       this.logger.log(`WhatsApp message sent to ${formattedPhone}`);
 
@@ -264,11 +237,9 @@ export class WhatsAppService {
           status: 'FAILED',
           direction: 'OUTBOUND',
           error: error.response?.data?.error?.message || error.message,
-          tenantId,
+
           clientId,
-          caseId,
-        },
-      });
+          caseId } });
 
       throw error;
     }
@@ -282,7 +253,7 @@ export class WhatsAppService {
     templateName: string;
     language?: string;
     components?: any[];
-    tenantId: string;
+
     clientId?: string;
     caseId?: string;
   }) {
@@ -291,11 +262,10 @@ export class WhatsAppService {
       templateName,
       language = 'ar',
       components = [],
-      tenantId,
+
       clientId,
-      caseId,
-    } = params;
-    const config = await this.getConfig(tenantId);
+      caseId } = params;
+    const config = await this.getConfig();
 
     try {
       const formattedPhone = this.formatPhoneNumber(to);
@@ -310,11 +280,9 @@ export class WhatsAppService {
             type: 'template',
             status: 'SENT',
             direction: 'OUTBOUND',
-            tenantId,
+
             clientId,
-            caseId,
-          },
-        });
+            caseId } });
 
         return message;
       }
@@ -329,15 +297,11 @@ export class WhatsAppService {
             template: {
               name: templateName,
               language: { code: language },
-              components,
-            },
-          },
+              components } },
           {
             headers: {
               Authorization: `Bearer ${config.accessToken}`,
-              'Content-Type': 'application/json',
-            },
-          },
+              'Content-Type': 'application/json' } },
         ),
       );
 
@@ -351,11 +315,9 @@ export class WhatsAppService {
           type: 'template',
           status: 'SENT',
           direction: 'OUTBOUND',
-          tenantId,
+
           clientId,
-          caseId,
-        },
-      });
+          caseId } });
 
       this.logger.log(`WhatsApp template sent to ${formattedPhone}`);
 
@@ -372,11 +334,9 @@ export class WhatsAppService {
           status: 'FAILED',
           direction: 'OUTBOUND',
           error: error.response?.data?.error?.message || error.message,
-          tenantId,
+
           clientId,
-          caseId,
-        },
-      });
+          caseId } });
 
       throw error;
     }
@@ -385,18 +345,14 @@ export class WhatsAppService {
   /**
    * Send hearing reminder via WhatsApp
    */
-  async sendHearingReminder(hearingId: string, tenantId: string) {
+  async sendHearingReminder(hearingId: string) {
     const hearing = await this.prisma.hearing.findFirst({
-      where: { id: hearingId, tenantId },
+      where: { id: hearingId },
       include: {
         case: {
           include: {
-            client: true,
-          },
-        },
-        client: true,
-      },
-    });
+            client: true } },
+        client: true } });
 
     if (!hearing) {
       throw new Error('Hearing not found');
@@ -428,23 +384,20 @@ export class WhatsAppService {
     return this.sendTextMessage({
       to: client.phone,
       body: message,
-      tenantId,
+
       clientId: client.id,
-      caseId: hearing.caseId || undefined,
-    });
+      caseId: hearing.caseId || undefined });
   }
 
   /**
    * Send invoice reminder
    */
-  async sendInvoiceReminder(invoiceId: string, tenantId: string) {
+  async sendInvoiceReminder(invoiceId: string) {
     const invoice = await this.prisma.invoice.findFirst({
-      where: { id: invoiceId, tenantId },
+      where: { id: invoiceId },
       include: {
         client: true,
-        case: true,
-      },
-    });
+        case: true } });
 
     if (!invoice || !invoice.client?.phone) {
       throw new Error('Invoice or client phone not found');
@@ -471,10 +424,9 @@ export class WhatsAppService {
     return this.sendTextMessage({
       to: invoice.client.phone,
       body: message,
-      tenantId,
+
       clientId: invoice.clientId,
-      caseId: invoice.caseId || undefined,
-    });
+      caseId: invoice.caseId || undefined });
   }
 
   /**
@@ -510,10 +462,7 @@ export class WhatsAppService {
         const client = await this.prisma.client.findFirst({
           where: {
             phone: {
-              contains: from.replace('966', ''),
-            },
-          },
-        });
+              contains: from.replace('966', '') } } });
 
         // Save incoming message
         const savedMessage = await this.prisma.whatsAppMessage.create({
@@ -526,19 +475,15 @@ export class WhatsAppService {
             mediaUrl,
             status: 'DELIVERED',
             direction: 'INBOUND',
-            tenantId: client?.tenantId,
-            clientId: client?.id,
-          },
-        });
+
+            clientId: client?.id } });
 
         // Notify lawyers (if client found)
         if (client) {
           const lawyers = await this.prisma.user.findMany({
             where: {
-              tenantId: client.tenantId,
-              role: { in: ['OWNER', 'ADMIN', 'LAWYER'] },
-            },
-          });
+
+              role: { in: ['OWNER', 'ADMIN', 'LAWYER'] } } });
 
           for (const lawyer of lawyers) {
             await this.notificationsService.create({
@@ -546,9 +491,7 @@ export class WhatsAppService {
               message: `رسالة من ${client.name}: ${body.substring(0, 50)}...`,
               type: 'INFO',
               link: `/whatsapp/messages?clientId=${client.id}`,
-              userId: lawyer.id,
-              tenantId: client.tenantId,
-            });
+              userId: lawyer.id });
           }
         }
 
@@ -560,8 +503,7 @@ export class WhatsAppService {
         for (const status of value.statuses) {
           await this.prisma.whatsAppMessage.updateMany({
             where: { messageId: status.id },
-            data: { status: status.status.toUpperCase() },
-          });
+            data: { status: status.status.toUpperCase() } });
         }
       }
     } catch (error) {
@@ -574,14 +516,14 @@ export class WhatsAppService {
    * Get messages for a tenant
    */
   async getMessages(params: {
-    tenantId: string;
+
     clientId?: string;
     page?: number;
     limit?: number;
   }) {
-    const { tenantId, clientId, page = 1, limit = 50 } = params;
+    const { clientId, page = 1, limit = 50 } = params;
 
-    const where: any = { tenantId };
+    const where: any = {};
     if (clientId) where.clientId = clientId;
 
     const [messages, total] = await Promise.all([
@@ -589,12 +531,10 @@ export class WhatsAppService {
         where,
         include: {
           client: { select: { id: true, name: true, phone: true } },
-          case: { select: { id: true, title: true, caseNumber: true } },
-        },
+          case: { select: { id: true, title: true, caseNumber: true } } },
         orderBy: { createdAt: 'desc' },
         take: limit,
-        skip: (page - 1) * limit,
-      }),
+        skip: (page - 1) * limit }),
       this.prisma.whatsAppMessage.count({ where }),
     ]);
 
@@ -604,29 +544,24 @@ export class WhatsAppService {
         page,
         limit,
         total,
-        totalPages: Math.ceil(total / limit),
-      },
-    };
+        totalPages: Math.ceil(total / limit) } };
   }
 
   /**
    * Get conversation with a specific client
    */
-  async getConversation(clientId: string, tenantId: string) {
+  async getConversation(clientId: string) {
     const client = await this.prisma.client.findFirst({
-      where: { id: clientId, tenantId },
-    });
+      where: { id: clientId } });
 
     if (!client) throw new Error('Client not found');
 
     const messages = await this.prisma.whatsAppMessage.findMany({
       where: {
-        tenantId,
         OR: [
           { clientId, direction: 'OUTBOUND' },
           { from: { contains: (client.phone || '').replace(/^0/, '') }, direction: 'INBOUND' },
-        ],
-      },
+        ] },
       orderBy: { createdAt: 'asc' },
       take: 100, // Last 100 messages
     });
@@ -635,16 +570,14 @@ export class WhatsAppService {
       client: {
         id: client.id,
         name: client.name,
-        phone: client.phone,
-      },
-      messages,
-    };
+        phone: client.phone },
+      messages };
   }
 
   /**
    * Get WhatsApp stats
    */
-  async getStats(tenantId: string) {
+  async getStats() {
     const now = new Date();
     const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     const last7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -660,23 +593,19 @@ export class WhatsAppService {
       inbound,
       outbound,
     ] = await Promise.all([
-      this.prisma.whatsAppMessage.count({ where: { tenantId } }),
-      this.prisma.whatsAppMessage.count({ where: { tenantId, status: 'SENT' } }),
-      this.prisma.whatsAppMessage.count({ where: { tenantId, status: 'DELIVERED' } }),
-      this.prisma.whatsAppMessage.count({ where: { tenantId, status: 'READ' } }),
-      this.prisma.whatsAppMessage.count({ where: { tenantId, status: 'FAILED' } }),
+      this.prisma.whatsAppMessage.count({ where: {} }),
+      this.prisma.whatsAppMessage.count({ where: { status: 'SENT' } }),
+      this.prisma.whatsAppMessage.count({ where: { status: 'DELIVERED' } }),
+      this.prisma.whatsAppMessage.count({ where: { status: 'READ' } }),
+      this.prisma.whatsAppMessage.count({ where: { status: 'FAILED' } }),
       this.prisma.whatsAppMessage.count({
-        where: { tenantId, createdAt: { gte: last24h } },
-      }),
+        where: { createdAt: { gte: last24h } } }),
       this.prisma.whatsAppMessage.count({
-        where: { tenantId, createdAt: { gte: last7d } },
-      }),
+        where: { createdAt: { gte: last7d } } }),
       this.prisma.whatsAppMessage.count({
-        where: { tenantId, direction: 'INBOUND' },
-      }),
+        where: { direction: 'INBOUND' } }),
       this.prisma.whatsAppMessage.count({
-        where: { tenantId, direction: 'OUTBOUND' },
-      }),
+        where: { direction: 'OUTBOUND' } }),
     ]);
 
     return {
@@ -688,7 +617,6 @@ export class WhatsAppService {
       last24h: last24hCount,
       last7d: last7dCount,
       inbound,
-      outbound,
-    };
+      outbound };
   }
 }

@@ -1,9 +1,4 @@
-import {
-  WebSocketGateway,
-  WebSocketServer,
-  OnGatewayConnection,
-  OnGatewayDisconnect,
-} from '@nestjs/websockets';
+import { WebSocketGateway, WebSocketServer, OnGatewayConnection, OnGatewayDisconnect } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -11,10 +6,8 @@ import { JwtService } from '@nestjs/jwt';
 @WebSocketGateway({
   cors: {
     origin: '*',
-    credentials: true,
-  },
-  namespace: '/ws',
-})
+    credentials: true },
+  namespace: '/ws' })
 export class WebSocketGatewayService
   implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
@@ -37,16 +30,9 @@ export class WebSocketGatewayService
       }
 
       const payload = this.jwtService.verify(token, {
-        secret: process.env.JWT_SECRET || 'your-secret-key',
-      });
+        secret: process.env.JWT_SECRET || 'your-secret-key' });
 
       const userId = payload.userId || payload.clientId;
-      const tenantId = payload.tenantId;
-
-      if (!userId || !tenantId) {
-        client.disconnect();
-        return;
-      }
 
       // Store socket for user
       if (!this.userSockets.has(userId)) {
@@ -55,15 +41,15 @@ export class WebSocketGatewayService
       this.userSockets.get(userId)!.add(client.id);
 
       // Join rooms
-      client.join(`tenant:${tenantId}`);
+      client.join(`tenant:`);
       client.join(`user:${userId}`);
 
       // Store data on socket
       client.data.userId = userId;
-      client.data.tenantId = tenantId;
+
       client.data.isClient = !!payload.clientId;
 
-      this.logger.log(`Client connected: ${client.id} (user: ${userId}, tenant: ${tenantId})`);
+      this.logger.log(`Client connected: ${client.id} (user: ${userId}, tenant: )`);
     } catch (error) {
       this.logger.error('Connection error:', error.message);
       // Don't disconnect, allow anonymous connection
@@ -93,12 +79,10 @@ export class WebSocketGatewayService
   /**
    * Get online users count for a tenant
    */
-  getOnlineUsersCount(tenantId: string): number {
+  getOnlineUsersCount(): number {
     let count = 0;
     this.server?.sockets?.sockets?.forEach((socket) => {
-      if (socket.data?.tenantId === tenantId) {
-        count++;
-      }
+
     });
     return count;
   }
@@ -114,49 +98,49 @@ export class WebSocketGatewayService
   /**
    * Send notification to all users in a tenant
    */
-  sendNotificationToTenant(tenantId: string, notification: any) {
-    this.server?.to(`tenant:${tenantId}`).emit('notification', notification);
-    this.logger.debug(`Sent notification to tenant ${tenantId}`);
+  sendNotificationToTenant(notification: any) {
+    this.server?.to(`tenant:`).emit('notification', notification);
+    this.logger.debug(`Sent notification to tenant `);
   }
 
   /**
    * Broadcast case update
    */
-  broadcastCaseUpdate(tenantId: string, caseData: any) {
-    this.server?.to(`tenant:${tenantId}`).emit('case:update', caseData);
-    this.logger.debug(`Broadcast case update to tenant ${tenantId}`);
+  broadcastCaseUpdate(caseData: any) {
+    this.server?.to(`tenant:`).emit('case:update', caseData);
+    this.logger.debug(`Broadcast case update to tenant `);
   }
 
   /**
    * Broadcast hearing update
    */
-  broadcastHearingUpdate(tenantId: string, hearingData: any) {
-    this.server?.to(`tenant:${tenantId}`).emit('hearing:update', hearingData);
-    this.logger.debug(`Broadcast hearing update to tenant ${tenantId}`);
+  broadcastHearingUpdate(hearingData: any) {
+    this.server?.to(`tenant:`).emit('hearing:update', hearingData);
+    this.logger.debug(`Broadcast hearing update to tenant `);
   }
 
   /**
    * Broadcast invoice update
    */
-  broadcastInvoiceUpdate(tenantId: string, invoiceData: any) {
-    this.server?.to(`tenant:${tenantId}`).emit('invoice:update', invoiceData);
-    this.logger.debug(`Broadcast invoice update to tenant ${tenantId}`);
+  broadcastInvoiceUpdate(invoiceData: any) {
+    this.server?.to(`tenant:`).emit('invoice:update', invoiceData);
+    this.logger.debug(`Broadcast invoice update to tenant `);
   }
 
   /**
    * Broadcast new WhatsApp message
    */
-  broadcastWhatsAppMessage(tenantId: string, message: any) {
-    this.server?.to(`tenant:${tenantId}`).emit('whatsapp:message', message);
-    this.logger.debug(`Broadcast WhatsApp message to tenant ${tenantId}`);
+  broadcastWhatsAppMessage(message: any) {
+    this.server?.to(`tenant:`).emit('whatsapp:message', message);
+    this.logger.debug(`Broadcast WhatsApp message to tenant `);
   }
 
   /**
    * Broadcast document upload
    */
-  broadcastDocumentUpload(tenantId: string, document: any) {
-    this.server?.to(`tenant:${tenantId}`).emit('document:upload', document);
-    this.logger.debug(`Broadcast document upload to tenant ${tenantId}`);
+  broadcastDocumentUpload(document: any) {
+    this.server?.to(`tenant:`).emit('document:upload', document);
+    this.logger.debug(`Broadcast document upload to tenant `);
   }
 
   /**
@@ -174,17 +158,17 @@ export class WebSocketGatewayService
   /**
    * Broadcast WhatsApp QR code to tenant admins
    */
-  broadcastWhatsAppQR(tenantId: string, qrDataUrl: string) {
-    this.server?.to(`tenant:${tenantId}`).emit('whatsapp:qr', { qr: qrDataUrl });
-    this.logger.debug(`Broadcast WhatsApp QR to tenant ${tenantId}`);
+  broadcastWhatsAppQR(qrDataUrl: string) {
+    this.server?.to(`tenant:`).emit('whatsapp:qr', { qr: qrDataUrl });
+    this.logger.debug(`Broadcast WhatsApp QR to tenant `);
   }
 
   /**
    * Broadcast WhatsApp connection status to tenant admins
    */
-  broadcastWhatsAppStatus(tenantId: string, status: string, phone?: string) {
-    this.server?.to(`tenant:${tenantId}`).emit('whatsapp:status', { status, phone });
-    this.logger.debug(`Broadcast WhatsApp status '${status}' to tenant ${tenantId}`);
+  broadcastWhatsAppStatus(status: string, phone?: string) {
+    this.server?.to(`tenant:`).emit('whatsapp:status', { status, phone });
+    this.logger.debug(`Broadcast WhatsApp status '${status}' to tenant `);
   }
 }
 

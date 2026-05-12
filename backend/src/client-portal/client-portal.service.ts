@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  UnauthorizedException,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { EmailService } from '../email/email.service';
@@ -20,10 +16,9 @@ export class ClientPortalService {
   /**
    * Enable portal access for client
    */
-  async enablePortalAccess(clientId: string, tenantId: string) {
+  async enablePortalAccess(clientId: string) {
     const client = await this.prisma.client.findFirst({
-      where: { id: clientId, tenantId },
-    });
+      where: { id: clientId } });
 
     if (!client) throw new NotFoundException('العميل غير موجود');
 
@@ -40,9 +35,7 @@ export class ClientPortalService {
       where: { id: clientId },
       data: {
         portalAccessEnabled: true,
-        portalPassword: hashedPassword,
-      },
-    });
+        portalPassword: hashedPassword } });
 
     // Send email with credentials
     try {
@@ -67,9 +60,7 @@ export class ClientPortalService {
               تسجيل الدخول إلى البوابة
             </a>
           </div>
-        `,
-        tenantId,
-      });
+        ` });
     } catch (e) {
       // Email failed but portal is enabled
     }
@@ -83,10 +74,9 @@ export class ClientPortalService {
   /**
    * Disable portal access for client
    */
-  async disablePortalAccess(clientId: string, tenantId: string) {
+  async disablePortalAccess(clientId: string) {
     const client = await this.prisma.client.findFirst({
-      where: { id: clientId, tenantId },
-    });
+      where: { id: clientId } });
 
     if (!client) throw new NotFoundException('العميل غير موجود');
 
@@ -95,9 +85,7 @@ export class ClientPortalService {
       data: {
         portalAccessEnabled: false,
         portalPassword: null,
-        portalLoginToken: null,
-      },
-    });
+        portalLoginToken: null } });
 
     return { message: 'تم تعطيل البوابة' };
   }
@@ -112,14 +100,10 @@ export class ClientPortalService {
     const client = await this.prisma.client.findFirst({
       where: {
         phone: { contains: cleanPhone.slice(-9) },
-        portalAccessEnabled: true,
-      },
+        portalAccessEnabled: true },
       include: {
         tenant: {
-          select: { id: true, name: true, logo: true },
-        },
-      },
-    });
+          select: { id: true, name: true, logo: true } } } });
 
     if (!client || !client.portalPassword) {
       throw new UnauthorizedException('رقم الهاتف أو كلمة المرور غير صحيحة');
@@ -137,15 +121,13 @@ export class ClientPortalService {
     // Update last login
     await this.prisma.client.update({
       where: { id: client.id },
-      data: { lastPortalLogin: new Date() },
-    });
+      data: { lastPortalLogin: new Date() } });
 
     // Generate JWT
     const token = this.jwtService.sign({
       clientId: client.id,
-      tenantId: client.tenantId,
-      type: 'client-portal',
-    });
+
+      type: 'client-portal' });
 
     return {
       token,
@@ -153,10 +135,8 @@ export class ClientPortalService {
         id: client.id,
         name: client.name,
         email: client.email,
-        phone: client.phone,
-      },
-      tenant: client.tenant,
-    };
+        phone: client.phone },
+      tenant: client.tenant };
   }
 
   /**
@@ -168,8 +148,7 @@ export class ClientPortalService {
     newPassword: string,
   ) {
     const client = await this.prisma.client.findUnique({
-      where: { id: clientId },
-    });
+      where: { id: clientId } });
 
     if (!client || !client.portalPassword) {
       throw new NotFoundException('العميل غير موجود');
@@ -188,8 +167,7 @@ export class ClientPortalService {
 
     await this.prisma.client.update({
       where: { id: clientId },
-      data: { portalPassword: hashedNewPassword },
-    });
+      data: { portalPassword: hashedNewPassword } });
 
     return { message: 'تم تغيير كلمة المرور بنجاح' };
   }
@@ -197,19 +175,15 @@ export class ClientPortalService {
   /**
    * Get client's cases
    */
-  async getMyCases(clientId: string, tenantId: string) {
+  async getMyCases(clientId: string) {
     const cases = await this.prisma.case.findMany({
-      where: { clientId, tenantId },
+      where: { clientId },
       include: {
         assignedTo: {
-          select: { name: true, email: true, phone: true },
-        },
+          select: { name: true, email: true, phone: true } },
         _count: {
-          select: { hearings: true, documents: true },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+          select: { hearings: true, documents: true } } },
+      orderBy: { createdAt: 'desc' } });
 
     return cases;
   }
@@ -217,21 +191,16 @@ export class ClientPortalService {
   /**
    * Get case details
    */
-  async getCaseDetails(caseId: string, clientId: string, tenantId: string) {
+  async getCaseDetails(caseId: string, clientId: string) {
     const caseData = await this.prisma.case.findFirst({
-      where: { id: caseId, clientId, tenantId },
+      where: { id: caseId, clientId },
       include: {
         assignedTo: {
-          select: { name: true, email: true, phone: true },
-        },
+          select: { name: true, email: true, phone: true } },
         hearings: {
-          orderBy: { hearingDate: 'desc' },
-        },
+          orderBy: { hearingDate: 'desc' } },
         documents: {
-          orderBy: { createdAt: 'desc' },
-        },
-      },
-    });
+          orderBy: { createdAt: 'desc' } } } });
 
     if (!caseData) throw new NotFoundException('القضية غير موجودة');
 
@@ -241,16 +210,13 @@ export class ClientPortalService {
   /**
    * Get client's invoices
    */
-  async getMyInvoices(clientId: string, tenantId: string) {
+  async getMyInvoices(clientId: string) {
     const invoices = await this.prisma.invoice.findMany({
-      where: { clientId, tenantId },
+      where: { clientId },
       include: {
         case: {
-          select: { caseNumber: true, title: true },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+          select: { caseNumber: true, title: true } } },
+      orderBy: { createdAt: 'desc' } });
 
     return invoices;
   }
@@ -261,17 +227,13 @@ export class ClientPortalService {
   async getInvoiceDetails(
     invoiceId: string,
     clientId: string,
-    tenantId: string,
   ) {
     const invoice = await this.prisma.invoice.findFirst({
-      where: { id: invoiceId, clientId, tenantId },
+      where: { id: invoiceId, clientId },
       include: {
         case: {
-          select: { caseNumber: true, title: true },
-        },
-        items: true,
-      },
-    });
+          select: { caseNumber: true, title: true } },
+        items: true } });
 
     if (!invoice) throw new NotFoundException('الفاتورة غير موجودة');
 
@@ -281,11 +243,9 @@ export class ClientPortalService {
   /**
    * Get client's documents
    */
-  async getMyDocuments(clientId: string, tenantId: string, caseId?: string) {
+  async getMyDocuments(clientId: string, caseId?: string) {
     const where: any = {
-      case: { clientId },
-      tenantId,
-    };
+      case: { clientId } };
 
     if (caseId) where.caseId = caseId;
 
@@ -293,11 +253,8 @@ export class ClientPortalService {
       where,
       include: {
         case: {
-          select: { caseNumber: true, title: true },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+          select: { caseNumber: true, title: true } } },
+      orderBy: { createdAt: 'desc' } });
 
     return documents;
   }
@@ -305,9 +262,9 @@ export class ClientPortalService {
   /**
    * Get client profile
    */
-  async getProfile(clientId: string, tenantId: string) {
+  async getProfile(clientId: string) {
     const client = await this.prisma.client.findFirst({
-      where: { id: clientId, tenantId },
+      where: { id: clientId },
       select: {
         id: true,
         name: true,
@@ -322,11 +279,7 @@ export class ClientPortalService {
         _count: {
           select: {
             cases: true,
-            invoices: true,
-          },
-        },
-      },
-    });
+            invoices: true } } } });
 
     if (!client) throw new NotFoundException('العميل غير موجود');
 
@@ -336,7 +289,7 @@ export class ClientPortalService {
   /**
    * Get client dashboard stats
    */
-  async getDashboardStats(clientId: string, tenantId: string) {
+  async getDashboardStats(clientId: string) {
     const [
       totalCases,
       activeCases,
@@ -344,29 +297,24 @@ export class ClientPortalService {
       pendingInvoices,
       upcomingHearings,
     ] = await Promise.all([
-      this.prisma.case.count({ where: { clientId, tenantId } }),
+      this.prisma.case.count({ where: { clientId } }),
       this.prisma.case.count({
-        where: { clientId, tenantId, status: { in: ['OPEN', 'IN_PROGRESS'] } },
-      }),
-      this.prisma.invoice.count({ where: { clientId, tenantId } }),
+        where: { clientId, status: { in: ['OPEN', 'IN_PROGRESS'] } } }),
+      this.prisma.invoice.count({ where: { clientId } }),
       this.prisma.invoice.count({
-        where: { clientId, tenantId, status: { in: ['PENDING', 'SENT', 'OVERDUE'] } },
-      }),
+        where: { clientId, status: { in: ['PENDING', 'SENT', 'OVERDUE'] } } }),
       this.prisma.hearing.count({
         where: {
           case: { clientId },
-          tenantId,
+
           hearingDate: { gte: new Date() },
-          status: { in: ['SCHEDULED', 'POSTPONED'] },
-        },
-      }),
+          status: { in: ['SCHEDULED', 'POSTPONED'] } } }),
     ]);
 
     // Get pending amount
     const pendingAmount = await this.prisma.invoice.aggregate({
-      where: { clientId, tenantId, status: { in: ['PENDING', 'SENT', 'OVERDUE'] } },
-      _sum: { totalAmount: true },
-    });
+      where: { clientId, status: { in: ['PENDING', 'SENT', 'OVERDUE'] } },
+      _sum: { totalAmount: true } });
 
     return {
       totalCases,
@@ -374,32 +322,27 @@ export class ClientPortalService {
       totalInvoices,
       pendingInvoices,
       upcomingHearings,
-      pendingAmount: Number(pendingAmount._sum.totalAmount) || 0,
-    };
+      pendingAmount: Number(pendingAmount._sum.totalAmount) || 0 };
   }
 
   /**
    * Get upcoming hearings
    */
-  async getUpcomingHearings(clientId: string, tenantId: string) {
+  async getUpcomingHearings(clientId: string) {
     const hearings = await this.prisma.hearing.findMany({
       where: {
         OR: [
           { clientId },
           { case: { clientId } },
         ],
-        tenantId,
+
         hearingDate: { gte: new Date() },
-        status: { in: ['SCHEDULED', 'POSTPONED'] },
-      },
+        status: { in: ['SCHEDULED', 'POSTPONED'] } },
       include: {
         case: {
-          select: { caseNumber: true, title: true },
-        },
-      },
+          select: { caseNumber: true, title: true } } },
       orderBy: { hearingDate: 'asc' },
-      take: 10,
-    });
+      take: 10 });
 
     return hearings;
   }

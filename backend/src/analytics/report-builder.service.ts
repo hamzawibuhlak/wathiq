@@ -32,9 +32,9 @@ interface GroupItem {
 export class ReportBuilderService {
     constructor(private prisma: PrismaService) { }
 
-    async buildReport(tenantId: string, config: ReportConfig) {
+    async buildReport(config: ReportConfig) {
         // Build where clause
-        const where: Record<string, any> = { tenantId };
+        const where: Record<string, any> = {};
 
         config.filters.forEach(filter => {
             const { field, operator, value } = filter;

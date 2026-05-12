@@ -1,15 +1,4 @@
-import {
-    Controller,
-    Get,
-    Post,
-    Put,
-    Delete,
-    Body,
-    Param,
-    Query,
-    Req,
-    UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, Req, UseGuards } from '@nestjs/common';
 import { FormsService } from './forms.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Request } from 'express';
@@ -26,59 +15,58 @@ export class FormsController {
     @Post('forms')
     async create(@Req() req: Request, @Body() body: any) {
         const user = req.user as any;
-        return this.formsService.create(user.tenantId, user.id, body);
+        return this.formsService.create(user.id, body);
     }
 
     @UseGuards(JwtAuthGuard)
     @Get('forms')
     async findAll(@Req() req: Request, @Query() query: any) {
         const user = req.user as any;
-        return this.formsService.findAll(user.tenantId, user.id, query);
+        return this.formsService.findAll(user.id, query);
     }
 
     @UseGuards(JwtAuthGuard)
     @Get('forms/editor/answers')
     async getEditorAnswers(@Req() req: Request, @Query() query: any) {
         const user = req.user as any;
-        return this.formsService.getAnswersForEditor(user.tenantId, user.id, {
+        return this.formsService.getAnswersForEditor(user.id, {
             caseId: query.caseId,
-            clientId: query.clientId,
-        });
+            clientId: query.clientId });
     }
 
     @UseGuards(JwtAuthGuard)
     @Get('forms/:id')
     async findById(@Req() req: Request, @Param('id') id: string) {
         const user = req.user as any;
-        return this.formsService.findById(id, user.tenantId, user.id);
+        return this.formsService.findById(id, user.id);
     }
 
     @UseGuards(JwtAuthGuard)
     @Put('forms/:id')
     async update(@Req() req: Request, @Param('id') id: string, @Body() body: any) {
         const user = req.user as any;
-        return this.formsService.update(id, user.tenantId, user.id, body);
+        return this.formsService.update(id, user.id, body);
     }
 
     @UseGuards(JwtAuthGuard)
     @Delete('forms/:id')
     async delete(@Req() req: Request, @Param('id') id: string) {
         const user = req.user as any;
-        return this.formsService.delete(id, user.tenantId, user.id);
+        return this.formsService.delete(id, user.id);
     }
 
     @UseGuards(JwtAuthGuard)
     @Put('forms/:id/access')
     async manageAccess(@Req() req: Request, @Param('id') id: string, @Body() body: any) {
         const user = req.user as any;
-        return this.formsService.manageAccess(id, user.tenantId, user.id, body);
+        return this.formsService.manageAccess(id, user.id, body);
     }
 
     @UseGuards(JwtAuthGuard)
     @Post('forms/:id/otp')
     async generateOtp(@Req() req: Request, @Param('id') id: string, @Body() body: any) {
         const user = req.user as any;
-        return this.formsService.generateOtp(id, user.tenantId, user.id, body);
+        return this.formsService.generateOtp(id, user.id, body);
     }
 
     @UseGuards(JwtAuthGuard)
@@ -89,7 +77,7 @@ export class FormsController {
         @Query() query: any,
     ) {
         const user = req.user as any;
-        return this.formsService.getSubmissions(id, user.tenantId, user.id, query);
+        return this.formsService.getSubmissions(id, user.id, query);
     }
 
     @UseGuards(JwtAuthGuard)
@@ -102,7 +90,7 @@ export class FormsController {
         const user = req.user as any;
         return this.formsService.updateSubmissionStatus(
             submissionId,
-            user.tenantId,
+
             user.id,
             body,
         );
@@ -116,14 +104,14 @@ export class FormsController {
         @Body() body: any,
     ) {
         const user = req.user as any;
-        return this.formsService.linkSubmission(submissionId, user.tenantId, user.id, body);
+        return this.formsService.linkSubmission(submissionId, user.id, body);
     }
 
     @UseGuards(JwtAuthGuard)
     @Post('forms/submissions/:submissionId/convert-client')
     async convertToClient(@Req() req: Request, @Param('submissionId') submissionId: string) {
         const user = req.user as any;
-        return this.formsService.convertToClient(submissionId, user.tenantId, user.id);
+        return this.formsService.convertToClient(submissionId, user.id);
     }
 
     @UseGuards(JwtAuthGuard)
@@ -134,7 +122,7 @@ export class FormsController {
         @Body() body: any,
     ) {
         const user = req.user as any;
-        return this.formsService.convertToCase(submissionId, user.tenantId, user.id, body || {});
+        return this.formsService.convertToCase(submissionId, user.id, body || {});
     }
 
     // ─── Per-answer visibility ───
@@ -146,7 +134,7 @@ export class FormsController {
         @Body() body: { userIds: string[] },
     ) {
         const user = req.user as any;
-        return this.formsService.setAnswerVisibility(answerId, user.tenantId, user.id, body.userIds || []);
+        return this.formsService.setAnswerVisibility(answerId, user.id, body.userIds || []);
     }
 
     // ─── Answer notes ───
@@ -154,7 +142,7 @@ export class FormsController {
     @Get('forms/answers/:answerId/notes')
     async listAnswerNotes(@Req() req: Request, @Param('answerId') answerId: string) {
         const user = req.user as any;
-        return this.formsService.listAnswerNotes(answerId, user.tenantId, user.id);
+        return this.formsService.listAnswerNotes(answerId, user.id);
     }
 
     @UseGuards(JwtAuthGuard)
@@ -165,7 +153,7 @@ export class FormsController {
         @Body() body: { content: string },
     ) {
         const user = req.user as any;
-        return this.formsService.addAnswerNote(answerId, user.tenantId, user.id, body.content);
+        return this.formsService.addAnswerNote(answerId, user.id, body.content);
     }
 
     @UseGuards(JwtAuthGuard)
@@ -176,7 +164,7 @@ export class FormsController {
         @Param('noteId') noteId: string,
     ) {
         const user = req.user as any;
-        return this.formsService.deleteAnswerNote(answerId, noteId, user.tenantId, user.id);
+        return this.formsService.deleteAnswerNote(answerId, noteId, user.id);
     }
 
     // ─── Answer discussions ───
@@ -188,14 +176,14 @@ export class FormsController {
         @Body() body: { inviteeIds?: string[]; message?: string },
     ) {
         const user = req.user as any;
-        return this.formsService.startDiscussion(answerId, user.tenantId, user.id, body);
+        return this.formsService.startDiscussion(answerId, user.id, body);
     }
 
     @UseGuards(JwtAuthGuard)
     @Get('forms/discussions/:id')
     async getDiscussion(@Req() req: Request, @Param('id') id: string) {
         const user = req.user as any;
-        return this.formsService.getDiscussion(id, user.tenantId, user.id);
+        return this.formsService.getDiscussion(id, user.id);
     }
 
     @UseGuards(JwtAuthGuard)
@@ -206,7 +194,7 @@ export class FormsController {
         @Body() body: { content: string },
     ) {
         const user = req.user as any;
-        return this.formsService.addDiscussionMessage(id, user.tenantId, user.id, body.content);
+        return this.formsService.addDiscussionMessage(id, user.id, body.content);
     }
 
     @UseGuards(JwtAuthGuard)
@@ -217,7 +205,7 @@ export class FormsController {
         @Body() body: { userIds: string[] },
     ) {
         const user = req.user as any;
-        return this.formsService.inviteToDiscussion(id, user.tenantId, user.id, body.userIds || []);
+        return this.formsService.inviteToDiscussion(id, user.id, body.userIds || []);
     }
 
     // ══════════════════════════════════════════════════════════
@@ -242,8 +230,7 @@ export class FormsController {
     ) {
         const metadata = {
             ip: req.ip || req.headers['x-forwarded-for'] || 'unknown',
-            userAgent: req.headers['user-agent'] || 'unknown',
-        };
+            userAgent: req.headers['user-agent'] || 'unknown' };
         return this.formsService.submitForm(slug, body, metadata);
     }
 }

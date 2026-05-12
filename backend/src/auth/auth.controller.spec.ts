@@ -122,10 +122,7 @@ describe('AuthController', () => {
       email: 'test@example.com',
       name: 'Test User',
       role: UserRole.LAWYER,
-      tenant: {
-        id: 'tenant-1',
-        name: 'Test Firm',
-      },
+
     };
 
     it('should return current user data', async () => {

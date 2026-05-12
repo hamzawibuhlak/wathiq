@@ -1,22 +1,5 @@
-import {
-    Controller,
-    Get,
-    Post,
-    Patch,
-    Delete,
-    Body,
-    Param,
-    Query,
-    UseGuards,
-    ParseUUIDPipe,
-} from '@nestjs/common';
-import {
-    ApiTags,
-    ApiOperation,
-    ApiBearerAuth,
-    ApiResponse,
-    ApiQuery,
-} from '@nestjs/swagger';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards, ParseUUIDPipe } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { HearingsService } from './hearings.service';
 import { CreateHearingDto } from './dto/create-hearing.dto';
@@ -25,7 +8,7 @@ import { FilterHearingsDto } from './dto/filter-hearings.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
-import { TenantId } from '../common/decorators/tenant-id.decorator';
+
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 
 @ApiTags('Hearings')
@@ -39,12 +22,12 @@ export class HearingsController {
     @ApiOperation({ summary: 'الحصول على جميع الجلسات مع pagination و filters' })
     @ApiResponse({ status: 200, description: 'قائمة الجلسات' })
     async findAll(
-        @TenantId() tenantId: string,
+
         @Query() filterDto: FilterHearingsDto,
         @CurrentUser('id') userId: string,
         @CurrentUser('role') userRole: UserRole,
     ) {
-        return this.hearingsService.findAll(tenantId, filterDto, userId, userRole);
+        return this.hearingsService.findAll(filterDto, userId, userRole);
     }
 
     @Get('calendar')
@@ -53,13 +36,13 @@ export class HearingsController {
     @ApiQuery({ name: 'month', required: false, description: 'الشهر (1-12)' })
     @ApiQuery({ name: 'year', required: false, description: 'السنة' })
     async getCalendar(
-        @TenantId() tenantId: string,
+
         @Query('month') month?: number,
         @Query('year') year?: number,
         @CurrentUser('id') userId?: string,
         @CurrentUser('role') userRole?: UserRole,
     ) {
-        return this.hearingsService.getCalendar(tenantId, month, year, userId, userRole);
+        return this.hearingsService.getCalendar(month, year, userId, userRole);
     }
 
     @Get('upcoming')
@@ -67,12 +50,12 @@ export class HearingsController {
     @ApiResponse({ status: 200, description: 'الجلسات القادمة' })
     @ApiQuery({ name: 'days', required: false, description: 'عدد الأيام (افتراضي: 7)' })
     async getUpcoming(
-        @TenantId() tenantId: string,
+
         @Query('days') days?: number,
         @CurrentUser('id') userId?: string,
         @CurrentUser('role') userRole?: UserRole,
     ) {
-        return this.hearingsService.getUpcoming(tenantId, days, userId, userRole);
+        return this.hearingsService.getUpcoming(days, userId, userRole);
     }
 
     @Get(':id')
@@ -81,9 +64,9 @@ export class HearingsController {
     @ApiResponse({ status: 404, description: 'الجلسة غير موجودة' })
     async findOne(
         @Param('id', ParseUUIDPipe) id: string,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.hearingsService.findOne(id, tenantId);
+        return this.hearingsService.findOne(id);
     }
 
     @Post()
@@ -93,10 +76,10 @@ export class HearingsController {
     @ApiResponse({ status: 400, description: 'بيانات غير صالحة' })
     async create(
         @Body() createHearingDto: CreateHearingDto,
-        @TenantId() tenantId: string,
+
         @CurrentUser('id') userId: string,
     ) {
-        return this.hearingsService.create(createHearingDto, tenantId, userId);
+        return this.hearingsService.create(createHearingDto, userId);
     }
 
     @Patch(':id')
@@ -107,9 +90,9 @@ export class HearingsController {
     async update(
         @Param('id', ParseUUIDPipe) id: string,
         @Body() updateHearingDto: UpdateHearingDto,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.hearingsService.update(id, updateHearingDto, tenantId);
+        return this.hearingsService.update(id, updateHearingDto);
     }
 
     @Delete(':id')
@@ -119,9 +102,9 @@ export class HearingsController {
     @ApiResponse({ status: 404, description: 'الجلسة غير موجودة' })
     async remove(
         @Param('id', ParseUUIDPipe) id: string,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.hearingsService.remove(id, tenantId);
+        return this.hearingsService.remove(id);
     }
 
     @Post(':id/send-reminder')
@@ -132,9 +115,9 @@ export class HearingsController {
     @ApiResponse({ status: 404, description: 'الجلسة غير موجودة' })
     async sendReminder(
         @Param('id', ParseUUIDPipe) id: string,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.hearingsService.sendReminder(id, tenantId);
+        return this.hearingsService.sendReminder(id);
     }
 
     @Patch('bulk/status')
@@ -143,9 +126,9 @@ export class HearingsController {
     @ApiResponse({ status: 200, description: 'تم تحديث الجلسات بنجاح' })
     async bulkUpdateStatus(
         @Body() body: { ids: string[]; status: string },
-        @TenantId() tenantId: string,
+
     ) {
-        return this.hearingsService.bulkUpdateStatus(body.ids, body.status, tenantId);
+        return this.hearingsService.bulkUpdateStatus(body.ids, body.status);
     }
 
     @Delete('bulk/delete')
@@ -154,8 +137,8 @@ export class HearingsController {
     @ApiResponse({ status: 200, description: 'تم حذف الجلسات بنجاح' })
     async bulkDelete(
         @Body() body: { ids: string[] },
-        @TenantId() tenantId: string,
+
     ) {
-        return this.hearingsService.bulkDelete(body.ids, tenantId);
+        return this.hearingsService.bulkDelete(body.ids);
     }
 }

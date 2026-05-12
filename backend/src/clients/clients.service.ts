@@ -30,9 +30,7 @@ export class ClientsService {
      * Get all clients with pagination and search
      * Lawyers only see clients they are assigned to via visibleToUsers
      */
-    async findAll(
-        tenantId: string,
-        filterDto: FilterClientsDto,
+    async findAll(filterDto: FilterClientsDto,
         userId?: string,
         userRole?: string,
     ): Promise<PaginatedResponse<unknown>> {
@@ -43,17 +41,13 @@ export class ClientsService {
             isActive,
             city,
             sortBy = 'createdAt',
-            sortOrder = 'desc',
-        } = filterDto;
-
-        // Build where clause - ALWAYS filter by tenantId
-        const where: Prisma.ClientWhereInput = { tenantId };
+            sortOrder = 'desc' } = filterDto;
+        const where: Prisma.ClientWhereInput = {};
 
         // Lawyers only see clients assigned to them
         if (userRole === 'LAWYER' && userId) {
             where.visibleToUsers = {
-                some: { id: userId },
-            };
+                some: { id: userId } };
         }
 
         // Active filter
@@ -95,12 +89,10 @@ export class ClientsService {
                 where,
                 include: {
                     _count: { select: { cases: true } },
-                    visibleToUsers: { select: { id: true, name: true } },
-                },
+                    visibleToUsers: { select: { id: true, name: true } } },
                 orderBy,
                 skip,
-                take: limit,
-            }),
+                take: limit }),
             this.prisma.client.count({ where }),
         ]);
 
@@ -110,22 +102,19 @@ export class ClientsService {
                 page,
                 limit,
                 total,
-                totalPages: Math.ceil(total / limit),
-            },
-        };
+                totalPages: Math.ceil(total / limit) } };
     }
 
     /**
      * Get client by ID with cases, hearings, invoices
      */
-    async findOne(id: string, tenantId: string, userId?: string, userRole?: string) {
-        const where: Prisma.ClientWhereInput = { id, tenantId };
+    async findOne(id: string, userId?: string, userRole?: string) {
+        const where: Prisma.ClientWhereInput = { id };
 
         // Lawyers can only view clients assigned to them
         if (userRole === 'LAWYER' && userId) {
             where.visibleToUsers = {
-                some: { id: userId },
-            };
+                some: { id: userId } };
         }
 
         const client = await this.prisma.client.findFirst({
@@ -139,11 +128,9 @@ export class ClientsService {
                         status: true,
                         caseType: true,
                         createdAt: true,
-                        assignedTo: { select: { id: true, name: true } },
-                    },
+                        assignedTo: { select: { id: true, name: true } } },
                     orderBy: { createdAt: 'desc' },
-                    take: 10,
-                },
+                    take: 10 },
                 hearings: {
                     select: {
                         id: true,
@@ -155,13 +142,9 @@ export class ClientsService {
                             select: {
                                 id: true,
                                 caseNumber: true,
-                                title: true,
-                            },
-                        },
-                    },
+                                title: true } } },
                     orderBy: { hearingDate: 'desc' },
-                    take: 10,
-                },
+                    take: 10 },
                 invoices: {
                     select: {
                         id: true,
@@ -174,23 +157,15 @@ export class ClientsService {
                             select: {
                                 id: true,
                                 caseNumber: true,
-                                title: true,
-                            },
-                        },
-                    },
+                                title: true } } },
                     orderBy: { createdAt: 'desc' },
-                    take: 10,
-                },
+                    take: 10 },
                 visibleToUsers: { select: { id: true, name: true } },
                 _count: {
                     select: {
                         cases: true,
                         hearings: true,
-                        invoices: true,
-                    },
-                },
-            },
-        });
+                        invoices: true } } } });
 
         if (!client) {
             throw new NotFoundException('العميل غير موجود');
@@ -202,17 +177,15 @@ export class ClientsService {
     /**
      * Get client's cases
      */
-    async getClientCases(clientId: string, tenantId: string) {
+    async getClientCases(clientId: string) {
         // Verify client exists
-        await this.findOne(clientId, tenantId);
+        await this.findOne(clientId);
 
         const cases = await this.prisma.case.findMany({
-            where: { clientId, tenantId },
+            where: { clientId },
             include: {
-                assignedTo: { select: { id: true, name: true } },
-            },
-            orderBy: { createdAt: 'desc' },
-        });
+                assignedTo: { select: { id: true, name: true } } },
+            orderBy: { createdAt: 'desc' } });
 
         return { data: cases };
     }
@@ -220,34 +193,31 @@ export class ClientsService {
     /**
      * Create new client
      */
-    async create(dto: CreateClientDto, tenantId: string, userId?: string) {
+    async create(dto: CreateClientDto, userId?: string) {
         const { visibleToUserIds, ...clientData } = dto;
 
         // Phase 37: Generate client code
-        const clientCode = await this.entityCodeService.generateClientCode(tenantId);
+        const clientCode = await this.entityCodeService.generateClientCode();
 
         const client = await this.prisma.client.create({
             data: {
                 ...clientData,
-                tenantId,
+
                 code: clientCode.code,
                 codeNumber: clientCode.codeNumber,
                 visibleToUsers: visibleToUserIds?.length
                     ? { connect: visibleToUserIds.map((id) => ({ id })) }
-                    : undefined,
-            } as any,
+                    : undefined } as any,
             include: {
                 _count: { select: { cases: true } },
-                visibleToUsers: { select: { id: true, name: true } },
-            },
-        });
+                visibleToUsers: { select: { id: true, name: true } } } });
 
         // ─── إنشاء مجلد باسم العميل تلقائياً ────────────
         try {
             await this.documentFoldersService.createClientFolder(
                 dto.name,
                 client.id,
-                tenantId,
+
                 userId,
             );
         } catch {
@@ -276,12 +246,11 @@ export class ClientsService {
                     jpg: 'image/jpeg',
                     jpeg: 'image/jpeg',
                     png: 'image/png',
-                    webp: 'image/webp',
-                };
+                    webp: 'image/webp' };
                 const mimeType = mimeMap[ext] || 'application/octet-stream';
 
                 try {
-                    const docCode = await this.entityCodeService.generateFlatCode(tenantId, 'document');
+                    const docCode = await this.entityCodeService.generateFlatCode('document');
                     await (this.prisma as any).document.create({
                         data: {
                             title: `${docField.title} — ${dto.name}`,
@@ -292,12 +261,10 @@ export class ClientsService {
                             documentType: docField.docType,
                             tags: ['عميل', dto.name],
                             ocrStatus: mimeType === 'application/pdf' || mimeType.startsWith('image/') ? 'PENDING' : 'NOT_APPLICABLE',
-                            tenantId,
+
                             uploadedById: userId,
                             code: docCode.code,
-                            codeNumber: docCode.codeNumber,
-                        },
-                    });
+                            codeNumber: docCode.codeNumber } });
                 } catch {
                     // لا نوقف إنشاء العميل إذا فشل إنشاء سجل المستند
                 }
@@ -306,16 +273,15 @@ export class ClientsService {
 
         return {
             data: client,
-            message: 'تم إنشاء العميل بنجاح',
-        };
+            message: 'تم إنشاء العميل بنجاح' };
     }
 
     /**
      * Update client
      */
-    async update(id: string, dto: UpdateClientDto, tenantId: string) {
+    async update(id: string, dto: UpdateClientDto) {
         // Verify client exists
-        await this.findOne(id, tenantId);
+        await this.findOne(id);
 
         const { visibleToUserIds, ...clientData } = dto;
 
@@ -325,26 +291,22 @@ export class ClientsService {
                 ...clientData,
                 visibleToUsers: visibleToUserIds !== undefined
                     ? { set: visibleToUserIds.map((id) => ({ id })) }
-                    : undefined,
-            },
+                    : undefined },
             include: {
                 _count: { select: { cases: true } },
-                visibleToUsers: { select: { id: true, name: true } },
-            },
-        });
+                visibleToUsers: { select: { id: true, name: true } } } });
 
         return {
             data: client,
-            message: 'تم تحديث العميل بنجاح',
-        };
+            message: 'تم تحديث العميل بنجاح' };
     }
 
     /**
      * Delete client
      */
-    async remove(id: string, tenantId: string) {
+    async remove(id: string) {
         // Verify client exists
-        const client = await this.findOne(id, tenantId);
+        const client = await this.findOne(id);
 
         // Check if client has cases
         if (client.data._count.cases > 0) {

@@ -81,7 +81,7 @@ export class SessionsService {
                         name: true,
                         role: true,
                         isActive: true,
-                        tenantId: true,
+
                     },
                 },
             },

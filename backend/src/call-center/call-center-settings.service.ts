@@ -14,23 +14,19 @@ export class CallCenterSettingsService {
     // GET SETTINGS
     // ══════════════════════════════════════════════════════════
 
-    async getSettings(tenantId: string) {
+    async getSettings() {
         let settings = await this.prisma.callCenterSettings.findUnique({
-            where: { tenantId },
-        });
+            where: {} });
 
         // auto-create if not exists
         if (!settings) {
             settings = await this.prisma.callCenterSettings.create({
                 data: {
-                    tenantId,
                     ucmHost: '',
                     gdmsApiKey: '',
                     gdmsApiSecret: '',
                     gdmsUsername: '',
-                    gdmsPassword: '',
-                },
-            });
+                    gdmsPassword: '' } });
         }
 
         // mask secrets
@@ -38,20 +34,18 @@ export class CallCenterSettingsService {
             ...settings,
             gdmsApiKey: settings.gdmsApiKey ? '••••••••' : '',
             gdmsApiSecret: settings.gdmsApiSecret ? '••••••••' : '',
-            gdmsPassword: settings.gdmsPassword ? '••••••••' : '',
-        };
+            gdmsPassword: settings.gdmsPassword ? '••••••••' : '' };
     }
 
     // ══════════════════════════════════════════════════════════
     // UPDATE SETTINGS
     // ══════════════════════════════════════════════════════════
 
-    async updateSettings(tenantId: string, data: any) {
+    async updateSettings(data: any) {
         const updateData: any = { ...data };
 
         // remove fields that shouldn't be in updateData
         delete updateData.id;
-        delete updateData.tenantId;
         delete updateData.createdAt;
         delete updateData.updatedAt;
         delete updateData.tenant;
@@ -67,34 +61,30 @@ export class CallCenterSettingsService {
         }
 
         await this.prisma.callCenterSettings.upsert({
-            where: { tenantId },
-            create: { tenantId, ...updateData },
-            update: updateData,
-        });
+            where: {},
+            create: { ...updateData },
+            update: updateData });
 
-        return this.getSettings(tenantId);
+        return this.getSettings();
     }
 
     // ══════════════════════════════════════════════════════════
     // TEST CONNECTION
     // ══════════════════════════════════════════════════════════
 
-    async testConnection(tenantId: string) {
-        return this.gdmsApi.testConnection(tenantId);
+    async testConnection() {
+        return this.gdmsApi.testConnection();
     }
 
     // ══════════════════════════════════════════════════════════
     // AUTO-ASSIGN EXTENSION TO USER
     // ══════════════════════════════════════════════════════════
 
-    async autoAssignExtension(
-        tenantId: string,
-        userId: string,
+    async autoAssignExtension(userId: string,
         userName: string,
     ) {
         const settings = await this.prisma.callCenterSettings.findUnique({
-            where: { tenantId },
-        });
+            where: {} });
 
         if (!settings) {
             throw new NotFoundException('إعدادات السنترال غير موجودة');
@@ -102,17 +92,15 @@ export class CallCenterSettingsService {
 
         // check if user already has an extension
         const existingUserExt = await this.prisma.sipExtension.findUnique({
-            where: { userId },
-        });
+            where: { userId } });
         if (existingUserExt) {
             throw new BadRequestException('هذا المستخدم لديه Extension مسبقاً');
         }
 
         // find next available extension number
         const existingExtensions = await this.prisma.sipExtension.findMany({
-            where: { tenantId },
-            select: { extension: true },
-        });
+            where: {},
+            select: { extension: true } });
 
         const usedNumbers = existingExtensions.map((e) => parseInt(e.extension));
         let nextExtension = settings.extensionStart;
@@ -136,12 +124,11 @@ export class CallCenterSettingsService {
         if (settings.gdmsDeviceId && settings.gdmsApiKey) {
             try {
                 const gdmsResult = await this.gdmsApi.createExtensionOnGdms(
-                    tenantId,
+
                     {
                         extensionNumber: nextExtension.toString(),
                         displayName: userName,
-                        password,
-                    },
+                        password },
                 );
                 gdmsExtensionId = gdmsResult.gdmsExtensionId;
             } catch (err) {
@@ -158,14 +145,11 @@ export class CallCenterSettingsService {
                 ucmHost: settings.ucmHost,
                 ucmPort: settings.ucmPort,
                 userId,
-                tenantId,
+
                 gdmsExtensionId: gdmsExtensionId || null,
-                createdViaGdms: !!gdmsExtensionId,
-            },
+                createdViaGdms: !!gdmsExtensionId },
             include: {
-                user: { select: { id: true, name: true, email: true } },
-            },
-        });
+                user: { select: { id: true, name: true, email: true } } } });
 
         return extension;
     }
@@ -174,7 +158,7 @@ export class CallCenterSettingsService {
     // SYNC CALL LOGS
     // ══════════════════════════════════════════════════════════
 
-    async syncCallLogs(tenantId: string) {
-        return this.gdmsApi.syncCallLogs(tenantId);
+    async syncCallLogs() {
+        return this.gdmsApi.syncCallLogs();
     }
 }

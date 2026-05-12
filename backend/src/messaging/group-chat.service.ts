@@ -10,9 +10,7 @@ export class GroupChatService {
     /**
      * Create group chat
      */
-    async createGroup(
-        tenantId: string,
-        createdById: string,
+    async createGroup(createdById: string,
         data: {
             name: string;
             description?: string;
@@ -23,7 +21,7 @@ export class GroupChatService {
             data: {
                 name: data.name,
                 description: data.description,
-                tenantId,
+
                 createdById,
                 members: {
                     create: [

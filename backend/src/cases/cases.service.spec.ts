@@ -19,16 +19,12 @@ describe('CasesService', () => {
       update: jest.fn(),
       delete: jest.fn(),
       count: jest.fn(),
-      groupBy: jest.fn(),
-    },
-    $queryRaw: jest.fn(),
-  };
+      groupBy: jest.fn() },
+    $queryRaw: jest.fn() };
 
   const mockNotificationsService = {
-    create: jest.fn(),
-  };
+    create: jest.fn() };
 
-  const tenantId = 'tenant-1';
   const userId = 'user-1';
 
   const mockCase = {
@@ -39,15 +35,14 @@ describe('CasesService', () => {
     caseType: CaseType.CIVIL,
     status: CaseStatus.OPEN,
     priority: CasePriority.MEDIUM,
-    tenantId,
+
     clientId: 'client-1',
     assignedToId: userId,
     createdById: userId,
     createdAt: new Date(),
     updatedAt: new Date(),
     client: { id: 'client-1', name: 'عميل اختبار', phone: '0501234567' },
-    assignedTo: { id: userId, name: 'محامي اختبار', avatar: null },
-  };
+    assignedTo: { id: userId, name: 'محامي اختبار', avatar: null } };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -55,14 +50,11 @@ describe('CasesService', () => {
         CasesService,
         {
           provide: PrismaService,
-          useValue: mockPrismaService,
-        },
+          useValue: mockPrismaService },
         {
           provide: NotificationsService,
-          useValue: mockNotificationsService,
-        },
-      ],
-    }).compile();
+          useValue: mockNotificationsService },
+      ] }).compile();
 
     service = module.get<CasesService>(CasesService);
     prisma = module.get<PrismaService>(PrismaService);
@@ -82,7 +74,7 @@ describe('CasesService', () => {
       mockPrismaService.case.findMany.mockResolvedValue(mockCases);
       mockPrismaService.case.count.mockResolvedValue(1);
 
-      const result = await service.findAll(tenantId, { page: 1, limit: 10 });
+      const result = await service.findAll({ page: 1, limit: 10 });
 
       expect(result).toHaveProperty('data');
       expect(result).toHaveProperty('meta');
@@ -95,15 +87,12 @@ describe('CasesService', () => {
       mockPrismaService.case.findMany.mockResolvedValue([]);
       mockPrismaService.case.count.mockResolvedValue(0);
 
-      await service.findAll(tenantId, { status: CaseStatus.OPEN });
+      await service.findAll({ status: CaseStatus.OPEN });
 
       expect(mockPrismaService.case.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            tenantId,
-            status: CaseStatus.OPEN,
-          }),
-        })
+            status: CaseStatus.OPEN }) })
       );
     });
 
@@ -111,15 +100,12 @@ describe('CasesService', () => {
       mockPrismaService.case.findMany.mockResolvedValue([]);
       mockPrismaService.case.count.mockResolvedValue(0);
 
-      await service.findAll(tenantId, { caseType: CaseType.CRIMINAL });
+      await service.findAll({ caseType: CaseType.CRIMINAL });
 
       expect(mockPrismaService.case.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            tenantId,
-            caseType: CaseType.CRIMINAL,
-          }),
-        })
+            caseType: CaseType.CRIMINAL }) })
       );
     });
 
@@ -127,19 +113,16 @@ describe('CasesService', () => {
       mockPrismaService.case.findMany.mockResolvedValue([]);
       mockPrismaService.case.count.mockResolvedValue(0);
 
-      await service.findAll(tenantId, { search: 'بحث' });
+      await service.findAll({ search: 'بحث' });
 
       expect(mockPrismaService.case.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            tenantId,
             OR: expect.arrayContaining([
               { title: { contains: 'بحث', mode: 'insensitive' } },
               { description: { contains: 'بحث', mode: 'insensitive' } },
               { caseNumber: { contains: 'بحث', mode: 'insensitive' } },
-            ]),
-          }),
-        })
+            ]) }) })
       );
     });
 
@@ -147,15 +130,12 @@ describe('CasesService', () => {
       mockPrismaService.case.findMany.mockResolvedValue([]);
       mockPrismaService.case.count.mockResolvedValue(0);
 
-      await service.findAll(tenantId, {}, userId, UserRole.LAWYER);
+      await service.findAll({}, userId, UserRole.LAWYER);
 
       expect(mockPrismaService.case.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            tenantId,
-            assignedToId: userId,
-          }),
-        })
+            assignedToId: userId }) })
       );
     });
 
@@ -163,14 +143,12 @@ describe('CasesService', () => {
       mockPrismaService.case.findMany.mockResolvedValue([]);
       mockPrismaService.case.count.mockResolvedValue(0);
 
-      await service.findAll(tenantId, {}, userId, UserRole.ADMIN);
+      await service.findAll({}, userId, UserRole.ADMIN);
 
       expect(mockPrismaService.case.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            tenantId,
-          }),
-        })
+          }) })
       );
       // assignedToId should NOT be in where for ADMIN
       const call = mockPrismaService.case.findMany.mock.calls[0][0];
@@ -181,13 +159,12 @@ describe('CasesService', () => {
       mockPrismaService.case.findMany.mockResolvedValue([]);
       mockPrismaService.case.count.mockResolvedValue(100);
 
-      const result = await service.findAll(tenantId, { page: 3, limit: 20 });
+      const result = await service.findAll({ page: 3, limit: 20 });
 
       expect(mockPrismaService.case.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           skip: 40, // (3-1) * 20
-          take: 20,
-        })
+          take: 20 })
       );
       expect(result.meta.totalPages).toBe(5); // 100 / 20
     });
@@ -201,11 +178,10 @@ describe('CasesService', () => {
         hearings: [],
         documents: [],
         invoices: [],
-        createdBy: { id: userId, name: 'Creator' },
-      };
+        createdBy: { id: userId, name: 'Creator' } };
       mockPrismaService.case.findFirst.mockResolvedValue(caseWithRelations);
 
-      const result = await service.findOne('case-1', tenantId);
+      const result = await service.findOne('case-1');
 
       expect(result).toHaveProperty('data');
       expect(result.data.id).toBe('case-1');
@@ -214,8 +190,8 @@ describe('CasesService', () => {
     it('should throw NotFoundException for non-existent case', async () => {
       mockPrismaService.case.findFirst.mockResolvedValue(null);
 
-      await expect(service.findOne('non-existent', tenantId)).rejects.toThrow(NotFoundException);
-      await expect(service.findOne('non-existent', tenantId)).rejects.toThrow('القضية غير موجودة');
+      await expect(service.findOne('non-existent')).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('non-existent')).rejects.toThrow('القضية غير موجودة');
     });
 
     it('should throw ForbiddenException for LAWYER accessing other\'s case', async () => {
@@ -223,10 +199,10 @@ describe('CasesService', () => {
       mockPrismaService.case.findFirst.mockResolvedValue(otherUserCase);
 
       await expect(
-        service.findOne('case-1', tenantId, userId, UserRole.LAWYER)
+        service.findOne('case-1', userId, UserRole.LAWYER)
       ).rejects.toThrow(ForbiddenException);
       await expect(
-        service.findOne('case-1', tenantId, userId, UserRole.LAWYER)
+        service.findOne('case-1', userId, UserRole.LAWYER)
       ).rejects.toThrow('لا تملك صلاحية الوصول لهذه القضية');
     });
 
@@ -236,11 +212,10 @@ describe('CasesService', () => {
         hearings: [],
         documents: [],
         invoices: [],
-        createdBy: { id: userId, name: 'Creator' },
-      };
+        createdBy: { id: userId, name: 'Creator' } };
       mockPrismaService.case.findFirst.mockResolvedValue(caseWithRelations);
 
-      const result = await service.findOne('case-1', tenantId, userId, UserRole.LAWYER);
+      const result = await service.findOne('case-1', userId, UserRole.LAWYER);
 
       expect(result.data.id).toBe('case-1');
     });
@@ -252,8 +227,7 @@ describe('CasesService', () => {
       title: 'قضية جديدة',
       caseType: CaseType.CIVIL,
       clientId: 'client-1',
-      priority: CasePriority.HIGH,
-    };
+      priority: CasePriority.HIGH };
 
     it('should create case with auto-generated number', async () => {
       // Mock for generateCaseNumber
@@ -261,10 +235,9 @@ describe('CasesService', () => {
       mockPrismaService.case.create.mockResolvedValue({
         ...mockCase,
         ...createDto,
-        caseNumber: '2024/006',
-      });
+        caseNumber: '2024/006' });
 
-      const result = await service.create(createDto as any, tenantId, userId);
+      const result = await service.create(createDto as any, userId);
 
       expect(result).toHaveProperty('data');
       expect(result).toHaveProperty('message', 'تم إنشاء القضية بنجاح');
@@ -274,41 +247,36 @@ describe('CasesService', () => {
     it('should send notification when assigned to different user', async () => {
       const dtoWithAssignee = {
         ...createDto,
-        assignedToId: 'other-lawyer',
-      };
+        assignedToId: 'other-lawyer' };
 
       mockPrismaService.$queryRaw.mockResolvedValue([{ count: BigInt(5) }]);
       mockPrismaService.case.create.mockResolvedValue({
         ...mockCase,
         ...dtoWithAssignee,
-        caseNumber: '2024/006',
-      });
+        caseNumber: '2024/006' });
 
-      await service.create(dtoWithAssignee as any, tenantId, userId);
+      await service.create(dtoWithAssignee as any, userId);
 
       expect(mockNotificationsService.create).toHaveBeenCalledWith(
         expect.objectContaining({
           userId: 'other-lawyer',
-          tenantId,
-          type: 'INFO',
-        })
+
+          type: 'INFO' })
       );
     });
 
     it('should NOT send notification when assigned to self', async () => {
       const dtoWithSelf = {
         ...createDto,
-        assignedToId: userId,
-      };
+        assignedToId: userId };
 
       mockPrismaService.$queryRaw.mockResolvedValue([{ count: BigInt(5) }]);
       mockPrismaService.case.create.mockResolvedValue({
         ...mockCase,
         ...dtoWithSelf,
-        caseNumber: '2024/006',
-      });
+        caseNumber: '2024/006' });
 
-      await service.create(dtoWithSelf as any, tenantId, userId);
+      await service.create(dtoWithSelf as any, userId);
 
       expect(mockNotificationsService.create).not.toHaveBeenCalled();
     });
@@ -318,29 +286,27 @@ describe('CasesService', () => {
   describe('update', () => {
     const updateDto = {
       title: 'عنوان محدث',
-      status: CaseStatus.IN_PROGRESS,
-    };
+      status: CaseStatus.IN_PROGRESS };
 
     it('should update case', async () => {
       mockPrismaService.case.findFirst.mockResolvedValue(mockCase);
       mockPrismaService.case.update.mockResolvedValue({ ...mockCase, ...updateDto });
 
-      const result = await service.update('case-1', updateDto as any, tenantId);
+      const result = await service.update('case-1', updateDto as any);
 
       expect(result).toHaveProperty('data');
       expect(result).toHaveProperty('message', 'تم تحديث القضية بنجاح');
       expect(mockPrismaService.case.update).toHaveBeenCalledWith({
         where: { id: 'case-1' },
         data: updateDto,
-        include: expect.any(Object),
-      });
+        include: expect.any(Object) });
     });
 
     it('should throw NotFoundException for non-existent case', async () => {
       mockPrismaService.case.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.update('non-existent', updateDto as any, tenantId)
+        service.update('non-existent', updateDto as any)
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -349,7 +315,7 @@ describe('CasesService', () => {
       mockPrismaService.case.findFirst.mockResolvedValue(otherUserCase);
 
       await expect(
-        service.update('case-1', updateDto as any, tenantId, userId, UserRole.LAWYER)
+        service.update('case-1', updateDto as any, userId, UserRole.LAWYER)
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -357,7 +323,7 @@ describe('CasesService', () => {
       mockPrismaService.case.findFirst.mockResolvedValue(mockCase);
       mockPrismaService.case.update.mockResolvedValue({ ...mockCase, ...updateDto });
 
-      const result = await service.update('case-1', updateDto as any, tenantId, userId, UserRole.LAWYER);
+      const result = await service.update('case-1', updateDto as any, userId, UserRole.LAWYER);
 
       expect(result.message).toBe('تم تحديث القضية بنجاح');
     });
@@ -369,18 +335,17 @@ describe('CasesService', () => {
       mockPrismaService.case.findFirst.mockResolvedValue(mockCase);
       mockPrismaService.case.delete.mockResolvedValue(mockCase);
 
-      const result = await service.remove('case-1', tenantId);
+      const result = await service.remove('case-1');
 
       expect(result).toEqual({ message: 'تم حذف القضية بنجاح' });
       expect(mockPrismaService.case.delete).toHaveBeenCalledWith({
-        where: { id: 'case-1' },
-      });
+        where: { id: 'case-1' } });
     });
 
     it('should throw NotFoundException for non-existent case', async () => {
       mockPrismaService.case.findFirst.mockResolvedValue(null);
 
-      await expect(service.remove('non-existent', tenantId)).rejects.toThrow(NotFoundException);
+      await expect(service.remove('non-existent')).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -393,7 +358,7 @@ describe('CasesService', () => {
         { status: 'CLOSED', _count: { _all: 30 } },
       ]);
 
-      const result = await service.getStats(tenantId);
+      const result = await service.getStats();
 
       expect(result).toHaveProperty('data');
       expect(mockPrismaService.case.count).toHaveBeenCalled();
@@ -403,15 +368,12 @@ describe('CasesService', () => {
       mockPrismaService.case.count.mockResolvedValue(10);
       mockPrismaService.case.groupBy.mockResolvedValue([]);
 
-      await service.getStats(tenantId, userId, UserRole.LAWYER);
+      await service.getStats(userId, UserRole.LAWYER);
 
       expect(mockPrismaService.case.count).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            tenantId,
-            assignedToId: userId,
-          }),
-        })
+            assignedToId: userId }) })
       );
     });
   });

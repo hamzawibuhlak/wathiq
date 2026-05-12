@@ -20,8 +20,8 @@ export class FormsService {
     // CREATE FORM
     // ══════════════════════════════════════════════════════════
 
-    async create(tenantId: string, userId: string, data: any) {
-        const codeData = await this.entityCodeService.generateFlatCode(tenantId, 'form');
+    async create(userId: string, data: any) {
+        const codeData = await this.entityCodeService.generateFlatCode('form');
 
         const slug = this.generateSlug(data.title);
         const uniqueSlug = await this.ensureUniqueSlug(slug);
@@ -48,7 +48,7 @@ export class FormsService {
                 notifyEmails: data.notifyEmails || [],
                 successMessage: data.successMessage || 'شكراً لك! تم إرسال النموذج بنجاح',
                 redirectUrl: data.redirectUrl || null,
-                tenantId,
+
                 createdBy: userId,
                 caseId: data.caseId || null,
                 allowedUsers: data.allowedUserIds?.length
@@ -66,16 +66,11 @@ export class FormsService {
                         validation: field.validation || undefined,
                         options: field.options || undefined,
                         conditionalShow: field.conditionalShow || undefined,
-                        fileSettings: field.fileSettings || undefined,
-                    })),
-                },
-            },
+                        fileSettings: field.fileSettings || undefined })) } },
             include: {
                 fields: { orderBy: { order: 'asc' } },
                 allowedUsers: { select: { id: true, name: true, email: true, avatar: true } },
-                _count: { select: { submissions: true } },
-            },
-        });
+                _count: { select: { submissions: true } } } });
 
         return form;
     }
@@ -84,14 +79,12 @@ export class FormsService {
     // GET ALL FORMS (permission-filtered)
     // ══════════════════════════════════════════════════════════
 
-    async findAll(tenantId: string, userId: string, filters?: any) {
+    async findAll(userId: string, filters?: any) {
         const where: any = {
-            tenantId,
             OR: [
                 { createdBy: userId },
                 { allowedUsers: { some: { id: userId } } },
-            ],
-        };
+            ] };
 
         if (filters?.search) {
             where.AND = [
@@ -99,8 +92,7 @@ export class FormsService {
                     OR: [
                         { title: { contains: filters.search, mode: 'insensitive' } },
                         { description: { contains: filters.search, mode: 'insensitive' } },
-                    ],
-                },
+                    ] },
             ];
         }
 
@@ -118,26 +110,22 @@ export class FormsService {
                 _count: { select: { submissions: true } },
                 creator: { select: { id: true, name: true, avatar: true } },
                 case: { select: { id: true, code: true, title: true } },
-                allowedUsers: { select: { id: true, name: true, avatar: true } },
-            },
-            orderBy: { createdAt: 'desc' },
-        });
+                allowedUsers: { select: { id: true, name: true, avatar: true } } },
+            orderBy: { createdAt: 'desc' } });
     }
 
     // ══════════════════════════════════════════════════════════
     // GET FORM BY ID (for editing)
     // ══════════════════════════════════════════════════════════
 
-    async findById(id: string, tenantId: string, userId: string) {
+    async findById(id: string, userId: string) {
         const form = await this.prisma.form.findFirst({
-            where: { id, tenantId },
+            where: { id },
             include: {
                 fields: { orderBy: { order: 'asc' } },
                 _count: { select: { submissions: true } },
                 creator: { select: { id: true, name: true } },
-                allowedUsers: { select: { id: true, name: true, email: true, avatar: true } },
-            },
-        });
+                allowedUsers: { select: { id: true, name: true, email: true, avatar: true } } } });
 
         if (!form) throw new NotFoundException('النموذج غير موجود');
 
@@ -159,9 +147,7 @@ export class FormsService {
             where: { slug },
             include: {
                 fields: { orderBy: { order: 'asc' } },
-                tenant: { select: { name: true, logo: true } },
-            },
-        });
+                tenant: { select: { name: true, logo: true } } } });
 
         if (!form) throw new NotFoundException('النموذج غير موجود');
         if (!form.isActive) throw new BadRequestException('النموذج غير مفعّل');
@@ -175,11 +161,10 @@ export class FormsService {
     // UPDATE FORM
     // ══════════════════════════════════════════════════════════
 
-    async update(id: string, tenantId: string, userId: string, data: any) {
+    async update(id: string, userId: string, data: any) {
         const form = await this.prisma.form.findFirst({
-            where: { id, tenantId },
-            include: { allowedUsers: { select: { id: true } } },
-        });
+            where: { id },
+            include: { allowedUsers: { select: { id: true } } } });
 
         if (!form) throw new NotFoundException('النموذج غير موجود');
 
@@ -213,32 +198,23 @@ export class FormsService {
                             validation: field.validation || undefined,
                             options: field.options || undefined,
                             conditionalShow: field.conditionalShow || undefined,
-                            fileSettings: field.fileSettings || undefined,
-                        })),
-                    },
-                }),
+                            fileSettings: field.fileSettings || undefined })) } }),
                 ...(allowedUserIds && {
                     allowedUsers: {
-                        set: allowedUserIds.map((uid: string) => ({ id: uid })),
-                    },
-                }),
-            },
+                        set: allowedUserIds.map((uid: string) => ({ id: uid })) } }) },
             include: {
                 fields: { orderBy: { order: 'asc' } },
                 allowedUsers: { select: { id: true, name: true, email: true, avatar: true } },
-                _count: { select: { submissions: true } },
-            },
-        });
+                _count: { select: { submissions: true } } } });
     }
 
     // ══════════════════════════════════════════════════════════
     // MANAGE ACCESS
     // ══════════════════════════════════════════════════════════
 
-    async manageAccess(id: string, tenantId: string, userId: string, data: { add?: string[]; remove?: string[] }) {
+    async manageAccess(id: string, userId: string, data: { add?: string[]; remove?: string[] }) {
         const form = await this.prisma.form.findFirst({
-            where: { id, tenantId },
-        });
+            where: { id } });
         if (!form) throw new NotFoundException('النموذج غير موجود');
         if (form.createdBy !== userId) {
             throw new ForbiddenException('فقط منشئ النموذج يمكنه إدارة الصلاحيات');
@@ -249,23 +225,18 @@ export class FormsService {
             data: {
                 allowedUsers: {
                     ...(data.add?.length && { connect: data.add.map(uid => ({ id: uid })) }),
-                    ...(data.remove?.length && { disconnect: data.remove.map(uid => ({ id: uid })) }),
-                },
-            },
+                    ...(data.remove?.length && { disconnect: data.remove.map(uid => ({ id: uid })) }) } },
             include: {
-                allowedUsers: { select: { id: true, name: true, email: true, avatar: true } },
-            },
-        });
+                allowedUsers: { select: { id: true, name: true, email: true, avatar: true } } } });
     }
 
     // ══════════════════════════════════════════════════════════
     // DELETE FORM (cascade: answers -> submissions -> tokens -> form)
     // ══════════════════════════════════════════════════════════
 
-    async delete(id: string, tenantId: string, userId: string) {
+    async delete(id: string, userId: string) {
         const form = await this.prisma.form.findFirst({
-            where: { id, tenantId },
-        });
+            where: { id } });
         if (!form) throw new NotFoundException('النموذج غير موجود');
         if (form.createdBy !== userId) {
             throw new ForbiddenException('فقط منشئ النموذج يمكنه حذفه');
@@ -274,8 +245,7 @@ export class FormsService {
         await this.prisma.$transaction(async tx => {
             const subs = await tx.formSubmission.findMany({
                 where: { formId: id },
-                select: { id: true },
-            });
+                select: { id: true } });
             const subIds = subs.map(s => s.id);
             if (subIds.length) {
                 // Answers cascade-delete via FK, but cascading through answers to notes/discussions is fine too.
@@ -297,8 +267,7 @@ export class FormsService {
     async submitForm(slug: string, data: any, metadata: any) {
         const form = await this.prisma.form.findUnique({
             where: { slug },
-            include: { fields: true },
-        });
+            include: { fields: true } });
 
         if (!form || !form.isActive) {
             throw new BadRequestException('النموذج غير متاح');
@@ -315,8 +284,7 @@ export class FormsService {
         // Check duplicate submissions
         if (!form.allowMultiple && data.submitterEmail) {
             const exists = await this.prisma.formSubmission.findFirst({
-                where: { formId: form.id, submitterEmail: data.submitterEmail },
-            });
+                where: { formId: form.id, submitterEmail: data.submitterEmail } });
             if (exists) {
                 throw new BadRequestException('لقد قمت بتعبئة هذا النموذج مسبقاً');
             }
@@ -348,32 +316,25 @@ export class FormsService {
                 answers: {
                     create: Object.entries(data.answers || {}).map(([fieldId, value]) => ({
                         fieldId,
-                        ...this.formatAnswerValue(value),
-                    })),
-                },
-            },
+                        ...this.formatAnswerValue(value) })) } },
             include: {
-                answers: { include: { field: true } },
-            },
-        });
+                answers: { include: { field: true } } } });
 
         return {
             success: true,
             submissionCode: submission.code,
             message: form.successMessage,
-            redirectUrl: form.redirectUrl,
-        };
+            redirectUrl: form.redirectUrl };
     }
 
     // ══════════════════════════════════════════════════════════
     // GET SUBMISSIONS — permission-filtered per answer
     // ══════════════════════════════════════════════════════════
 
-    async getSubmissions(formId: string, tenantId: string, userId: string, filters?: any) {
+    async getSubmissions(formId: string, userId: string, filters?: any) {
         const form = await this.prisma.form.findFirst({
-            where: { id: formId, tenantId },
-            include: { allowedUsers: { select: { id: true } } },
-        });
+            where: { id: formId },
+            include: { allowedUsers: { select: { id: true } } } });
 
         if (!form) throw new NotFoundException('النموذج غير موجود');
 
@@ -406,24 +367,17 @@ export class FormsService {
                         visibleToUsers: { select: { id: true, name: true, avatar: true } },
                         notes: {
                             include: { author: { select: { id: true, name: true, avatar: true } } },
-                            orderBy: { createdAt: 'desc' },
-                        },
+                            orderBy: { createdAt: 'desc' } },
                         discussion: {
                             include: {
                                 participants: { select: { id: true, name: true, avatar: true } },
-                                _count: { select: { messages: true } },
-                            },
-                        },
-                    },
-                },
+                                _count: { select: { messages: true } } } } } },
                 linkedClient: { select: { id: true, name: true, code: true } },
                 linkedCase: { select: { id: true, title: true, code: true } },
                 linkedHearing: { select: { id: true, code: true, hearingDate: true } },
                 convertedToClient: { select: { id: true, name: true, code: true } },
-                convertedToCase: { select: { id: true, title: true, code: true } },
-            },
-            orderBy: { submittedAt: 'desc' },
-        });
+                convertedToCase: { select: { id: true, title: true, code: true } } },
+            orderBy: { submittedAt: 'desc' } });
 
         // Post-filter answer visibility: non-creators only see answers whose
         // visibleToUsers is empty (inherit form access) or contains userId.
@@ -446,13 +400,11 @@ export class FormsService {
 
     async updateSubmissionStatus(
         submissionId: string,
-        tenantId: string,
         userId: string,
         data: { status: string; notes?: string },
     ) {
         const submission = await this.prisma.formSubmission.findFirst({
-            where: { id: submissionId, form: { tenantId } },
-        });
+            where: { id: submissionId, form: {} } });
 
         if (!submission) throw new NotFoundException('الإجابة غير موجودة');
 
@@ -462,20 +414,17 @@ export class FormsService {
                 status: data.status,
                 notes: data.notes,
                 reviewedBy: userId,
-                reviewedAt: new Date(),
-            },
+                reviewedAt: new Date() },
             include: {
-                answers: { include: { field: true } },
-            },
-        });
+                answers: { include: { field: true } } } });
     }
 
     // ══════════════════════════════════════════════════════════
     // PER-ANSWER VISIBILITY
     // ══════════════════════════════════════════════════════════
 
-    async setAnswerVisibility(answerId: string, tenantId: string, userId: string, userIds: string[]) {
-        const ctx = await this.assertAnswerCreatorAccess(answerId, tenantId, userId);
+    async setAnswerVisibility(answerId: string, userId: string, userIds: string[]) {
+        const ctx = await this.assertAnswerCreatorAccess(answerId, userId);
         if (!ctx.isFormCreator) {
             throw new ForbiddenException('فقط منشئ النموذج يمكنه تغيير صلاحية الاطلاع على الإجابة');
         }
@@ -484,13 +433,9 @@ export class FormsService {
             where: { id: answerId },
             data: {
                 visibleToUsers: {
-                    set: userIds.map(id => ({ id })),
-                },
-            },
+                    set: userIds.map(id => ({ id })) } },
             include: {
-                visibleToUsers: { select: { id: true, name: true, avatar: true } },
-            },
-        });
+                visibleToUsers: { select: { id: true, name: true, avatar: true } } } });
     }
 
     // ══════════════════════════════════════════════════════════
@@ -499,14 +444,12 @@ export class FormsService {
 
     async generateOtp(
         formId: string,
-        tenantId: string,
         userId: string,
         data: { recipientEmail?: string; recipientPhone?: string; deliveryMethod?: string },
     ) {
         const form = await this.prisma.form.findFirst({
-            where: { id: formId, tenantId },
-            include: { tenant: true },
-        });
+            where: { id: formId },
+            include: { tenant: true } });
         if (!form) throw new NotFoundException('النموذج غير موجود');
         if (!form.otpEnabled) {
             throw new BadRequestException('كلمات المرور لمرة واحدة غير مفعّلة لهذا النموذج');
@@ -526,9 +469,7 @@ export class FormsService {
                 recipientPhone: data.recipientPhone || null,
                 deliveryMethod,
                 expiresAt,
-                createdBy: userId,
-            },
-        });
+                createdBy: userId } });
 
         // Deliver
         const appUrl = process.env.APP_URL || 'https://app.bewathiq.com';
@@ -541,16 +482,12 @@ export class FormsService {
                 const res = await this.emailService.sendEmail({
                     to: data.recipientEmail,
                     subject: `رمز الدخول للنموذج: ${form.title}`,
-                    body: `<p>${message.replace(/\n/g, '<br>')}</p>`,
-                    tenantId,
-                });
+                    body: `<p>${message.replace(/\n/g, '<br>')}</p>` });
                 delivered = res.success;
             } else if ((deliveryMethod === 'whatsapp' || deliveryMethod === 'sms') && data.recipientPhone) {
                 await this.whatsappService.sendTextMessage({
                     to: data.recipientPhone,
-                    body: message,
-                    tenantId,
-                });
+                    body: message });
                 delivered = true;
             }
         } catch (err) {
@@ -561,8 +498,7 @@ export class FormsService {
         if (delivered) {
             await this.prisma.formAccessToken.update({
                 where: { id: token.id },
-                data: { deliveredAt: new Date() },
-            });
+                data: { deliveredAt: new Date() } });
         }
 
         return {
@@ -571,8 +507,7 @@ export class FormsService {
             deliveryMethod,
             delivered,
             expiresAt,
-            formUrl,
-        };
+            formUrl };
     }
 
     async verifyOtp(slug: string, code: string) {
@@ -583,8 +518,7 @@ export class FormsService {
         const tokens = await this.prisma.formAccessToken.findMany({
             where: { formId: form.id, usedAt: null, expiresAt: { gt: new Date() } },
             orderBy: { createdAt: 'desc' },
-            take: 20,
-        });
+            take: 20 });
         for (const t of tokens) {
             if (await bcrypt.compare(code, t.codeHash)) {
                 return { valid: true };
@@ -597,14 +531,12 @@ export class FormsService {
         const tokens = await this.prisma.formAccessToken.findMany({
             where: { formId, usedAt: null, expiresAt: { gt: new Date() } },
             orderBy: { createdAt: 'desc' },
-            take: 50,
-        });
+            take: 50 });
         for (const t of tokens) {
             if (await bcrypt.compare(code, t.codeHash)) {
                 await this.prisma.formAccessToken.update({
                     where: { id: t.id },
-                    data: { usedAt: new Date(), usedByIp: ip || null },
-                });
+                    data: { usedAt: new Date(), usedByIp: ip || null } });
                 return;
             }
         }
@@ -626,14 +558,12 @@ export class FormsService {
 
     async linkSubmission(
         submissionId: string,
-        tenantId: string,
         userId: string,
         data: { clientId?: string | null; caseId?: string | null; hearingId?: string | null },
     ) {
         const submission = await this.prisma.formSubmission.findFirst({
-            where: { id: submissionId, form: { tenantId } },
-            include: { form: { include: { allowedUsers: { select: { id: true } } } } },
-        });
+            where: { id: submissionId, form: {} },
+            include: { form: { include: { allowedUsers: { select: { id: true } } } } } });
         if (!submission) throw new NotFoundException('الإجابة غير موجودة');
 
         const isCreator = submission.form.createdBy === userId;
@@ -647,25 +577,21 @@ export class FormsService {
             data: {
                 linkedClientId: data.clientId ?? null,
                 linkedCaseId: data.caseId ?? null,
-                linkedHearingId: data.hearingId ?? null,
-            },
+                linkedHearingId: data.hearingId ?? null },
             include: {
                 linkedClient: { select: { id: true, name: true, code: true } },
                 linkedCase: { select: { id: true, title: true, code: true } },
-                linkedHearing: { select: { id: true, code: true, hearingDate: true } },
-            },
-        });
+                linkedHearing: { select: { id: true, code: true, hearingDate: true } } } });
     }
 
     // ══════════════════════════════════════════════════════════
     // CONVERT SUBMISSION → NEW CLIENT
     // ══════════════════════════════════════════════════════════
 
-    async convertToClient(submissionId: string, tenantId: string, userId: string) {
+    async convertToClient(submissionId: string, userId: string) {
         const submission = await this.prisma.formSubmission.findFirst({
-            where: { id: submissionId, form: { tenantId } },
-            include: { answers: { include: { field: true } } },
-        });
+            where: { id: submissionId, form: {} },
+            include: { answers: { include: { field: true } } } });
         if (!submission) throw new NotFoundException('الإجابة غير موجودة');
         if (submission.convertedToClientId) {
             throw new BadRequestException('هذه الإجابة تم تحويلها لعميل مسبقاً');
@@ -674,7 +600,7 @@ export class FormsService {
         const mapped = this.mapAnswersToEntity(submission.answers);
         const name = mapped.name || submission.submitterName || `عميل من نموذج ${submission.code}`;
 
-        const codeData = await this.entityCodeService.generateClientCode(tenantId);
+        const codeData = await this.entityCodeService.generateClientCode();
 
         const client = await this.prisma.client.create({
             data: {
@@ -687,15 +613,12 @@ export class FormsService {
                 notes: mapped.notes || `تم الإنشاء من إجابة نموذج ${submission.code}`,
                 code: codeData.code,
                 codeNumber: codeData.codeNumber,
-                tenantId,
-                visibleToUsers: { connect: [{ id: userId }] },
-            },
-        });
+
+                visibleToUsers: { connect: [{ id: userId }] } } });
 
         await this.prisma.formSubmission.update({
             where: { id: submissionId },
-            data: { convertedToClientId: client.id, linkedClientId: client.id },
-        });
+            data: { convertedToClientId: client.id, linkedClientId: client.id } });
 
         return client;
     }
@@ -706,14 +629,12 @@ export class FormsService {
 
     async convertToCase(
         submissionId: string,
-        tenantId: string,
         userId: string,
         data: { clientId?: string },
     ) {
         const submission = await this.prisma.formSubmission.findFirst({
-            where: { id: submissionId, form: { tenantId } },
-            include: { answers: { include: { field: true } } },
-        });
+            where: { id: submissionId, form: {} },
+            include: { answers: { include: { field: true } } } });
         if (!submission) throw new NotFoundException('الإجابة غير موجودة');
         if (submission.convertedToCaseId) {
             throw new BadRequestException('هذه الإجابة تم تحويلها لقضية مسبقاً');
@@ -721,7 +642,7 @@ export class FormsService {
 
         let clientId = data.clientId || submission.linkedClientId || submission.convertedToClientId;
         if (!clientId) {
-            const client = await this.convertToClient(submissionId, tenantId, userId);
+            const client = await this.convertToClient(submissionId, userId);
             clientId = client.id;
         }
 
@@ -732,10 +653,9 @@ export class FormsService {
 
         // Tenant-scoped sequential caseNumber
         const lastCase = await this.prisma.case.findFirst({
-            where: { tenantId },
+            where: {},
             orderBy: { createdAt: 'desc' },
-            select: { caseNumber: true },
-        });
+            select: { caseNumber: true } });
         const nextNumber = (parseInt(lastCase?.caseNumber?.replace(/\D/g, '') || '0', 10) || 0) + 1;
 
         const caseRec = await this.prisma.case.create({
@@ -747,18 +667,15 @@ export class FormsService {
                 description: mapped.description || mapped.notes || null,
                 courtName: mapped.courtName || null,
                 courtCaseNumber: mapped.courtCaseNumber || null,
-                tenantId,
+
                 clientId,
                 createdById: userId,
                 assignedToId: userId,
-                notes: `تم الإنشاء من إجابة نموذج ${submission.code}`,
-            },
-        });
+                notes: `تم الإنشاء من إجابة نموذج ${submission.code}` } });
 
         await this.prisma.formSubmission.update({
             where: { id: submissionId },
-            data: { convertedToCaseId: caseRec.id, linkedCaseId: caseRec.id },
-        });
+            data: { convertedToCaseId: caseRec.id, linkedCaseId: caseRec.id } });
 
         return caseRec;
     }
@@ -791,32 +708,29 @@ export class FormsService {
     // ANSWER NOTES
     // ══════════════════════════════════════════════════════════
 
-    async addAnswerNote(answerId: string, tenantId: string, userId: string, content: string) {
-        await this.assertAnswerVisibility(answerId, tenantId, userId);
+    async addAnswerNote(answerId: string, userId: string, content: string) {
+        await this.assertAnswerVisibility(answerId, userId);
         if (!content?.trim()) throw new BadRequestException('الملاحظة فارغة');
 
         return this.prisma.formAnswerNote.create({
-            data: { answerId, authorId: userId, tenantId, content: content.trim() },
-            include: { author: { select: { id: true, name: true, avatar: true } } },
-        });
+            data: { answerId, authorId: userId, content: content.trim() },
+            include: { author: { select: { id: true, name: true, avatar: true } } } });
     }
 
-    async listAnswerNotes(answerId: string, tenantId: string, userId: string) {
-        await this.assertAnswerVisibility(answerId, tenantId, userId);
+    async listAnswerNotes(answerId: string, userId: string) {
+        await this.assertAnswerVisibility(answerId, userId);
         return this.prisma.formAnswerNote.findMany({
-            where: { answerId, tenantId },
+            where: { answerId },
             include: { author: { select: { id: true, name: true, avatar: true } } },
-            orderBy: { createdAt: 'desc' },
-        });
+            orderBy: { createdAt: 'desc' } });
     }
 
-    async deleteAnswerNote(answerId: string, noteId: string, tenantId: string, userId: string) {
+    async deleteAnswerNote(answerId: string, noteId: string, userId: string) {
         const note = await this.prisma.formAnswerNote.findFirst({
-            where: { id: noteId, answerId, tenantId },
-        });
+            where: { id: noteId, answerId } });
         if (!note) throw new NotFoundException('الملاحظة غير موجودة');
 
-        const ctx = await this.assertAnswerVisibility(answerId, tenantId, userId);
+        const ctx = await this.assertAnswerVisibility(answerId, userId);
         if (note.authorId !== userId && !ctx.isFormCreator) {
             throw new ForbiddenException('لا يمكنك حذف ملاحظة ليست لك');
         }
@@ -830,15 +744,13 @@ export class FormsService {
 
     async startDiscussion(
         answerId: string,
-        tenantId: string,
         userId: string,
         data: { inviteeIds?: string[]; message?: string },
     ) {
-        const ctx = await this.assertAnswerVisibility(answerId, tenantId, userId);
+        const ctx = await this.assertAnswerVisibility(answerId, userId);
 
         const existing = await this.prisma.formAnswerDiscussion.findUnique({
-            where: { answerId },
-        });
+            where: { answerId } });
         if (existing) return existing;
 
         const participants = new Set<string>([userId, ...(data.inviteeIds || [])]);
@@ -848,33 +760,26 @@ export class FormsService {
         const discussion = await this.prisma.formAnswerDiscussion.create({
             data: {
                 answerId,
-                tenantId,
+
                 createdBy: userId,
                 participants: { connect: Array.from(participants).map(id => ({ id })) },
                 ...(data.message?.trim() && {
                     messages: {
-                        create: { authorId: userId, content: data.message.trim() },
-                    },
-                }),
-            },
+                        create: { authorId: userId, content: data.message.trim() } } }) },
             include: {
                 participants: { select: { id: true, name: true, avatar: true } },
                 messages: {
                     include: { author: { select: { id: true, name: true, avatar: true } } },
-                    orderBy: { createdAt: 'asc' },
-                },
-            },
-        });
+                    orderBy: { createdAt: 'asc' } } } });
 
         return discussion;
     }
 
-    async addDiscussionMessage(discussionId: string, tenantId: string, userId: string, content: string) {
+    async addDiscussionMessage(discussionId: string, userId: string, content: string) {
         if (!content?.trim()) throw new BadRequestException('الرسالة فارغة');
         const discussion = await this.prisma.formAnswerDiscussion.findFirst({
-            where: { id: discussionId, tenantId },
-            include: { participants: { select: { id: true } }, answer: { include: { submission: { include: { form: { select: { createdBy: true } } } } } } },
-        });
+            where: { id: discussionId },
+            include: { participants: { select: { id: true } }, answer: { include: { submission: { include: { form: { select: { createdBy: true } } } } } } } });
         if (!discussion) throw new NotFoundException('المناقشة غير موجودة');
 
         const isParticipant = discussion.participants.some(p => p.id === userId);
@@ -885,15 +790,13 @@ export class FormsService {
 
         return this.prisma.formAnswerMessage.create({
             data: { discussionId, authorId: userId, content: content.trim() },
-            include: { author: { select: { id: true, name: true, avatar: true } } },
-        });
+            include: { author: { select: { id: true, name: true, avatar: true } } } });
     }
 
-    async inviteToDiscussion(discussionId: string, tenantId: string, userId: string, inviteeIds: string[]) {
+    async inviteToDiscussion(discussionId: string, userId: string, inviteeIds: string[]) {
         const discussion = await this.prisma.formAnswerDiscussion.findFirst({
-            where: { id: discussionId, tenantId },
-            include: { answer: { include: { submission: { include: { form: { select: { createdBy: true } } } } } } },
-        });
+            where: { id: discussionId },
+            include: { answer: { include: { submission: { include: { form: { select: { createdBy: true } } } } } } } });
         if (!discussion) throw new NotFoundException('المناقشة غير موجودة');
 
         const isFormCreator = discussion.answer.submission.form.createdBy === userId;
@@ -905,22 +808,18 @@ export class FormsService {
         return this.prisma.formAnswerDiscussion.update({
             where: { id: discussionId },
             data: { participants: { connect: inviteeIds.map(id => ({ id })) } },
-            include: { participants: { select: { id: true, name: true, avatar: true } } },
-        });
+            include: { participants: { select: { id: true, name: true, avatar: true } } } });
     }
 
-    async getDiscussion(discussionId: string, tenantId: string, userId: string) {
+    async getDiscussion(discussionId: string, userId: string) {
         const discussion = await this.prisma.formAnswerDiscussion.findFirst({
-            where: { id: discussionId, tenantId },
+            where: { id: discussionId },
             include: {
                 participants: { select: { id: true, name: true, avatar: true } },
                 messages: {
                     include: { author: { select: { id: true, name: true, avatar: true } } },
-                    orderBy: { createdAt: 'asc' },
-                },
-                answer: { include: { submission: { include: { form: { select: { createdBy: true, title: true } } } } } },
-            },
-        });
+                    orderBy: { createdAt: 'asc' } },
+                answer: { include: { submission: { include: { form: { select: { createdBy: true, title: true } } } } } } } });
         if (!discussion) throw new NotFoundException('المناقشة غير موجودة');
 
         const isParticipant = discussion.participants.some(p => p.id === userId);
@@ -936,12 +835,10 @@ export class FormsService {
     // EDITOR INTEGRATION: answers for a case/client scoped to user
     // ══════════════════════════════════════════════════════════
 
-    async getAnswersForEditor(
-        tenantId: string,
-        userId: string,
+    async getAnswersForEditor(userId: string,
         filters: { caseId?: string; clientId?: string },
     ) {
-        const where: any = { form: { tenantId } };
+        const where: any = { form: {} };
         if (filters.caseId) where.linkedCaseId = filters.caseId;
         else if (filters.clientId) where.linkedClientId = filters.clientId;
         else throw new BadRequestException('يجب تحديد قضية أو عميل');
@@ -953,12 +850,8 @@ export class FormsService {
                 answers: {
                     include: {
                         field: { select: { id: true, label: true, type: true } },
-                        visibleToUsers: { select: { id: true } },
-                    },
-                },
-            },
-            orderBy: { submittedAt: 'desc' },
-        });
+                        visibleToUsers: { select: { id: true } } } } },
+            orderBy: { submittedAt: 'desc' } });
 
         // Filter forms and answers by permissions
         return submissions
@@ -983,9 +876,7 @@ export class FormsService {
                         fieldId: a.fieldId,
                         label: a.field.label,
                         type: a.field.type,
-                        value: a.valueText ?? a.valueNumber ?? a.valueDate ?? a.valueBoolean ?? a.valueJson,
-                    })),
-                };
+                        value: a.valueText ?? a.valueNumber ?? a.valueDate ?? a.valueBoolean ?? a.valueJson })) };
             });
     }
 
@@ -993,20 +884,15 @@ export class FormsService {
     // HELPERS
     // ══════════════════════════════════════════════════════════
 
-    private async assertAnswerVisibility(answerId: string, tenantId: string, userId: string) {
+    private async assertAnswerVisibility(answerId: string, userId: string) {
         const answer = await this.prisma.formFieldAnswer.findFirst({
-            where: { id: answerId, submission: { form: { tenantId } } },
+            where: { id: answerId, submission: { form: {} } },
             include: {
                 visibleToUsers: { select: { id: true } },
                 submission: {
                     include: {
                         form: {
-                            select: { createdBy: true, allowedUsers: { select: { id: true } } },
-                        },
-                    },
-                },
-            },
-        });
+                            select: { createdBy: true, allowedUsers: { select: { id: true } } } } } } } });
         if (!answer) throw new NotFoundException('الإجابة غير موجودة');
 
         const formCreatorId = answer.submission.form.createdBy;
@@ -1021,11 +907,10 @@ export class FormsService {
         return { isFormCreator, formCreatorId, isAllowed } as { isFormCreator: boolean; formCreatorId: string; isAllowed: boolean };
     }
 
-    private async assertAnswerCreatorAccess(answerId: string, tenantId: string, userId: string) {
+    private async assertAnswerCreatorAccess(answerId: string, userId: string) {
         const answer = await this.prisma.formFieldAnswer.findFirst({
-            where: { id: answerId, submission: { form: { tenantId } } },
-            include: { submission: { include: { form: { select: { createdBy: true } } } } },
-        });
+            where: { id: answerId, submission: { form: {} } },
+            include: { submission: { include: { form: { select: { createdBy: true } } } } } });
         if (!answer) throw new NotFoundException('الإجابة غير موجودة');
         const isFormCreator = answer.submission.form.createdBy === userId;
         return { isFormCreator, formCreatorId: answer.submission.form.createdBy };
@@ -1045,8 +930,7 @@ export class FormsService {
 
         while (true) {
             const existing = await this.prisma.form.findUnique({
-                where: { slug: uniqueSlug },
-            });
+                where: { slug: uniqueSlug } });
 
             if (!existing) break;
 
@@ -1061,8 +945,7 @@ export class FormsService {
         const lastSub = await this.prisma.formSubmission.findFirst({
             where: { formId },
             orderBy: { codeNumber: 'desc' },
-            select: { codeNumber: true },
-        });
+            select: { codeNumber: true } });
 
         const nextNumber = (lastSub?.codeNumber || 0) + 1;
         const code = `${formCode}_SUB${nextNumber.toString().padStart(5, '0')}`;

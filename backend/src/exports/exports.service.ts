@@ -6,9 +6,9 @@ import * as ExcelJS from 'exceljs';
 export class ExportsService {
   constructor(private prisma: PrismaService) {}
 
-  async exportCases(tenantId: string, filters?: any) {
+  async exportCases(filters?: any) {
     const { ids, ...otherFilters } = filters || {};
-    const whereClause: any = { tenantId, ...otherFilters };
+    const whereClause: any = { ...otherFilters };
     if (ids && ids.length > 0) {
       whereClause.id = { in: ids };
     }
@@ -98,9 +98,9 @@ export class ExportsService {
     return buffer;
   }
 
-  async exportInvoices(tenantId: string, filters?: any) {
+  async exportInvoices(filters?: any) {
     const { ids, ...otherFilters } = filters || {};
-    const whereClause: any = { tenantId, ...otherFilters };
+    const whereClause: any = { ...otherFilters };
     if (ids && ids.length > 0) {
       whereClause.id = { in: ids };
     }
@@ -177,9 +177,9 @@ export class ExportsService {
     return buffer;
   }
 
-  async exportClients(tenantId: string, filters?: any) {
+  async exportClients(filters?: any) {
     const { ids } = filters || {};
-    const whereClause: any = { tenantId };
+    const whereClause: any = {};
     if (ids && ids.length > 0) {
       whereClause.id = { in: ids };
     }
@@ -239,9 +239,9 @@ export class ExportsService {
     return buffer;
   }
 
-  async exportHearings(tenantId: string, filters?: any) {
+  async exportHearings(filters?: any) {
     const { ids, ...otherFilters } = filters || {};
-    const whereClause: any = { tenantId, ...otherFilters };
+    const whereClause: any = { ...otherFilters };
     if (ids && ids.length > 0) {
       whereClause.id = { in: ids };
     }
@@ -308,9 +308,7 @@ export class ExportsService {
     return buffer;
   }
 
-  async exportFinancialReport(
-    tenantId: string,
-    startDate: Date,
+  async exportFinancialReport(startDate: Date,
     endDate: Date,
   ) {
     // Validate and fix dates
@@ -327,7 +325,6 @@ export class ExportsService {
 
     const invoices = await this.prisma.invoice.findMany({
       where: {
-        tenantId,
         createdAt: {
           gte: validStartDate,
           lte: validEndDate,
@@ -436,8 +433,8 @@ export class ExportsService {
   }
 
   // ========== Documents Export ==========
-  async exportDocuments(tenantId: string, filters?: any) {
-    const whereClause: any = { tenantId };
+  async exportDocuments(filters?: any) {
+    const whereClause: any = {};
     
     if (filters?.caseId) {
       whereClause.caseId = filters.caseId;
@@ -528,8 +525,8 @@ export class ExportsService {
   }
 
   // ========== Tasks Export ==========
-  async exportTasks(tenantId: string, filters?: any) {
-    const whereClause: any = { tenantId };
+  async exportTasks(filters?: any) {
+    const whereClause: any = {};
     
     if (filters?.status) {
       whereClause.status = filters.status;

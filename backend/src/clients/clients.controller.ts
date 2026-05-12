@@ -1,21 +1,5 @@
-import {
-    Controller,
-    Get,
-    Post,
-    Patch,
-    Delete,
-    Body,
-    Param,
-    Query,
-    UseGuards,
-    ParseUUIDPipe,
-} from '@nestjs/common';
-import {
-    ApiTags,
-    ApiOperation,
-    ApiBearerAuth,
-    ApiResponse,
-} from '@nestjs/swagger';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards, ParseUUIDPipe } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { ClientsService } from './clients.service';
 import { CreateClientDto } from './dto/create-client.dto';
@@ -24,7 +8,7 @@ import { FilterClientsDto } from './dto/filter-clients.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
-import { TenantId } from '../common/decorators/tenant-id.decorator';
+
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 
 @ApiTags('Clients')
@@ -38,12 +22,12 @@ export class ClientsController {
     @ApiOperation({ summary: 'الحصول على جميع العملاء مع pagination و search' })
     @ApiResponse({ status: 200, description: 'قائمة العملاء' })
     async findAll(
-        @TenantId() tenantId: string,
+
         @Query() filterDto: FilterClientsDto,
         @CurrentUser('id') userId: string,
         @CurrentUser('role') userRole: string,
     ) {
-        return this.clientsService.findAll(tenantId, filterDto, userId, userRole);
+        return this.clientsService.findAll(filterDto, userId, userRole);
     }
 
     @Get(':id')
@@ -52,11 +36,11 @@ export class ClientsController {
     @ApiResponse({ status: 404, description: 'العميل غير موجود' })
     async findOne(
         @Param('id', ParseUUIDPipe) id: string,
-        @TenantId() tenantId: string,
+
         @CurrentUser('id') userId: string,
         @CurrentUser('role') userRole: string,
     ) {
-        return this.clientsService.findOne(id, tenantId, userId, userRole);
+        return this.clientsService.findOne(id, userId, userRole);
     }
 
     @Get(':id/cases')
@@ -65,9 +49,9 @@ export class ClientsController {
     @ApiResponse({ status: 404, description: 'العميل غير موجود' })
     async getClientCases(
         @Param('id', ParseUUIDPipe) id: string,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.clientsService.getClientCases(id, tenantId);
+        return this.clientsService.getClientCases(id);
     }
 
     @Post()
@@ -77,10 +61,10 @@ export class ClientsController {
     @ApiResponse({ status: 400, description: 'بيانات غير صالحة' })
     async create(
         @Body() createClientDto: CreateClientDto,
-        @TenantId() tenantId: string,
+
         @CurrentUser('id') userId: string,
     ) {
-        return this.clientsService.create(createClientDto, tenantId, userId);
+        return this.clientsService.create(createClientDto, userId);
     }
 
     @Patch(':id')
@@ -91,9 +75,9 @@ export class ClientsController {
     async update(
         @Param('id', ParseUUIDPipe) id: string,
         @Body() updateClientDto: UpdateClientDto,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.clientsService.update(id, updateClientDto, tenantId);
+        return this.clientsService.update(id, updateClientDto);
     }
 
     @Delete(':id')
@@ -103,8 +87,8 @@ export class ClientsController {
     @ApiResponse({ status: 404, description: 'العميل غير موجود' })
     async remove(
         @Param('id', ParseUUIDPipe) id: string,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.clientsService.remove(id, tenantId);
+        return this.clientsService.remove(id);
     }
 }

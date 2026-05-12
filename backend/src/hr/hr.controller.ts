@@ -20,76 +20,76 @@ export class HrController {
 
     @Get('employees')
     getEmployees(@Req() req: any, @Query() query: any) {
-        return this.employeeService.findAll(req.user.tenantId, query);
+        return this.employeeService.findAll(query);
     }
 
     @Get('employees/statistics')
     getStatistics(@Req() req: any) {
-        return this.employeeService.getStatistics(req.user.tenantId);
+        return this.employeeService.getStatistics();
     }
 
     @Get('employees/org-chart')
     getOrgChart(@Req() req: any) {
-        return this.employeeService.getOrganizationChart(req.user.tenantId);
+        return this.employeeService.getOrganizationChart();
     }
 
     @Get('employees/:id')
     getEmployee(@Param('id') id: string, @Req() req: any) {
-        return this.employeeService.findOne(id, req.user.tenantId);
+        return this.employeeService.findOne(id);
     }
 
     @Get('employees/:id/eosb')
     getEOSB(@Param('id') id: string, @Req() req: any) {
-        return this.employeeService.calculateEndOfServiceBenefits(id, req.user.tenantId);
+        return this.employeeService.calculateEndOfServiceBenefits(id);
     }
 
     @Post('employees')
     createEmployee(@Body() body: any, @Req() req: any) {
-        return this.employeeService.create(req.user.tenantId, body);
+        return this.employeeService.create(body);
     }
 
     @Put('employees/:id')
     updateEmployee(@Param('id') id: string, @Body() body: any, @Req() req: any) {
-        return this.employeeService.update(id, req.user.tenantId, body);
+        return this.employeeService.update(id, body);
     }
 
     @Post('employees/:id/terminate')
     terminateEmployee(@Param('id') id: string, @Body() body: any, @Req() req: any) {
-        return this.employeeService.terminate(id, req.user.tenantId, body);
+        return this.employeeService.terminate(id, body);
     }
 
     // ============ DEPARTMENTS ============
 
     @Get('departments')
     getDepartments(@Req() req: any) {
-        return this.employeeService.getDepartments(req.user.tenantId);
+        return this.employeeService.getDepartments();
     }
 
     @Post('departments')
     createDepartment(@Body() body: any, @Req() req: any) {
-        return this.employeeService.createDepartment(req.user.tenantId, body);
+        return this.employeeService.createDepartment(body);
     }
 
     @Put('departments/:id')
     updateDepartment(@Param('id') id: string, @Body() body: any, @Req() req: any) {
-        return this.employeeService.updateDepartment(id, req.user.tenantId, body);
+        return this.employeeService.updateDepartment(id, body);
     }
 
     // ============ ATTENDANCE ============
 
     @Post('attendance/clock-in')
     clockIn(@Body() body: any, @Req() req: any) {
-        return this.attendanceService.clockIn(body.employeeId, req.user.tenantId, body);
+        return this.attendanceService.clockIn(body.employeeId, body);
     }
 
     @Post('attendance/clock-out')
     clockOut(@Body() body: any, @Req() req: any) {
-        return this.attendanceService.clockOut(body.employeeId, req.user.tenantId);
+        return this.attendanceService.clockOut(body.employeeId);
     }
 
     @Get('attendance')
     getAttendance(@Req() req: any, @Query() query: any) {
-        return this.attendanceService.getAttendance(req.user.tenantId, query);
+        return this.attendanceService.getAttendance(query);
     }
 
     @Get('attendance/today/:employeeId')
@@ -99,91 +99,91 @@ export class HrController {
 
     @Post('attendance/mark-absent')
     markAbsent(@Body() body: any, @Req() req: any) {
-        return this.attendanceService.markAbsent(req.user.tenantId, body.date);
+        return this.attendanceService.markAbsent(body.date);
     }
 
     @Get('attendance/report')
     getAttendanceReport(@Req() req: any, @Query('startDate') startDate: string, @Query('endDate') endDate: string) {
-        return this.attendanceService.getAttendanceReport(req.user.tenantId, startDate, endDate);
+        return this.attendanceService.getAttendanceReport(startDate, endDate);
     }
 
     @Get('attendance/settings')
     getAttendanceSettings(@Req() req: any) {
-        return this.attendanceService.getSettings(req.user.tenantId);
+        return this.attendanceService.getSettings();
     }
 
     @Put('attendance/settings')
     updateAttendanceSettings(@Body() body: any, @Req() req: any) {
-        return this.attendanceService.updateSettings(req.user.tenantId, body);
+        return this.attendanceService.updateSettings(body);
     }
 
     // ============ LEAVE ============
 
     @Get('leave/types')
     getLeaveTypes(@Req() req: any) {
-        return this.leaveService.getLeaveTypes(req.user.tenantId);
+        return this.leaveService.getLeaveTypes();
     }
 
     @Post('leave/types')
     createLeaveType(@Body() body: any, @Req() req: any) {
-        return this.leaveService.createLeaveType(req.user.tenantId, body);
+        return this.leaveService.createLeaveType(body);
     }
 
     @Post('leave/types/initialize')
     initializeLeaveTypes(@Req() req: any) {
-        return this.leaveService.initializeDefaultLeaveTypes(req.user.tenantId);
+        return this.leaveService.initializeDefaultLeaveTypes();
     }
 
     @Get('leave/requests')
     getLeaveRequests(@Req() req: any, @Query() query: any) {
-        return this.leaveService.getLeaveRequests(req.user.tenantId, query);
+        return this.leaveService.getLeaveRequests(query);
     }
 
     @Post('leave/requests')
     submitLeaveRequest(@Body() body: any, @Req() req: any) {
-        return this.leaveService.submitRequest(body.employeeId, req.user.tenantId, body);
+        return this.leaveService.submitRequest(body.employeeId, body);
     }
 
     @Put('leave/requests/:id/review')
     reviewLeaveRequest(@Param('id') id: string, @Body() body: any, @Req() req: any) {
-        return this.leaveService.reviewRequest(id, req.user.tenantId, req.user.id, body);
+        return this.leaveService.reviewRequest(id, req.user.id, body);
     }
 
     @Get('leave/balances/:employeeId')
     getEmployeeLeaveBalances(@Param('employeeId') employeeId: string, @Req() req: any) {
-        return this.leaveService.getEmployeeBalances(employeeId, req.user.tenantId);
+        return this.leaveService.getEmployeeBalances(employeeId);
     }
 
     // ============ PAYROLL ============
 
     @Post('payroll/generate')
     generatePayroll(@Body() body: any, @Req() req: any) {
-        return this.payrollService.generateMonthlyPayroll(req.user.tenantId, body.month, body.year);
+        return this.payrollService.generateMonthlyPayroll(body.month, body.year);
     }
 
     @Get('payroll')
     getPayrolls(@Req() req: any, @Query() query: any) {
-        return this.payrollService.getPayrolls(req.user.tenantId, query);
+        return this.payrollService.getPayrolls(query);
     }
 
     @Put('payroll/:id/approve')
     approvePayroll(@Param('id') id: string, @Req() req: any) {
-        return this.payrollService.approvePayroll(id, req.user.id, req.user.tenantId);
+        return this.payrollService.approvePayroll(id, req.user.id);
     }
 
     @Put('payroll/:id/mark-paid')
     markPayrollPaid(@Param('id') id: string, @Body() body: any, @Req() req: any) {
-        return this.payrollService.markAsPaid(id, req.user.tenantId, body);
+        return this.payrollService.markAsPaid(id, body);
     }
 
     @Get('payroll/report')
     getPayrollReport(@Req() req: any, @Query('month') month: string, @Query('year') year: string) {
-        return this.payrollService.getPayrollReport(req.user.tenantId, parseInt(month), parseInt(year));
+        return this.payrollService.getPayrollReport(parseInt(month), parseInt(year));
     }
 
     @Get('payroll/bank-file')
     async getBankFile(@Req() req: any, @Query('month') month: string, @Query('year') year: string, @Res() res: Response) {
-        const csv = await this.payrollService.generateBankFile(req.user.tenantId, parseInt(month), parseInt(year));
+        const csv = await this.payrollService.generateBankFile(parseInt(month), parseInt(year));
         res.setHeader('Content-Type', 'text/csv; charset=utf-8');
         res.setHeader('Content-Disposition', `attachment; filename=payroll-${year}-${month}.csv`);
         res.send('\uFEFF' + csv); // BOM for Arabic

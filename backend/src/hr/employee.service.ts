@@ -9,8 +9,8 @@ export class EmployeeService {
         private encryptionService: EncryptionService,
     ) { }
 
-    async create(tenantId: string, dto: any) {
-        const employeeNumber = await this.generateEmployeeNumber(tenantId);
+    async create(dto: any) {
+        const employeeNumber = await this.generateEmployeeNumber();
         const encryptedIdNumber = this.encryptionService.encrypt(dto.nationalIdNumber);
 
         // Probation: 90 days by Saudi Labor Law
@@ -52,18 +52,14 @@ export class EmployeeService {
                 iqamaExpiry: dto.iqamaExpiry ? new Date(dto.iqamaExpiry) : undefined,
                 bankName: dto.bankName,
                 accountNumber: dto.accountNumber,
-                iban: dto.iban,
-                tenantId,
-            },
+                iban: dto.iban },
             include: {
                 department: true,
-                directManager: { select: { id: true, firstName: true, lastName: true, jobTitle: true } },
-            },
-        });
+                directManager: { select: { id: true, firstName: true, lastName: true, jobTitle: true } } } });
     }
 
-    async findAll(tenantId: string, filters?: { departmentId?: string; employmentStatus?: string; search?: string }) {
-        const where: any = { tenantId };
+    async findAll(filters?: { departmentId?: string; employmentStatus?: string; search?: string }) {
+        const where: any = {};
         if (filters?.departmentId) where.departmentId = filters.departmentId;
         if (filters?.employmentStatus) where.employmentStatus = filters.employmentStatus;
         if (filters?.search) {
@@ -80,13 +76,11 @@ export class EmployeeService {
             where,
             include: {
                 department: true,
-                directManager: { select: { id: true, firstName: true, lastName: true } },
-            },
-            orderBy: { createdAt: 'desc' },
-        });
+                directManager: { select: { id: true, firstName: true, lastName: true } } },
+            orderBy: { createdAt: 'desc' } });
     }
 
-    async findOne(id: string, tenantId: string) {
+    async findOne(id: string) {
         const employee = await this.prisma.employee.findUnique({
             where: { id },
             include: {
@@ -94,11 +88,9 @@ export class EmployeeService {
                 directManager: { select: { id: true, firstName: true, lastName: true, jobTitle: true, email: true } },
                 subordinates: { select: { id: true, firstName: true, lastName: true, jobTitle: true } },
                 documents: true,
-                user: { select: { id: true, email: true, role: true } },
-            },
-        });
+                user: { select: { id: true, email: true, role: true } } } });
 
-        if (!employee || employee.tenantId !== tenantId) {
+        if (!employee) {
             throw new NotFoundException('الموظف غير موجود');
         }
 
@@ -110,8 +102,8 @@ export class EmployeeService {
         return employee;
     }
 
-    async update(id: string, tenantId: string, data: any) {
-        await this.findOne(id, tenantId);
+    async update(id: string, data: any) {
+        await this.findOne(id);
         if (data.nationalIdNumber) {
             data.nationalIdNumber = this.encryptionService.encrypt(data.nationalIdNumber);
         }
@@ -122,12 +114,11 @@ export class EmployeeService {
         return this.prisma.employee.update({
             where: { id },
             data,
-            include: { department: true, directManager: true },
-        });
+            include: { department: true, directManager: true } });
     }
 
-    async terminate(id: string, tenantId: string, data: { terminationDate: string; terminationReason: string; lastWorkingDay: string }) {
-        await this.findOne(id, tenantId);
+    async terminate(id: string, data: { terminationDate: string; terminationReason: string; lastWorkingDay: string }) {
+        await this.findOne(id);
         return this.prisma.employee.update({
             where: { id },
             data: {
@@ -135,16 +126,14 @@ export class EmployeeService {
                 terminationDate: new Date(data.terminationDate),
                 terminationReason: data.terminationReason,
                 lastWorkingDay: new Date(data.lastWorkingDay),
-                isActive: false,
-            },
-        });
+                isActive: false } });
     }
 
     /**
      * مكافأة نهاية الخدمة - Saudi Labor Law EOSB
      */
-    async calculateEndOfServiceBenefits(employeeId: string, tenantId: string) {
-        const employee = await this.findOne(employeeId, tenantId);
+    async calculateEndOfServiceBenefits(employeeId: string) {
+        const employee = await this.findOne(employeeId);
         const hireDate = new Date(employee.hireDate);
         const endDate = employee.terminationDate ? new Date(employee.terminationDate) : new Date();
         const yearsOfService = (endDate.getTime() - hireDate.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
@@ -163,37 +152,33 @@ export class EmployeeService {
             employeeName: `${employee.firstName} ${employee.lastName}`,
             yearsOfService: Math.round(yearsOfService * 10) / 10,
             monthlySalary,
-            eosb: Math.round(eosb * 100) / 100,
-        };
+            eosb: Math.round(eosb * 100) / 100 };
     }
 
-    async getOrganizationChart(tenantId: string) {
+    async getOrganizationChart() {
         const employees = await this.prisma.employee.findMany({
-            where: { tenantId, isActive: true },
-            select: { id: true, firstName: true, lastName: true, jobTitle: true, photoUrl: true, departmentId: true, directManagerId: true },
-        });
+            where: { isActive: true },
+            select: { id: true, firstName: true, lastName: true, jobTitle: true, photoUrl: true, departmentId: true, directManagerId: true } });
         return this.buildHierarchy(employees, null);
     }
 
-    async getStatistics(tenantId: string) {
+    async getStatistics() {
         const [total, active, probation, onLeave, terminated] = await Promise.all([
-            this.prisma.employee.count({ where: { tenantId } }),
-            this.prisma.employee.count({ where: { tenantId, employmentStatus: 'ACTIVE' } }),
-            this.prisma.employee.count({ where: { tenantId, employmentStatus: 'PROBATION' } }),
-            this.prisma.employee.count({ where: { tenantId, employmentStatus: 'ON_LEAVE' } }),
-            this.prisma.employee.count({ where: { tenantId, employmentStatus: 'TERMINATED' } }),
+            this.prisma.employee.count({ where: {} }),
+            this.prisma.employee.count({ where: { employmentStatus: 'ACTIVE' } }),
+            this.prisma.employee.count({ where: { employmentStatus: 'PROBATION' } }),
+            this.prisma.employee.count({ where: { employmentStatus: 'ON_LEAVE' } }),
+            this.prisma.employee.count({ where: { employmentStatus: 'TERMINATED' } }),
         ]);
 
         const byDepartment = await this.prisma.employee.groupBy({
             by: ['departmentId'],
-            where: { tenantId, isActive: true },
-            _count: true,
-        });
+            where: { isActive: true },
+            _count: true });
 
         const departments = await this.prisma.department.findMany({
-            where: { tenantId },
-            select: { id: true, name: true },
-        });
+            where: {},
+            select: { id: true, name: true } });
 
         const deptMap = new Map(departments.map(d => [d.id, d.name]));
 
@@ -201,41 +186,35 @@ export class EmployeeService {
             total, active, probation, onLeave, terminated,
             byDepartment: byDepartment.map(d => ({
                 department: deptMap.get(d.departmentId) || 'غير محدد',
-                count: d._count,
-            })),
-        };
+                count: d._count })) };
     }
 
     // --- Departments ---
 
-    async createDepartment(tenantId: string, data: any) {
+    async createDepartment(data: any) {
         return this.prisma.department.create({
-            data: { ...data, tenantId },
-        });
+            data: { ...data } });
     }
 
-    async getDepartments(tenantId: string) {
+    async getDepartments() {
         return this.prisma.department.findMany({
-            where: { tenantId },
+            where: {},
             include: { _count: { select: { employees: true } } },
-            orderBy: { name: 'asc' },
-        });
+            orderBy: { name: 'asc' } });
     }
 
-    async updateDepartment(id: string, tenantId: string, data: any) {
+    async updateDepartment(id: string, data: any) {
         return this.prisma.department.update({
             where: { id },
-            data,
-        });
+            data });
     }
 
     // Helpers
 
-    private async generateEmployeeNumber(tenantId: string): Promise<string> {
+    private async generateEmployeeNumber(): Promise<string> {
         const year = new Date().getFullYear();
         const count = await this.prisma.employee.count({
-            where: { tenantId, employeeNumber: { startsWith: `EMP-${year}` } },
-        });
+            where: { employeeNumber: { startsWith: `EMP-${year}` } } });
         return `EMP-${year}-${String(count + 1).padStart(3, '0')}`;
     }
 

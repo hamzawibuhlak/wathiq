@@ -1,9 +1,4 @@
-import {
-    Injectable,
-    NotFoundException,
-    ConflictException,
-    ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -37,9 +32,8 @@ const userSelect = {
     lastLoginIp: true,
     createdAt: true,
     updatedAt: true,
-    tenantId: true,
-    createdById: true,
-};
+
+    createdById: true };
 
 @Injectable()
 export class UsersService {
@@ -48,7 +42,7 @@ export class UsersService {
     /**
      * Get all users with pagination and filters
      */
-    async findAll(tenantId: string, filterDto: FilterUsersDto): Promise<PaginatedResponse<unknown>> {
+    async findAll(filterDto: FilterUsersDto): Promise<PaginatedResponse<unknown>> {
         const {
             page = 1,
             limit = 10,
@@ -56,11 +50,8 @@ export class UsersService {
             role,
             isActive,
             sortBy = 'createdAt',
-            sortOrder = 'desc',
-        } = filterDto;
-
-        // Build where clause - ALWAYS filter by tenantId
-        const where: Prisma.UserWhereInput = { tenantId };
+            sortOrder = 'desc' } = filterDto;
+        const where: Prisma.UserWhereInput = {};
 
         // Role filter
         if (role) {
@@ -100,8 +91,7 @@ export class UsersService {
                 select: userSelect,
                 orderBy,
                 skip,
-                take: limit,
-            }),
+                take: limit }),
             this.prisma.user.count({ where }),
         ]);
 
@@ -111,26 +101,20 @@ export class UsersService {
                 page,
                 limit,
                 total,
-                totalPages: Math.ceil(total / limit),
-            },
-        };
+                totalPages: Math.ceil(total / limit) } };
     }
 
     /**
      * Get user by ID
      */
-    async findOne(id: string, tenantId: string) {
+    async findOne(id: string) {
         const user = await this.prisma.user.findFirst({
-            where: { id, tenantId },
+            where: { id },
             select: {
                 ...userSelect,
                 _count: {
                     select: {
-                        assignedCases: true,
-                    },
-                },
-            },
-        });
+                        assignedCases: true } } } });
 
         if (!user) {
             throw new NotFoundException('المستخدم غير موجود');
@@ -142,11 +126,10 @@ export class UsersService {
     /**
      * Create new user
      */
-    async create(dto: CreateUserDto, tenantId: string) {
+    async create(dto: CreateUserDto) {
         // Check if email exists globally
         const existingUser = await this.prisma.user.findUnique({
-            where: { email: dto.email },
-        });
+            where: { email: dto.email } });
 
         if (existingUser) {
             throw new ConflictException('البريد الإلكتروني مستخدم بالفعل');
@@ -163,24 +146,20 @@ export class UsersService {
         const user = await this.prisma.user.create({
             data: {
                 ...dto,
-                password: hashedPassword,
-                tenantId,
-            },
-            select: userSelect,
-        });
+                password: hashedPassword },
+            select: userSelect });
 
         return {
             data: user,
-            message: 'تم إنشاء المستخدم بنجاح',
-        };
+            message: 'تم إنشاء المستخدم بنجاح' };
     }
 
     /**
      * Update user
      */
-    async update(id: string, dto: UpdateUserDto, tenantId: string) {
+    async update(id: string, dto: UpdateUserDto) {
         // Verify user exists and belongs to tenant
-        const existingUser = await this.findOne(id, tenantId);
+        const existingUser = await this.findOne(id);
 
         // Prevent changing OWNER role
         if (existingUser.data.role === UserRole.OWNER && dto.role && dto.role !== UserRole.OWNER) {
@@ -195,8 +174,7 @@ export class UsersService {
         // Check email uniqueness if updating email
         if (dto.email) {
             const emailUser = await this.prisma.user.findFirst({
-                where: { email: dto.email, NOT: { id } },
-            });
+                where: { email: dto.email, NOT: { id } } });
 
             if (emailUser) {
                 throw new ConflictException('البريد الإلكتروني مستخدم بالفعل');
@@ -214,21 +192,19 @@ export class UsersService {
         const user = await this.prisma.user.update({
             where: { id },
             data: updateData,
-            select: userSelect,
-        });
+            select: userSelect });
 
         return {
             data: user,
-            message: 'تم تحديث المستخدم بنجاح',
-        };
+            message: 'تم تحديث المستخدم بنجاح' };
     }
 
     /**
      * Soft delete user (set isActive to false)
      */
-    async remove(id: string, tenantId: string, currentUserId: string) {
+    async remove(id: string, currentUserId: string) {
         // Verify user exists and belongs to tenant
-        const user = await this.findOne(id, tenantId);
+        const user = await this.findOne(id);
 
         // Prevent self-deletion
         if (id === currentUserId) {
@@ -243,8 +219,7 @@ export class UsersService {
         // Soft delete - just set isActive to false
         await this.prisma.user.update({
             where: { id },
-            data: { isActive: false },
-        });
+            data: { isActive: false } });
 
         return { message: 'تم تعطيل المستخدم بنجاح' };
     }
@@ -252,13 +227,12 @@ export class UsersService {
     /**
      * Reactivate user
      */
-    async reactivate(id: string, tenantId: string) {
-        await this.findOne(id, tenantId);
+    async reactivate(id: string) {
+        await this.findOne(id);
 
         await this.prisma.user.update({
             where: { id },
-            data: { isActive: true },
-        });
+            data: { isActive: true } });
 
         return { message: 'تم تفعيل المستخدم بنجاح' };
     }
@@ -266,21 +240,17 @@ export class UsersService {
     /**
      * Find all users who can be assigned as responsible lawyers
      */
-    async findLawyers(tenantId: string) {
+    async findLawyers() {
         const lawyers = await this.prisma.user.findMany({
             where: {
-                tenantId,
                 role: { in: ['LAWYER', 'ADMIN', 'OWNER'] },
-                isActive: true,
-            },
+                isActive: true },
             select: {
                 id: true,
                 name: true,
                 email: true,
-                role: true,
-            },
-            orderBy: { name: 'asc' },
-        });
+                role: true },
+            orderBy: { name: 'asc' } });
 
         return { data: lawyers };
     }
@@ -288,8 +258,8 @@ export class UsersService {
     /**
      * Change user role
      */
-    async changeRole(id: string, newRole: UserRole, tenantId: string, currentUserId: string) {
-        const user = await this.findOne(id, tenantId);
+    async changeRole(id: string, newRole: UserRole, currentUserId: string) {
+        const user = await this.findOne(id);
 
         // Cannot change own role
         if (id === currentUserId) {
@@ -308,8 +278,7 @@ export class UsersService {
 
         await this.prisma.user.update({
             where: { id },
-            data: { role: newRole },
-        });
+            data: { role: newRole } });
 
         return { message: 'تم تغيير الدور بنجاح' };
     }
@@ -317,8 +286,8 @@ export class UsersService {
     /**
      * Deactivate user
      */
-    async deactivate(id: string, tenantId: string, currentUserId: string) {
-        const user = await this.findOne(id, tenantId);
+    async deactivate(id: string, currentUserId: string) {
+        const user = await this.findOne(id);
 
         if (id === currentUserId) {
             throw new ForbiddenException('لا يمكنك تعطيل حسابك الخاص');
@@ -330,8 +299,7 @@ export class UsersService {
 
         await this.prisma.user.update({
             where: { id },
-            data: { isActive: false },
-        });
+            data: { isActive: false } });
 
         return { message: 'تم تعطيل المستخدم بنجاح' };
     }
@@ -339,15 +307,14 @@ export class UsersService {
     /**
      * Get user statistics
      */
-    async getStats(tenantId: string) {
+    async getStats() {
         const [total, active, byRole] = await Promise.all([
-            this.prisma.user.count({ where: { tenantId } }),
-            this.prisma.user.count({ where: { tenantId, isActive: true } }),
+            this.prisma.user.count({ where: {} }),
+            this.prisma.user.count({ where: { isActive: true } }),
             this.prisma.user.groupBy({
                 by: ['role'],
-                where: { tenantId },
-                _count: true,
-            }),
+                where: {},
+                _count: true }),
         ]);
 
         const roleStats = byRole.reduce((acc, item) => {
@@ -360,9 +327,7 @@ export class UsersService {
                 total,
                 active,
                 inactive: total - active,
-                byRole: roleStats,
-            },
-        };
+                byRole: roleStats } };
     }
 
     /**
@@ -373,21 +338,18 @@ export class UsersService {
             where: { id },
             data: {
                 lastLoginAt: new Date(),
-                lastLoginIp: ipAddress,
-            },
-        });
+                lastLoginIp: ipAddress } });
     }
 
     /**
      * Verify user email
      */
-    async verifyEmail(id: string, tenantId: string) {
-        await this.findOne(id, tenantId);
+    async verifyEmail(id: string) {
+        await this.findOne(id);
 
         await this.prisma.user.update({
             where: { id },
-            data: { isVerified: true },
-        });
+            data: { isVerified: true } });
 
         return { message: 'تم تأكيد البريد الإلكتروني بنجاح' };
     }

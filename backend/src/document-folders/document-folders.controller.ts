@@ -1,28 +1,12 @@
-import {
-    Controller,
-    Get,
-    Post,
-    Patch,
-    Delete,
-    Param,
-    Query,
-    Body,
-    UseGuards,
-    ParseUUIDPipe,
-} from '@nestjs/common';
-import {
-    ApiTags,
-    ApiOperation,
-    ApiBearerAuth,
-    ApiResponse,
-} from '@nestjs/swagger';
+import { Controller, Get, Post, Patch, Delete, Param, Query, Body, UseGuards, ParseUUIDPipe } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { DocumentFoldersService } from './document-folders.service';
 import { CreateFolderDto, UpdateFolderDto, LinkDocumentDto } from './dto/create-folder.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
-import { TenantId } from '../common/decorators/tenant-id.decorator';
+
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 
 @ApiTags('Document Folders')
@@ -36,10 +20,10 @@ export class DocumentFoldersController {
     @ApiOperation({ summary: 'جلب المجلدات (الجذرية أو حسب parentId)' })
     @ApiResponse({ status: 200, description: 'قائمة المجلدات' })
     async findAll(
-        @TenantId() tenantId: string,
+
         @Query('parentId') parentId?: string,
     ) {
-        return this.foldersService.findAll(tenantId, parentId);
+        return this.foldersService.findAll(parentId);
     }
 
     @Get(':id')
@@ -48,9 +32,9 @@ export class DocumentFoldersController {
     @ApiResponse({ status: 404, description: 'المجلد غير موجود' })
     async findOne(
         @Param('id', ParseUUIDPipe) id: string,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.foldersService.findOne(id, tenantId);
+        return this.foldersService.findOne(id);
     }
 
     @Get(':id/documents')
@@ -58,13 +42,13 @@ export class DocumentFoldersController {
     @ApiResponse({ status: 200, description: 'قائمة المستندات' })
     async getFolderDocuments(
         @Param('id', ParseUUIDPipe) id: string,
-        @TenantId() tenantId: string,
+
         @Query('page') page?: string,
         @Query('limit') limit?: string,
     ) {
         return this.foldersService.getFolderDocuments(
             id,
-            tenantId,
+
             page ? parseInt(page) : 1,
             limit ? parseInt(limit) : 20,
         );
@@ -75,9 +59,9 @@ export class DocumentFoldersController {
     @ApiResponse({ status: 200, description: 'مسار المجلد' })
     async getBreadcrumb(
         @Param('id', ParseUUIDPipe) id: string,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.foldersService.getBreadcrumb(id, tenantId);
+        return this.foldersService.getBreadcrumb(id);
     }
 
     @Post()
@@ -86,10 +70,10 @@ export class DocumentFoldersController {
     @ApiResponse({ status: 201, description: 'تم إنشاء المجلد' })
     async create(
         @Body() dto: CreateFolderDto,
-        @TenantId() tenantId: string,
+
         @CurrentUser('id') userId: string,
     ) {
-        return this.foldersService.create(dto, tenantId, userId);
+        return this.foldersService.create(dto, userId);
     }
 
     @Patch(':id')
@@ -99,9 +83,9 @@ export class DocumentFoldersController {
     async update(
         @Param('id', ParseUUIDPipe) id: string,
         @Body() dto: UpdateFolderDto,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.foldersService.update(id, dto, tenantId);
+        return this.foldersService.update(id, dto);
     }
 
     @Delete(':id')
@@ -110,9 +94,9 @@ export class DocumentFoldersController {
     @ApiResponse({ status: 200, description: 'تم حذف المجلد' })
     async remove(
         @Param('id', ParseUUIDPipe) id: string,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.foldersService.remove(id, tenantId);
+        return this.foldersService.remove(id);
     }
 
     @Post(':id/link-document')
@@ -122,9 +106,9 @@ export class DocumentFoldersController {
     async linkDocument(
         @Param('id', ParseUUIDPipe) id: string,
         @Body() dto: LinkDocumentDto,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.foldersService.linkDocument(id, dto.documentId, tenantId);
+        return this.foldersService.linkDocument(id, dto.documentId);
     }
 
     @Post(':id/move-document')
@@ -134,9 +118,9 @@ export class DocumentFoldersController {
     async moveDocument(
         @Param('id', ParseUUIDPipe) id: string,
         @Body() dto: LinkDocumentDto,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.foldersService.moveDocument(id, dto.documentId, tenantId);
+        return this.foldersService.moveDocument(id, dto.documentId);
     }
 
     @Delete(':id/unlink-document/:docId')
@@ -146,9 +130,9 @@ export class DocumentFoldersController {
     async unlinkDocument(
         @Param('id', ParseUUIDPipe) id: string,
         @Param('docId', ParseUUIDPipe) docId: string,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.foldersService.unlinkDocument(id, docId, tenantId);
+        return this.foldersService.unlinkDocument(id, docId);
     }
 
     @Post('move-to-root/:docId')
@@ -157,8 +141,8 @@ export class DocumentFoldersController {
     @ApiResponse({ status: 200, description: 'تم نقل المستند للأساسي' })
     async moveToRoot(
         @Param('docId', ParseUUIDPipe) docId: string,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.foldersService.moveToRoot(docId, tenantId);
+        return this.foldersService.moveToRoot(docId);
     }
 }

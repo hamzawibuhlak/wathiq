@@ -1,10 +1,4 @@
-import {
-    Injectable,
-    NestInterceptor,
-    ExecutionContext,
-    CallHandler,
-    Logger,
-} from '@nestjs/common';
+import { Injectable, NestInterceptor, ExecutionContext, CallHandler, Logger } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { Request, Response } from 'express';
@@ -21,7 +15,6 @@ export class LoggingInterceptor implements NestInterceptor {
         const { method, url, ip } = request;
         const userAgent = request.get('user-agent') || '';
         const userId = (request as any).user?.sub || 'anonymous';
-        const tenantId = (request as any).user?.tenantId || 'unknown';
 
         const now = Date.now();
 
@@ -33,7 +26,7 @@ export class LoggingInterceptor implements NestInterceptor {
                     const responseTime = Date.now() - now;
 
                     this.logger.log(
-                        `${method} ${url} ${statusCode} ${responseTime}ms ${contentLength}bytes - User:${userId} Tenant:${tenantId}`,
+                        `${method} ${url} ${statusCode} ${responseTime}ms ${contentLength}bytes - User:${userId} Tenant:`,
                     );
 
                     // Log slow requests
@@ -48,8 +41,7 @@ export class LoggingInterceptor implements NestInterceptor {
                     this.logger.error(
                         `${method} ${url} ERROR ${responseTime}ms - ${error.message}`,
                     );
-                },
-            }),
+                } }),
         );
     }
 }

@@ -11,33 +11,25 @@ export class ChatService {
     // CONVERSATIONS
     // =============================================
 
-    async getOrCreateDM(userId1: string, userId2: string, tenantId: string) {
+    async getOrCreateDM(userId1: string, userId2: string) {
         // Find existing DM between these two users
         const existing = await this.prisma.chatConversation.findFirst({
             where: {
-                tenantId,
                 type: 'DIRECT',
                 AND: [
                     { members: { some: { userId: userId1, leftAt: null } } },
                     { members: { some: { userId: userId2, leftAt: null } } },
-                ],
-            },
+                ] },
             include: {
                 members: {
                     where: { leftAt: null },
                     include: {
                         user: {
-                            select: { id: true, name: true, email: true, avatar: true, role: true },
-                        },
-                    },
-                },
+                            select: { id: true, name: true, email: true, avatar: true, role: true } } } },
                 messages: {
                     take: 1,
                     orderBy: { createdAt: 'desc' },
-                    where: { isDeleted: false },
-                },
-            },
-        });
+                    where: { isDeleted: false } } } });
 
         if (existing && existing.members.length === 2) {
             return existing;
@@ -48,34 +40,25 @@ export class ChatService {
             data: {
                 type: 'DIRECT',
                 creator: { connect: { id: userId1 } },
-                tenant: { connect: { id: tenantId } },
+
                 members: {
                     create: [
                         { userId: userId1 },
                         { userId: userId2 },
-                    ],
-                },
-            },
+                    ] } },
             include: {
                 members: {
                     include: {
                         user: {
-                            select: { id: true, name: true, email: true, avatar: true, role: true },
-                        },
-                    },
-                },
-            },
-        });
+                            select: { id: true, name: true, email: true, avatar: true, role: true } } } } } });
     }
 
     async createGroup(
         creatorId: string,
-        tenantId: string,
         data: { name: string; description?: string; memberIds: string[] },
     ) {
         const users = await this.prisma.user.findMany({
-            where: { id: { in: data.memberIds }, tenantId },
-        });
+            where: { id: { in: data.memberIds } } });
 
         if (users.length !== data.memberIds.length) {
             throw new BadRequestException('بعض المستخدمين غير موجودين');
@@ -89,51 +72,35 @@ export class ChatService {
                 name: data.name,
                 description: data.description,
                 creator: { connect: { id: creatorId } },
-                tenant: { connect: { id: tenantId } },
+
                 members: {
                     create: allMemberIds.map(userId => ({
                         userId,
                         role: userId === creatorId ? 'ADMIN' : 'MEMBER',
-                        isAdmin: userId === creatorId,
-                    })),
-                },
-            },
+                        isAdmin: userId === creatorId })) } },
             include: {
                 members: {
                     include: {
                         user: {
-                            select: { id: true, name: true, avatar: true, role: true },
-                        },
-                    },
-                },
-            },
-        });
+                            select: { id: true, name: true, avatar: true, role: true } } } } } });
     }
 
-    async getUserConversations(userId: string, tenantId: string) {
+    async getUserConversations(userId: string) {
         const conversations = await this.prisma.chatConversation.findMany({
             where: {
-                tenantId,
                 isActive: true,
-                members: { some: { userId, leftAt: null } },
-            },
+                members: { some: { userId, leftAt: null } } },
             include: {
                 members: {
                     where: { leftAt: null },
                     include: {
                         user: {
-                            select: { id: true, name: true, avatar: true, role: true },
-                        },
-                    },
-                },
+                            select: { id: true, name: true, avatar: true, role: true } } } },
                 messages: {
                     take: 1,
                     orderBy: { createdAt: 'desc' },
-                    where: { isDeleted: false },
-                },
-            },
-            orderBy: { updatedAt: 'desc' },
-        });
+                    where: { isDeleted: false } } },
+            orderBy: { updatedAt: 'desc' } });
 
         const withUnread = await Promise.all(
             conversations.map(async conv => {
@@ -144,16 +111,12 @@ export class ChatService {
                             conversationId: conv.id,
                             createdAt: { gt: member.lastReadAt },
                             senderId: { not: userId },
-                            isDeleted: false,
-                        },
-                    })
+                            isDeleted: false } })
                     : await this.prisma.chatMessage.count({
                         where: {
                             conversationId: conv.id,
                             senderId: { not: userId },
-                            isDeleted: false,
-                        },
-                    });
+                            isDeleted: false } });
 
                 return { ...conv, unreadCount };
             }),
@@ -169,7 +132,6 @@ export class ChatService {
     async sendMessage(
         conversationId: string,
         senderId: string,
-        tenantId: string,
         data: {
             content?: string;
             type?: 'TEXT' | 'FILE' | 'IMAGE' | 'VOICE';
@@ -183,9 +145,7 @@ export class ChatService {
     ) {
         const member = await this.prisma.chatConversationMember.findUnique({
             where: {
-                conversationId_userId: { conversationId, userId: senderId },
-            },
-        });
+                conversationId_userId: { conversationId, userId: senderId } } });
 
         if (!member || member.leftAt) {
             throw new BadRequestException('لست عضواً في هذه المحادثة');
@@ -202,27 +162,19 @@ export class ChatService {
                 fileName: data.fileName,
                 fileSize: data.fileSize,
                 fileMimeType: data.fileMimeType,
-                audioDuration: data.audioDuration,
-                tenant: { connect: { id: tenantId } },
-            },
+                audioDuration: data.audioDuration },
             include: {
                 sender: {
-                    select: { id: true, name: true, avatar: true, role: true },
-                },
+                    select: { id: true, name: true, avatar: true, role: true } },
                 replyTo: {
                     select: {
                         id: true,
                         content: true,
-                        sender: { select: { name: true } },
-                    },
-                },
-            },
-        });
+                        sender: { select: { name: true } } } } } });
 
         await this.prisma.chatConversation.update({
             where: { id: conversationId },
-            data: { updatedAt: new Date() },
-        });
+            data: { updatedAt: new Date() } });
 
         return message;
     }
@@ -230,16 +182,14 @@ export class ChatService {
     async getMessages(
         conversationId: string,
         userId: string,
-        tenantId: string,
         options?: { cursor?: string; limit?: number },
     ) {
         const limit = options?.limit || 50;
 
         const whereClause: any = {
             conversationId,
-            tenantId,
-            isDeleted: false,
-        };
+
+            isDeleted: false };
 
         if (options?.cursor) {
             const cursorDate = await this.getMessageDate(options.cursor);
@@ -250,74 +200,58 @@ export class ChatService {
             where: whereClause,
             include: {
                 sender: {
-                    select: { id: true, name: true, avatar: true, role: true },
-                },
+                    select: { id: true, name: true, avatar: true, role: true } },
                 replyTo: {
                     select: {
                         id: true,
                         content: true,
                         type: true,
-                        sender: { select: { name: true } },
-                    },
-                },
+                        sender: { select: { name: true } } } },
                 reactions: {
                     include: {
-                        user: { select: { id: true, name: true } },
-                    },
-                },
+                        user: { select: { id: true, name: true } } } },
                 receipts: {
                     include: {
-                        user: { select: { id: true, name: true, avatar: true } },
-                    },
-                },
-            },
+                        user: { select: { id: true, name: true, avatar: true } } } } },
             orderBy: { createdAt: 'desc' },
-            take: limit,
-        });
+            take: limit });
 
-        await this.markAsRead(conversationId, userId, tenantId);
+        await this.markAsRead(conversationId, userId);
 
         return messages.reverse();
     }
 
-    async markAsRead(conversationId: string, userId: string, tenantId: string) {
+    async markAsRead(conversationId: string, userId: string) {
         const unreadMessages = await this.prisma.chatMessage.findMany({
             where: {
                 conversationId,
-                tenantId,
+
                 senderId: { not: userId },
                 isDeleted: false,
-                receipts: { none: { userId } },
-            },
-            select: { id: true },
-        });
+                receipts: { none: { userId } } },
+            select: { id: true } });
 
         if (unreadMessages.length > 0) {
             await this.prisma.chatMessageReceipt.createMany({
                 data: unreadMessages.map(msg => ({
                     messageId: msg.id,
-                    userId,
-                })),
-                skipDuplicates: true,
-            });
+                    userId })),
+                skipDuplicates: true });
         }
 
         await this.prisma.chatConversationMember.update({
             where: {
-                conversationId_userId: { conversationId, userId },
-            },
-            data: { lastReadAt: new Date() },
-        });
+                conversationId_userId: { conversationId, userId } },
+            data: { lastReadAt: new Date() } });
 
         return { marked: unreadMessages.length };
     }
 
-    async editMessage(messageId: string, userId: string, tenantId: string, newContent: string) {
+    async editMessage(messageId: string, userId: string, newContent: string) {
         const message = await this.prisma.chatMessage.findUnique({
-            where: { id: messageId },
-        });
+            where: { id: messageId } });
 
-        if (!message || message.tenantId !== tenantId) {
+        if (!message) {
             throw new BadRequestException('الرسالة غير موجودة');
         }
 
@@ -330,20 +264,16 @@ export class ChatService {
             data: {
                 content: newContent,
                 isEdited: true,
-                editedAt: new Date(),
-            },
+                editedAt: new Date() },
             include: {
-                sender: { select: { id: true, name: true, avatar: true } },
-            },
-        });
+                sender: { select: { id: true, name: true, avatar: true } } } });
     }
 
-    async deleteMessage(messageId: string, userId: string, tenantId: string) {
+    async deleteMessage(messageId: string, userId: string) {
         const message = await this.prisma.chatMessage.findUnique({
-            where: { id: messageId },
-        });
+            where: { id: messageId } });
 
-        if (!message || message.tenantId !== tenantId) {
+        if (!message) {
             throw new BadRequestException('الرسالة غير موجودة');
         }
 
@@ -357,64 +287,51 @@ export class ChatService {
                 isDeleted: true,
                 deletedAt: new Date(),
                 content: null,
-                fileUrl: null,
-            },
-        });
+                fileUrl: null } });
     }
 
     async toggleReaction(messageId: string, userId: string, emoji: string) {
         const existing = await this.prisma.chatMessageReaction.findUnique({
             where: {
-                messageId_userId_emoji: { messageId, userId, emoji },
-            },
-        });
+                messageId_userId_emoji: { messageId, userId, emoji } } });
 
         if (existing) {
             await this.prisma.chatMessageReaction.delete({
-                where: { id: existing.id },
-            });
+                where: { id: existing.id } });
             return { action: 'removed', emoji };
         }
 
         await this.prisma.chatMessageReaction.create({
-            data: { messageId, userId, emoji },
-        });
+            data: { messageId, userId, emoji } });
 
         return { action: 'added', emoji };
     }
 
-    async searchMessages(query: string, userId: string, tenantId: string) {
+    async searchMessages(query: string, userId: string) {
         return this.prisma.chatMessage.findMany({
             where: {
-                tenantId,
                 isDeleted: false,
                 content: { contains: query, mode: 'insensitive' },
                 conversation: {
-                    members: { some: { userId, leftAt: null } },
-                },
-            },
+                    members: { some: { userId, leftAt: null } } } },
             include: {
                 sender: { select: { id: true, name: true, avatar: true } },
-                conversation: { select: { id: true, name: true, type: true } },
-            },
+                conversation: { select: { id: true, name: true, type: true } } },
             orderBy: { createdAt: 'desc' },
-            take: 20,
-        });
+            take: 20 });
     }
 
     async getOnlineMembers(conversationId: string) {
         const members = await this.prisma.chatConversationMember.findMany({
             where: { conversationId, leftAt: null },
-            select: { userId: true },
-        });
+            select: { userId: true } });
         return members.map(m => m.userId);
     }
 
     private async getMessageDate(messageId: string): Promise<Date> {
         const msg = await this.prisma.chatMessage.findUnique({
             where: { id: messageId },
-            select: { createdAt: true },
-        });
+            select: { createdAt: true } });
         return msg?.createdAt || new Date();
     }
 }

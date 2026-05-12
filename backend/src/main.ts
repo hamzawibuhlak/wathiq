@@ -17,14 +17,12 @@ async function bootstrap() {
     const logger = new Logger('Bootstrap');
 
     const app = await NestFactory.create(AppModule, {
-        logger: ['error', 'warn', 'log', 'debug'],
-    });
+        logger: ['error', 'warn', 'log', 'debug'] });
 
     // Security headers (helmet)
     app.use(helmet({
         contentSecurityPolicy: false, // Disabled for Swagger UI
-        crossOriginEmbedderPolicy: false,
-    }));
+        crossOriginEmbedderPolicy: false }));
 
     // Response compression (gzip)
     app.use(compression());
@@ -37,8 +35,7 @@ async function bootstrap() {
         origin: process.env.FRONTEND_URL || 'http://localhost:5173',
         methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
         credentials: true,
-        allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
-    });
+        allowedHeaders: ['Content-Type', 'Authorization', 'Accept'] });
 
     // Global Exception Filter
     app.useGlobalFilters(new HttpExceptionFilter());
@@ -53,13 +50,10 @@ async function bootstrap() {
             forbidNonWhitelisted: true,
             transform: true,
             transformOptions: {
-                enableImplicitConversion: true,
-            },
+                enableImplicitConversion: true },
             validationError: {
                 target: false,
-                value: false,
-            },
-        }),
+                value: false } }),
     );
 
     // Swagger setup with enhanced UI
@@ -79,8 +73,7 @@ Authorization: Bearer <your-jwt-token>
 \`\`\`
 
 ## 🏢 Multi-Tenancy
-كل البيانات معزولة حسب المكتب (tenantId).
-الـ tenantId يُستخرج تلقائياً من JWT token.
+كل البيانات معزولة حسب المكتب ().
 
 ## 📋 Response Format
 \`\`\`json
@@ -113,8 +106,7 @@ Authorization: Bearer <your-jwt-token>
                 bearerFormat: 'JWT',
                 name: 'Authorization',
                 description: 'أدخل الـ JWT token الذي حصلت عليه من /auth/login',
-                in: 'header',
-            },
+                in: 'header' },
             'JWT-auth',
         )
         .addTag('Auth', '🔐 تسجيل الدخول والتسجيل')
@@ -142,9 +134,7 @@ Authorization: Bearer <your-jwt-token>
             persistAuthorization: true,
             docExpansion: 'none',
             filter: true,
-            showRequestDuration: true,
-        },
-    });
+            showRequestDuration: true } });
 
     // Start server
     const port = process.env.PORT || 3000;
