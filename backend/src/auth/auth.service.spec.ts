@@ -214,9 +214,6 @@ describe('AuthService', () => {
       let capturedPassword = '';
       mockPrismaService.$transaction.mockImplementation(async (callback) => {
         const txMock = {
-          tenant: {
-            create: jest.fn().mockResolvedValue({ id: 'tenant-new' }),
-          },
           user: {
             create: jest.fn().mockImplementation((args) => {
               capturedPassword = args.data.password;

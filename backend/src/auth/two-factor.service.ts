@@ -13,7 +13,6 @@ export class TwoFactorService {
     async generateSecret(userId: string) {
         const user = await this.prisma.user.findUnique({
             where: { id: userId },
-            include: { tenant: true },
         });
 
         if (!user) {
@@ -24,9 +23,8 @@ export class TwoFactorService {
             throw new BadRequestException('المصادقة الثنائية مفعلة بالفعل');
         }
 
-        // Generate new secret
         const secret = speakeasy.generateSecret({
-            name: `Watheeq - ${null || 'System'}`,
+            name: `Watheeq - ${user.email}`,
             issuer: 'Watheeq',
             length: 20,
         });

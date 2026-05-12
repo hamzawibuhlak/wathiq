@@ -105,9 +105,15 @@ export class UploadsController {
 
         const logoUrl = `/uploads/${file.filename}`;
 
-        await this.null({
-            where: {},
-            data: { logo: logoUrl } });
+        const current = await this.prisma.companySettings.findFirst();
+        if (current) {
+            await this.prisma.companySettings.update({
+                where: { id: current.id },
+                data: { logo: logoUrl } });
+        } else {
+            await this.prisma.companySettings.create({
+                data: { name: 'My Law Office', logo: logoUrl } });
+        }
 
         return {
             data: { logoUrl },
@@ -141,9 +147,15 @@ export class UploadsController {
 
         const letterheadUrl = `/uploads/${file.filename}`;
 
-        await this.null({
-            where: {},
-            data: { letterheadUrl } });
+        const current = await this.prisma.companySettings.findFirst();
+        if (current) {
+            await this.prisma.companySettings.update({
+                where: { id: current.id },
+                data: { letterheadUrl } });
+        } else {
+            await this.prisma.companySettings.create({
+                data: { name: 'My Law Office', letterheadUrl } });
+        }
 
         return {
             data: { letterheadUrl },
