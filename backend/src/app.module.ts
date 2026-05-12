@@ -14,7 +14,7 @@ import { ActivityLogInterceptor } from './common/interceptors/activity-log.inter
 // Feature Modules
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
-import { TenantsModule } from './tenants/tenants.module';
+import { CompanySettingsModule } from './company-settings/company-settings.module';
 import { ClientsModule } from './clients/clients.module';
 import { CasesModule } from './cases/cases.module';
 import { HearingsModule } from './hearings/hearings.module';
@@ -47,27 +47,23 @@ import { WebhooksModule } from './webhooks/webhooks.module';
 import { MessagingModule } from './messaging/messaging.module';
 import { AccountingModule } from './accounting/accounting.module';
 import { HrModule } from './hr/hr.module';
-import { SuperAdminModule } from './super-admin/super-admin.module';
 import { ChatModule } from './chat/chat.module';
 import { OwnerModule } from './owner/owner.module';
 import { LegalDocumentsModule } from './legal-documents/legal-documents.module';
 import { MarketingModule } from './marketing/marketing.module';
 import { LegalLibraryModule } from './legal-library/legal-library.module';
 import { CallCenterModule } from './call-center/call-center.module';
-import { TenantRolesModule } from './tenant-roles/tenant-roles.module';
 import { FormsModule } from './forms/forms.module';
 import { DocumentFoldersModule } from './document-folders/document-folders.module';
 import { AppController } from './app.controller';
 
 @Module({
     imports: [
-        // Configuration
         ConfigModule.forRoot({
             isGlobal: true,
             envFilePath: '.env',
         }),
 
-        // Serve static uploads folder
         ServeStaticModule.forRoot({
             rootPath: join(process.cwd(), 'uploads'),
             serveRoot: '/uploads',
@@ -76,22 +72,17 @@ import { AppController } from './app.controller';
             },
         }),
 
-        // Database
         PrismaModule,
-
-        // Entity Codes (global)
         EntityCodeModule,
 
-        // Rate Limiting (100 requests per minute per IP)
         ThrottlerModule.forRoot([{
             ttl: 60000,
             limit: 100,
         }]),
 
-        // Feature Modules
         AuthModule,
         UsersModule,
-        TenantsModule,
+        CompanySettingsModule,
         ClientsModule,
         CasesModule,
         HearingsModule,
@@ -119,61 +110,30 @@ import { AppController } from './app.controller';
         ComplianceModule,
         CacheConfigModule,
         PerformanceModule,
-
-        // Phase 22: Communication Hub
         CallsModule,
         WebhooksModule,
         MessagingModule,
-
-        // Phase 23: Accounting & Finance
         AccountingModule,
-
-        // Phase 24: HR Management
         HrModule,
-
-        // Phase 25: Super Admin Dashboard
-        SuperAdminModule,
-
-        // Phase 26: Internal Chat
         ChatModule,
-
-        // Phase 27: Owner Panel
         OwnerModule,
-
-        // Phase 28: Legal Document Editor
         LegalDocumentsModule,
-
-        // Phase 29: Marketing Module
         MarketingModule,
-
-        // Phase 30: Legal Library
         LegalLibraryModule,
-
-        // Phase 32: Call Center & WhatsApp QR
         CallCenterModule,
-
-        // Phase 35: Tenant RBAC
-        TenantRolesModule,
-
-        // Phase 38: Dynamic Forms
         FormsModule,
-
-        // Document Folders (nested folder organization)
         DocumentFoldersModule,
     ],
     controllers: [AppController],
     providers: [
-        // Global Exception Filter
         {
             provide: APP_FILTER,
             useClass: HttpExceptionFilter,
         },
-        // Global Rate Limiting Guard
         {
             provide: APP_GUARD,
             useClass: ThrottlerGuard,
         },
-        // Global Activity Log Interceptor
         {
             provide: APP_INTERCEPTOR,
             useClass: ActivityLogInterceptor,
@@ -181,4 +141,3 @@ import { AppController } from './app.controller';
     ],
 })
 export class AppModule { }
-
