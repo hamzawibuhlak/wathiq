@@ -170,7 +170,11 @@ export class UserInvitationsService {
             invitation.status = InvitationStatus.EXPIRED;
         }
 
-        return { data: invitation };
+        const company = await this.prisma.companySettings.findFirst({
+            select: { name: true, logo: true },
+        });
+
+        return { data: { ...invitation, company: company ?? { name: '', logo: null } } };
     }
 
     /**

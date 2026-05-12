@@ -34,38 +34,11 @@ export interface User {
     lastLoginAt: string | null;
     createdAt: string;
     updatedAt: string;
-    tenantId: string;
-    tenant?: Tenant;
-}
-
-export interface Tenant {
-    id: string;
-    name: string;
-    nameEn: string | null;
-    slug: string;
-    email: string | null;
-    phone: string | null;
-    logo: string | null;
-    isActive: boolean;
-    planType?: string;
 }
 
 export interface LoginRequest {
     email: string;
     password: string;
-    companyName?: string;
-}
-
-export interface RegisterRequest {
-    officeName: string;
-    slug: string;
-    name: string;
-    email: string;
-    password: string;
-    phone?: string;
-    city?: string;
-    licenseNumber?: string;
-    planType?: string;
 }
 
 export interface AuthResponse {
@@ -107,7 +80,6 @@ export interface Client {
     isActive: boolean;
     createdAt: string;
     updatedAt: string;
-    tenantId: string;
     _count?: {
         cases: number;
     };
@@ -162,7 +134,6 @@ export interface Case {
     notes: string | null;
     createdAt: string;
     updatedAt: string;
-    tenantId: string;
     clientId: string;
     assignedToId: string | null;
     createdById: string;
@@ -212,7 +183,6 @@ export interface Hearing {
     status: HearingStatus;
     createdAt: string;
     updatedAt: string;
-    tenantId: string;
     caseId?: string | null;
     case?: Case;
     clientId: string;
@@ -252,7 +222,6 @@ export interface Document {
     documentType: DocumentType;
     createdAt: string;
     updatedAt: string;
-    tenantId: string;
     caseId: string | null;
     uploadedById: string;
     case?: Case;
@@ -270,7 +239,6 @@ export interface DocumentFolder {
     icon: string | null;
     parentId: string | null;
     clientId: string | null;
-    tenantId: string;
     createdById: string | null;
     createdAt: string;
     updatedAt: string;
@@ -285,7 +253,6 @@ export interface DocumentFolderLink {
     id: string;
     documentId: string;
     folderId: string;
-    tenantId: string;
     createdAt: string;
     document?: Document;
     folder?: DocumentFolder;
@@ -318,7 +285,6 @@ export interface Invoice {
     paymentProof: string | null;
     createdAt: string;
     updatedAt: string;
-    tenantId: string;
     clientId: string;
     caseId: string | null;
     createdById: string;

@@ -174,8 +174,8 @@ export default function PublicFormPage() {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
                 <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full border-t-4" style={{ borderColor: accentColor }}>
-                    {form.tenant?.logo && (
-                        <img src={form.tenant.logo} alt={form.tenant.name} className="h-10 mx-auto mb-4" />
+                    {form.company?.logo && (
+                        <img src={form.company.logo} alt={form.company.name} className="h-10 mx-auto mb-4" />
                     )}
                     <div
                         className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
@@ -227,9 +227,9 @@ export default function PublicFormPage() {
         <div className="min-h-screen bg-gray-50 py-8 px-4">
             <div className="max-w-2xl mx-auto">
                 {/* Tenant Logo */}
-                {form.tenant?.logo && (
+                {form.company?.logo && (
                     <div className="text-center mb-4">
-                        <img src={form.tenant.logo} alt={form.tenant.name} className="h-12 mx-auto" />
+                        <img src={form.company.logo} alt={form.company.name} className="h-12 mx-auto" />
                     </div>
                 )}
 
@@ -374,9 +374,9 @@ export default function PublicFormPage() {
                         )}
                     </div>
 
-                    {form.tenant?.name && (
+                    {form.company?.name && (
                         <p className="text-center text-xs text-gray-400 mt-6">
-                            {form.tenant.name}
+                            {form.company.name}
                         </p>
                     )}
                 </form>

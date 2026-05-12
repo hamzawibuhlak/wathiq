@@ -109,7 +109,7 @@ export interface UserInvitation {
     createdAt: string;
     inviter: { id: string; name: string; email: string };
     acceptedUser?: { id: string; name: string; email: string };
-    tenant: { id: string; name: string; logo?: string };
+    company: { name: string; logo?: string };
 }
 
 export interface CreateInvitationData {

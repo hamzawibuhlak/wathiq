@@ -153,7 +153,10 @@ export class FormsService {
 
         // Strip sensitive fields
         const { notifyEmails, createdBy, autoReplyMessage, ...publicForm } = form as any;
-        return publicForm;
+        const company = await this.prisma.companySettings.findFirst({
+            select: { name: true, logo: true },
+        });
+        return { ...publicForm, company: company ?? { name: '', logo: null } };
     }
 
     // ══════════════════════════════════════════════════════════

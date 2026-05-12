@@ -21,7 +21,6 @@ export interface User {
     lastLoginIp?: string;
     createdAt: string;
     updatedAt: string;
-    tenantId: string;
     createdById?: string;
     _count?: {
         assignedCases: number;
@@ -47,8 +46,7 @@ export interface UserInvitation {
         name: string;
         email: string;
     };
-    tenant: {
-        id: string;
+    company: {
         name: string;
         logo?: string;
     };
@@ -208,7 +206,7 @@ export const invitationsApi = {
 
     // Accept invitation (public)
     accept: (data: AcceptInvitationDto) => 
-        api.post<{ data: Pick<User, 'id' | 'email' | 'name' | 'role' | 'tenantId'>; message: string }>('/invitations/accept', data),
+        api.post<{ data: Pick<User, 'id' | 'email' | 'name' | 'role'>; message: string }>('/invitations/accept', data),
 
     // Send invitation
     create: (data: CreateInvitationDto) => 

@@ -28,7 +28,6 @@ export interface Workflow {
     triggerType: WorkflowTrigger;
     triggerConfig: Record<string, any>;
     actions: WorkflowAction[];
-    tenantId: string;
     createdAt: string;
     updatedAt: string;
     _count?: { executions: number };

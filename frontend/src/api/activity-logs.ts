@@ -15,7 +15,6 @@ export interface ActivityLog {
     email: string;
     avatar?: string;
   };
-  tenantId: string;
   createdAt: string;
 }
 

@@ -29,7 +29,6 @@ export interface Task {
     hearingId?: string;
     assignedToId: string;
     createdById: string;
-    tenantId: string;
     tags: string[];
     completedAt?: string;
     parentId?: string;
