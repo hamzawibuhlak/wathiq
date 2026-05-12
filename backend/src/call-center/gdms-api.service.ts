@@ -8,8 +8,7 @@ export class GdmsApiService {
     private readonly logger = new Logger(GdmsApiService.name);
     private readonly GDMS_BASE_URL = 'https://www.gdms.cloud';
 
-    // Cache tokens per tenant to avoid re-auth on every call
-    private tokenCache: Map<string, { token: string; expiresAt: number }> = new Map();
+    private tokenCache: { token: string; expiresAt: number } | null = null;
 
     constructor(private prisma: PrismaService) { }
 
@@ -65,14 +64,11 @@ export class GdmsApiService {
     // ══════════════════════════════════════════════════════════
 
     private async getAccessToken(): Promise<string> {
-        // Check cache first
-        const cached = this.tokenCache.get();
-        if (cached && cached.expiresAt > Date.now()) {
-            return cached.token;
+        if (this.tokenCache && this.tokenCache.expiresAt > Date.now()) {
+            return this.tokenCache.token;
         }
 
-        const settings = await this.prisma.callCenterSettings.findUnique({
-            where: {} });
+        const settings = await this.prisma.callCenterSettings.findFirst();
         if (!settings) {
             throw new BadRequestException('إعدادات السنترال غير موجودة');
         }
@@ -108,12 +104,11 @@ export class GdmsApiService {
             const token = response.data.access_token;
             const expiresIn = response.data.expires_in || 3600;
 
-            // Cache the token (expire 5 min early to be safe)
-            this.tokenCache.set({
+            this.tokenCache = {
                 token,
-                expiresAt: Date.now() + (expiresIn - 300) * 1000 });
+                expiresAt: Date.now() + (expiresIn - 300) * 1000 };
 
-            this.logger.log(`GDMS OAuth token obtained for tenant `);
+            this.logger.log('GDMS OAuth token obtained');
             return token;
         } catch (error) {
             this.logger.error('GDMS OAuth token request failed', error?.response?.data || error.message);
@@ -148,8 +143,7 @@ export class GdmsApiService {
             // Step 1: Get OAuth token (this validates credentials)
             const token = await this.getAccessToken();
 
-            const settings = await this.prisma.callCenterSettings.findUnique({
-                where: {} });
+            const settings = await this.prisma.callCenterSettings.findFirst();
             if (!settings) {
                 return { success: false, message: 'إعدادات السنترال غير موجودة' };
             }
@@ -178,9 +172,8 @@ export class GdmsApiService {
                 }
             }
 
-            // Update connection status
             await this.prisma.callCenterSettings.update({
-                where: {},
+                where: { id: settings.id },
                 data: {
                     isConnected: true,
                     lastSync: new Date(),
@@ -196,12 +189,15 @@ export class GdmsApiService {
         } catch (error) {
             this.logger.error('GDMS Connection Test Failed', error.message);
 
-            await this.prisma.callCenterSettings.update({
-                where: {},
-                data: {
-                    isConnected: false,
-                    lastError: error.message,
-                    syncAttempts: { increment: 1 } } }).catch(() => { });
+            const cur = await this.prisma.callCenterSettings.findFirst();
+            if (cur) {
+                await this.prisma.callCenterSettings.update({
+                    where: { id: cur.id },
+                    data: {
+                        isConnected: false,
+                        lastError: error.message,
+                        syncAttempts: { increment: 1 } } }).catch(() => { });
+            }
 
             return {
                 success: false,
@@ -217,8 +213,7 @@ export class GdmsApiService {
     ) {
         try {
             const client = await this.getApiClient();
-            const settings = await this.prisma.callCenterSettings.findUnique({
-                where: {} });
+            const settings = await this.prisma.callCenterSettings.findFirst();
             if (!settings) throw new BadRequestException('إعدادات السنترال غير موجودة');
 
             const response = await client.post(
@@ -245,8 +240,7 @@ export class GdmsApiService {
     async deleteExtensionFromGdms(gdmsExtensionId: string) {
         try {
             const client = await this.getApiClient();
-            const settings = await this.prisma.callCenterSettings.findUnique({
-                where: {} });
+            const settings = await this.prisma.callCenterSettings.findFirst();
             if (!settings) throw new BadRequestException('إعدادات السنترال غير موجودة');
 
             await client.delete(
@@ -262,8 +256,7 @@ export class GdmsApiService {
     async syncExtensionStatus(extensionNumber: string) {
         try {
             const client = await this.getApiClient();
-            const settings = await this.prisma.callCenterSettings.findUnique({
-                where: {} });
+            const settings = await this.prisma.callCenterSettings.findFirst();
             if (!settings) return null;
 
             const response = await client.get(
@@ -292,8 +285,7 @@ export class GdmsApiService {
     async syncCallLogs(fromDate?: Date, toDate?: Date) {
         try {
             const client = await this.getApiClient();
-            const settings = await this.prisma.callCenterSettings.findUnique({
-                where: {} });
+            const settings = await this.prisma.callCenterSettings.findFirst();
             if (!settings) throw new BadRequestException('إعدادات السنترال غير موجودة');
 
             const response = await client.get(
@@ -354,8 +346,7 @@ export class GdmsApiService {
     ): Promise<string> {
         try {
             const client = await this.getApiClient();
-            const settings = await this.prisma.callCenterSettings.findUnique({
-                where: {} });
+            const settings = await this.prisma.callCenterSettings.findFirst();
             if (!settings) throw new BadRequestException('إعدادات السنترال غير موجودة');
 
             const response = await client.get(

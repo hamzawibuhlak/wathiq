@@ -18,8 +18,8 @@ export class AccountService {
         level?: number;
         description?: string;
     }) {
-        const exists = await this.prisma.account.findUnique({
-            where: {  } });
+        const exists = await this.prisma.account.findFirst({
+            where: { accountNumber: dto.accountNumber } });
         if (exists) throw new BadRequestException(`الحساب ${dto.accountNumber} موجود مسبقاً`);
 
         return this.prisma.account.create({
@@ -44,8 +44,8 @@ export class AccountService {
      * Get account by number
      */
     async findByNumber(accountNumber: string) {
-        const account = await this.prisma.account.findUnique({
-            where: {  },
+        const account = await this.prisma.account.findFirst({
+            where: { accountNumber },
             include: { childAccounts: true } });
         if (!account) throw new NotFoundException(`الحساب ${accountNumber} غير موجود`);
         return account;

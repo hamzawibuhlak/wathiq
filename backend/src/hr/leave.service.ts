@@ -100,10 +100,10 @@ export class LeaveService {
         ];
 
         for (const lt of defaults) {
-            await this.prisma.leaveType.upsert({
-                where: {  },
-                update: {},
-                create: { ...lt } });
+            const existing = await this.prisma.leaveType.findFirst({ where: { code: lt.code } });
+            if (!existing) {
+                await this.prisma.leaveType.create({ data: { ...lt } });
+            }
         }
 
         return this.getLeaveTypes();

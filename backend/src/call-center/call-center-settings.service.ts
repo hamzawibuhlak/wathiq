@@ -15,10 +15,8 @@ export class CallCenterSettingsService {
     // ══════════════════════════════════════════════════════════
 
     async getSettings() {
-        let settings = await this.prisma.callCenterSettings.findUnique({
-            where: {} });
+        let settings = await this.prisma.callCenterSettings.findFirst();
 
-        // auto-create if not exists
         if (!settings) {
             settings = await this.prisma.callCenterSettings.create({
                 data: {
@@ -60,10 +58,15 @@ export class CallCenterSettingsService {
             }
         }
 
-        await this.prisma.callCenterSettings.upsert({
-            where: {},
-            create: { ...updateData },
-            update: updateData });
+        const current = await this.prisma.callCenterSettings.findFirst();
+        if (current) {
+            await this.prisma.callCenterSettings.update({
+                where: { id: current.id },
+                data: updateData });
+        } else {
+            await this.prisma.callCenterSettings.create({
+                data: updateData });
+        }
 
         return this.getSettings();
     }
@@ -83,8 +86,7 @@ export class CallCenterSettingsService {
     async autoAssignExtension(userId: string,
         userName: string,
     ) {
-        const settings = await this.prisma.callCenterSettings.findUnique({
-            where: {} });
+        const settings = await this.prisma.callCenterSettings.findFirst();
 
         if (!settings) {
             throw new NotFoundException('إعدادات السنترال غير موجودة');

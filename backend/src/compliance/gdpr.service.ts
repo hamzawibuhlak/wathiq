@@ -16,8 +16,7 @@ export class GdprService {
     async exportUserData(userId: string) {
         const [user, cases, documents, activities] = await Promise.all([
             this.prisma.user.findUnique({
-                where: { id: userId },
-                include: { tenant: true } }),
+                where: { id: userId } }),
             this.prisma.case.findMany({
                 where: {
                     OR: [

@@ -146,8 +146,7 @@ export class FormsService {
         const form = await this.prisma.form.findUnique({
             where: { slug },
             include: {
-                fields: { orderBy: { order: 'asc' } },
-                tenant: { select: { name: true, logo: true } } } });
+                fields: { orderBy: { order: 'asc' } } } });
 
         if (!form) throw new NotFoundException('النموذج غير موجود');
         if (!form.isActive) throw new BadRequestException('النموذج غير مفعّل');
@@ -448,8 +447,7 @@ export class FormsService {
         data: { recipientEmail?: string; recipientPhone?: string; deliveryMethod?: string },
     ) {
         const form = await this.prisma.form.findFirst({
-            where: { id: formId },
-            include: { tenant: true } });
+            where: { id: formId } });
         if (!form) throw new NotFoundException('النموذج غير موجود');
         if (!form.otpEnabled) {
             throw new BadRequestException('كلمات المرور لمرة واحدة غير مفعّلة لهذا النموذج');

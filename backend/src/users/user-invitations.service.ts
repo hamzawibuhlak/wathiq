@@ -90,7 +90,7 @@ export class UserInvitationsService {
             await this.emailService.sendInvitation({
                 to: email,
                 inviterName: invitation.inviter.name,
-                tenantName: null,
+                tenantName: '',
                 role: invitation.role,
                 token,
 
@@ -331,7 +331,7 @@ export class UserInvitationsService {
             await this.emailService.sendInvitation({
                 to: updated.email,
                 inviterName: updated.inviter.name,
-                tenantName: null,
+                tenantName: '',
                 role: updated.role,
                 token,
 

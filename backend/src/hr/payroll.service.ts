@@ -180,7 +180,7 @@ export class PayrollService {
     }
 
     private async getSettings() {
-        let s = await this.prisma.payrollSettings.findUnique({ where: {} });
+        let s = await this.prisma.payrollSettings.findFirst();
         if (!s) s = await this.prisma.payrollSettings.create({ data: {} });
         return s;
     }

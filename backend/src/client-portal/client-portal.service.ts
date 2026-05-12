@@ -100,10 +100,9 @@ export class ClientPortalService {
     const client = await this.prisma.client.findFirst({
       where: {
         phone: { contains: cleanPhone.slice(-9) },
-        portalAccessEnabled: true },
-      include: {
-        tenant: {
-          select: { id: true, name: true, logo: true } } } });
+        portalAccessEnabled: true } });
+    const company = await this.prisma.companySettings.findFirst({
+      select: { id: true, name: true, logo: true } });
 
     if (!client || !client.portalPassword) {
       throw new UnauthorizedException('رقم الهاتف أو كلمة المرور غير صحيحة');
@@ -136,7 +135,7 @@ export class ClientPortalService {
         name: client.name,
         email: client.email,
         phone: client.phone },
-      tenant: client.tenant };
+      tenant: company };
   }
 
   /**

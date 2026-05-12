@@ -83,8 +83,7 @@ export class ScheduledNotificationsService {
                     dueDate: { lt: now } },
                 include: {
                     client: { select: { name: true } },
-                    createdBy: { select: { id: true } },
-                    tenant: { select: { id: true } } } });
+                    createdBy: { select: { id: true } } } });
 
             // Update status to OVERDUE and notify
             for (const invoice of overdueInvoices) {
@@ -136,8 +135,7 @@ export class ScheduledNotificationsService {
                     status: { notIn: ['COMPLETED', 'CANCELLED'] },
                     dueDate: { lt: now } },
                 include: {
-                    assignedTo: { select: { id: true } },
-                    tenant: { select: { id: true } } } });
+                    assignedTo: { select: { id: true } } } });
 
             for (const task of overdueTasks) {
                 // Check if we already sent a notification today

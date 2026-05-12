@@ -292,10 +292,14 @@ export class MarketingService {
     }
 
     async connectAdsPlatform(data: any) {
-        return this.prisma.adsConnection.upsert({
-            where: {  },
-            create: { ...data },
-            update: { accessToken: data.accessToken, refreshToken: data.refreshToken, isActive: true } });
+        const existing = await this.prisma.adsConnection.findFirst({
+            where: { platform: data.platform, accountId: data.accountId } });
+        if (existing) {
+            return this.prisma.adsConnection.update({
+                where: { id: existing.id },
+                data: { accessToken: data.accessToken, refreshToken: data.refreshToken, isActive: true } });
+        }
+        return this.prisma.adsConnection.create({ data: { ...data } });
     }
 
     async getAdsDashboard(from: Date, to: Date) {

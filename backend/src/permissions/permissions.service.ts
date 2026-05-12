@@ -64,8 +64,7 @@ export class PermissionsService implements OnModuleInit {
     if (!permission) return false;
 
     const rolePermission = await this.prisma.rolePermission.findUnique({
-      where: {
-      } });
+      where: { role_permissionId: { role: user.role, permissionId: permission.id } } });
 
     return !!rolePermission;
   }
@@ -104,8 +103,7 @@ export class PermissionsService implements OnModuleInit {
     }
 
     return this.prisma.rolePermission.upsert({
-      where: {
-      },
+      where: { role_permissionId: { role, permissionId: permission.id } },
       create: {
         role,
         permissionId: permission.id },

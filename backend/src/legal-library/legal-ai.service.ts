@@ -567,21 +567,26 @@ export class LegalAIService {
         const currentMonth = this.getCurrentMonth();
 
         try {
-            await this.prisma.legalAIUsage.upsert({
-                where: {
-                },
-                create: {
-                    userId,
-                    month: currentMonth,
-                    questionsCount: 1,
-                    tokensUsed,
-                    cacheHits: cacheHit ? 1 : 0,
-                    cacheMisses: cacheHit ? 0 : 1 },
-                update: {
-                    questionsCount: { increment: 1 },
-                    tokensUsed: { increment: tokensUsed },
-                    cacheHits: { increment: cacheHit ? 1 : 0 },
-                    cacheMisses: { increment: cacheHit ? 0 : 1 } } });
+            const existing = await this.prisma.legalAIUsage.findFirst({
+                where: { userId, month: currentMonth } });
+            if (existing) {
+                await this.prisma.legalAIUsage.update({
+                    where: { id: existing.id },
+                    data: {
+                        questionsCount: { increment: 1 },
+                        tokensUsed: { increment: tokensUsed },
+                        cacheHits: { increment: cacheHit ? 1 : 0 },
+                        cacheMisses: { increment: cacheHit ? 0 : 1 } } });
+            } else {
+                await this.prisma.legalAIUsage.create({
+                    data: {
+                        userId,
+                        month: currentMonth,
+                        questionsCount: 1,
+                        tokensUsed,
+                        cacheHits: cacheHit ? 1 : 0,
+                        cacheMisses: cacheHit ? 0 : 1 } });
+            }
         } catch (error) {
             this.logger.error('Failed to track AI usage:', error);
         }

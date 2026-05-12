@@ -155,8 +155,8 @@ export class FinancialStatementsService {
      */
     async getVATReport(startDate: Date, endDate: Date) {
         const [inputAcc, outputAcc] = await Promise.all([
-            this.prisma.account.findUnique({ where: {  } }),
-            this.prisma.account.findUnique({ where: {  } }),
+            this.prisma.account.findFirst({ where: { accountNumber: '1160' } }),
+            this.prisma.account.findFirst({ where: { accountNumber: '2130' } }),
         ]);
 
         let vatInput = 0, vatOutput = 0;

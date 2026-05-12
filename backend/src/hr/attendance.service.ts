@@ -131,13 +131,14 @@ export class AttendanceService {
     }
 
     async getSettings() {
-        return this.prisma.attendanceSettings.findUnique({ where: {} });
+        return this.prisma.attendanceSettings.findFirst();
     }
 
     async updateSettings(data: any) {
-        return this.prisma.attendanceSettings.upsert({
-            where: {},
-            update: data,
-            create: { ...data } });
+        const cur = await this.prisma.attendanceSettings.findFirst();
+        if (cur) {
+            return this.prisma.attendanceSettings.update({ where: { id: cur.id }, data });
+        }
+        return this.prisma.attendanceSettings.create({ data: { ...data } });
     }
 }

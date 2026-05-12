@@ -172,9 +172,9 @@ export class JournalEntryService {
         if (!invoice) throw new BadRequestException('الفاتورة غير موجودة');
 
         const [arAcc, revAcc, vatAcc] = await Promise.all([
-            this.prisma.account.findUnique({ where: {  } }),
-            this.prisma.account.findUnique({ where: {  } }),
-            this.prisma.account.findUnique({ where: {  } }),
+            this.prisma.account.findFirst({ where: { accountNumber: '1140' } }),
+            this.prisma.account.findFirst({ where: { accountNumber: '4100' } }),
+            this.prisma.account.findFirst({ where: { accountNumber: '2130' } }),
         ]);
         if (!arAcc || !revAcc || !vatAcc) throw new BadRequestException('الحسابات الأساسية غير موجودة');
 

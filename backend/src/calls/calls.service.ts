@@ -105,7 +105,6 @@ export class CallsService {
         // Find user by phone number
         const user = await this.prisma.user.findFirst({
             where: { phone: from },
-            include: { tenant: true },
         });
 
         // Create call record
