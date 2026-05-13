@@ -45,8 +45,7 @@ export class GdprService {
             name: user.name,
             phone: user.phone,
             role: user.role,
-            createdAt: user.createdAt,
-            tenant: null } : null;
+            createdAt: user.createdAt } : null;
 
         return {
             user: sanitizedUser,

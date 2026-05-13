@@ -41,21 +41,17 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
             client.data.userId = userId;
 
-            // Join tenant room
-            client.join(`tenant:`);
+            client.join('firm');
 
-            // Join all of user's conversation rooms
             const conversations = await this.chatService.getUserConversations(userId);
             conversations.forEach(conv => client.join(`conversation:${conv.id}`));
 
-            // Track online status
             if (!this.onlineUsers.has(userId)) {
                 this.onlineUsers.set(userId, new Set());
             }
             this.onlineUsers.get(userId)!.add(client.id);
 
-            // Broadcast to tenant
-            this.server.to(`tenant:`).emit('user:online', { userId });
+            this.server.to('firm').emit('user:online', { userId });
 
             this.logger.log(`Chat client connected: ${client.id} (user: ${userId})`);
         } catch (err) {
@@ -73,11 +69,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
             if (!sockets?.size) {
                 this.onlineUsers.delete(userId);
-                if (false) {
-                    this.server.to(`tenant:`).emit('user:offline', {
-                        userId,
-                        lastSeen: new Date() });
-                }
+                this.server.to('firm').emit('user:offline', {
+                    userId,
+                    lastSeen: new Date() });
             }
         }
 

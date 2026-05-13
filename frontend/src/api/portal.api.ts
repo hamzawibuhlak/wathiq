@@ -45,7 +45,7 @@ export interface PortalLoginResponse {
         email: string;
         phone: string;
     };
-    tenant: {
+    firm: {
         id: string;
         name: string;
         logo?: string;

@@ -26,7 +26,7 @@ export class LoggingInterceptor implements NestInterceptor {
                     const responseTime = Date.now() - now;
 
                     this.logger.log(
-                        `${method} ${url} ${statusCode} ${responseTime}ms ${contentLength}bytes - User:${userId} Tenant:`,
+                        `${method} ${url} ${statusCode} ${responseTime}ms ${contentLength}bytes - User:${userId}`,
                     );
 
                     // Log slow requests

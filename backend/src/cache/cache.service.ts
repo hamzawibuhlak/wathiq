@@ -4,7 +4,7 @@ import { Cache } from 'cache-manager';
 
 /**
  * Cache Service - خدمة التخزين المؤقت
- * Redis-based caching with tenant isolation
+ * Redis-based caching for the firm
  */
 @Injectable()
 export class CacheService implements OnModuleInit {
@@ -64,10 +64,10 @@ export class CacheService implements OnModuleInit {
     }
 
     /**
-     * Build tenant-specific key
+     * Build firm-scoped key
      */
-    tenantKey(namespace: string, ...parts: string[]): string {
-        return this.buildKey('tenant', namespace, ...parts);
+    firmKey(namespace: string, ...parts: string[]): string {
+        return this.buildKey('firm', namespace, ...parts);
     }
 
     /**
@@ -130,10 +130,10 @@ export class CacheService implements OnModuleInit {
     }
 
     /**
-     * Invalidate all cache for a tenant
+     * Invalidate all firm-scoped cache
      */
-    async invalidateTenant(): Promise<void> {
-        await this.invalidatePattern(`tenant::*`);
+    async invalidateAll(): Promise<void> {
+        await this.invalidatePattern('firm:*');
     }
 
     /**
@@ -141,11 +141,11 @@ export class CacheService implements OnModuleInit {
      */
     async invalidateEntity(entity: string, id?: string): Promise<void> {
         if (id) {
-            await this.del(this.tenantKey(entity, id));
+            await this.del(this.firmKey(entity, id));
         }
-        await this.invalidatePattern(this.tenantKey(entity, '*'));
+        await this.invalidatePattern(this.firmKey(entity, '*'));
         // Also invalidate list caches
-        await this.invalidatePattern(this.tenantKey(`${entity}-list`, '*'));
+        await this.invalidatePattern(this.firmKey(`${entity}-list`, '*'));
     }
 
     /**
@@ -156,7 +156,7 @@ export class CacheService implements OnModuleInit {
         fn: () => Promise<T>,
         ttl = 300
     ): Promise<T> {
-        const key = this.tenantKey(entity, id);
+        const key = this.firmKey(entity, id);
         return this.getOrSet(key, fn, ttl);
     }
 
@@ -168,7 +168,7 @@ export class CacheService implements OnModuleInit {
         fn: () => Promise<T>,
         ttl = 60 // Shorter TTL for lists
     ): Promise<T> {
-        const key = this.tenantKey(`${entity}-list`, queryHash);
+        const key = this.firmKey(`${entity}-list`, queryHash);
         return this.getOrSet(key, fn, ttl);
     }
 

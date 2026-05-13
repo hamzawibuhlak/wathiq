@@ -111,7 +111,7 @@ Authorization: Bearer <your-jwt-token>
         )
         .addTag('Auth', '🔐 تسجيل الدخول والتسجيل')
         .addTag('Users', '👥 إدارة المستخدمين')
-        .addTag('Tenants', '🏢 إعدادات المكتب')
+        .addTag('Firm', '🏢 إعدادات المكتب')
         .addTag('Clients', '👤 إدارة العملاء')
         .addTag('Cases', '⚖️ إدارة القضايا')
         .addTag('Hearings', '📅 إدارة الجلسات')

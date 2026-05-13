@@ -135,7 +135,7 @@ export class ClientPortalService {
         name: client.name,
         email: client.email,
         phone: client.phone },
-      tenant: company };
+      firm: company };
   }
 
   /**
