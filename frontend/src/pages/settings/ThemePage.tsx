@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Palette, Save, RotateCcw, Type } from 'lucide-react';
+import { Palette, Save, RotateCcw, Type, Sun, Moon } from 'lucide-react';
 import { Button, Card, CardHeader, CardTitle, CardContent, Label } from '@/components/ui';
 import { useFirmSettings, useUpdateFirmSettings } from '@/hooks/use-settings';
-import { DEFAULT_THEME, ARABIC_FONTS, ENGLISH_FONTS, applyTheme, ensureGoogleFont } from '@/lib/theme';
+import { DEFAULT_THEME, ARABIC_FONTS, ENGLISH_FONTS, applyTheme, ensureGoogleFont, applyThemeMode, getThemeMode, type ThemeMode } from '@/lib/theme';
 
 type ThemeState = {
     primaryColor: string;
@@ -22,6 +22,13 @@ export function ThemePage() {
     const { data: firmData, isLoading } = useFirmSettings();
     const updateMutation = useUpdateFirmSettings();
     const firm = firmData?.data;
+
+    const [mode, setMode] = useState<ThemeMode>(getThemeMode());
+
+    const toggleMode = (next: ThemeMode) => {
+        setMode(next);
+        applyThemeMode(next);
+    };
 
     const [state, setState] = useState<ThemeState>({
         primaryColor: DEFAULT_THEME.primaryColor,
@@ -60,6 +67,36 @@ export function ThemePage() {
 
     return (
         <div className="p-6 space-y-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        {mode === 'dark' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+                        وضع العرض
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex gap-2">
+                        <Button
+                            type="button"
+                            variant={mode === 'light' ? 'default' : 'outline'}
+                            onClick={() => toggleMode('light')}
+                        >
+                            <Sun className="w-4 h-4 ml-2" />
+                            فاتح
+                        </Button>
+                        <Button
+                            type="button"
+                            variant={mode === 'dark' ? 'default' : 'outline'}
+                            onClick={() => toggleMode('dark')}
+                        >
+                            <Moon className="w-4 h-4 ml-2" />
+                            داكن
+                        </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-3">يُحفظ التفضيل في هذا المتصفح فقط.</p>
+                </CardContent>
+            </Card>
+
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">

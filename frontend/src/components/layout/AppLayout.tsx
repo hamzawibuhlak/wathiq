@@ -8,7 +8,7 @@ import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { useWebSocket } from '@/hooks/use-websocket';
 import { useFirmSettings } from '@/hooks/use-settings';
-import { applyTheme } from '@/lib/theme';
+import { applyTheme, applyThemeMode, getThemeMode } from '@/lib/theme';
 import toast from 'react-hot-toast';
 
 const Softphone = lazy(() => import('@/components/call-center/Softphone'));
@@ -22,6 +22,10 @@ export function AppLayout() {
     const firm = firmData?.data;
     const firmName = firm?.name;
     const firmLogo = firm?.logo;
+
+    useEffect(() => {
+        applyThemeMode(getThemeMode());
+    }, []);
 
     useEffect(() => {
         if (!firm) return;

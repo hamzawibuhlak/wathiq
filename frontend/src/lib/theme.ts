@@ -52,6 +52,22 @@ export function hexToHsl(hex: string): string {
     return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
 }
 
+export type ThemeMode = 'light' | 'dark';
+
+const THEME_MODE_KEY = 'wasm-theme-mode';
+
+export function getThemeMode(): ThemeMode {
+    if (typeof window === 'undefined') return 'light';
+    return (localStorage.getItem(THEME_MODE_KEY) as ThemeMode) || 'light';
+}
+
+export function applyThemeMode(mode: ThemeMode) {
+    const root = document.documentElement;
+    if (mode === 'dark') root.classList.add('dark');
+    else root.classList.remove('dark');
+    localStorage.setItem(THEME_MODE_KEY, mode);
+}
+
 const loadedFonts = new Set<string>();
 
 export function ensureGoogleFont(family: string) {
