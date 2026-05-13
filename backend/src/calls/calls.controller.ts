@@ -18,10 +18,9 @@ export class CallsController {
         @CurrentUser() user: User,
         @Body() body: { to: string; record?: boolean },
     ) {
-        return this.callsService.initiateCall(user.id, user.tenantId!, {
+        return this.callsService.initiateCall(user.id, {
             to: body.to,
-            record: body.record,
-        });
+            record: body.record });
     }
 
     @Get('history')
@@ -35,11 +34,10 @@ export class CallsController {
         @Query('direction') direction?: 'INBOUND' | 'OUTBOUND',
         @Query('limit') limit?: string,
     ) {
-        return this.callsService.getCallHistory(user.tenantId!, {
+        return this.callsService.getCallHistory({
             userId,
             direction,
-            limit: limit ? parseInt(limit) : 50,
-        });
+            limit: limit ? parseInt(limit) : 50 });
     }
 
     @Get('analytics')
@@ -49,7 +47,7 @@ export class CallsController {
         @CurrentUser() user: User,
         @Query('period') period: 'day' | 'week' | 'month' = 'week',
     ) {
-        return this.callsService.getCallAnalytics(user.tenantId!, period);
+        return this.callsService.getCallAnalytics(period);
     }
 
     @Get(':id/recording')

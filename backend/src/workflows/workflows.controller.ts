@@ -1,20 +1,5 @@
-import {
-    Controller,
-    Get,
-    Post,
-    Patch,
-    Delete,
-    Body,
-    Param,
-    UseGuards,
-    ParseUUIDPipe,
-} from '@nestjs/common';
-import {
-    ApiTags,
-    ApiOperation,
-    ApiBearerAuth,
-    ApiResponse,
-} from '@nestjs/swagger';
+import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, ParseUUIDPipe } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { WorkflowsService } from './workflows.service';
 import { CreateWorkflowDto } from './dto/create-workflow.dto';
@@ -22,7 +7,6 @@ import { UpdateWorkflowDto } from './dto/update-workflow.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
-import { TenantId } from '../common/decorators/tenant-id.decorator';
 
 @ApiTags('Workflows')
 @ApiBearerAuth('JWT-auth')
@@ -35,8 +19,8 @@ export class WorkflowsController {
     @Get()
     @ApiOperation({ summary: 'الحصول على جميع سيرات العمل' })
     @ApiResponse({ status: 200, description: 'قائمة سيرات العمل' })
-    async findAll(@TenantId() tenantId: string) {
-        return this.workflowsService.findAll(tenantId);
+    async findAll() {
+        return this.workflowsService.findAll();
     }
 
     @Get('triggers')
@@ -57,18 +41,18 @@ export class WorkflowsController {
     @ApiResponse({ status: 404, description: 'سير العمل غير موجود' })
     async findOne(
         @Param('id', ParseUUIDPipe) id: string,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.workflowsService.findOne(id, tenantId);
+        return this.workflowsService.findOne(id);
     }
 
     @Get(':id/executions')
     @ApiOperation({ summary: 'الحصول على سجل تنفيذ سير العمل' })
     async getExecutionHistory(
         @Param('id', ParseUUIDPipe) id: string,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.workflowsService.getExecutionHistory(id, tenantId);
+        return this.workflowsService.getExecutionHistory(id);
     }
 
     @Post()
@@ -77,9 +61,9 @@ export class WorkflowsController {
     @ApiResponse({ status: 400, description: 'بيانات غير صالحة' })
     async create(
         @Body() createWorkflowDto: CreateWorkflowDto,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.workflowsService.create(createWorkflowDto, tenantId);
+        return this.workflowsService.create(createWorkflowDto);
     }
 
     @Patch(':id')
@@ -89,9 +73,9 @@ export class WorkflowsController {
     async update(
         @Param('id', ParseUUIDPipe) id: string,
         @Body() updateWorkflowDto: UpdateWorkflowDto,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.workflowsService.update(id, updateWorkflowDto, tenantId);
+        return this.workflowsService.update(id, updateWorkflowDto);
     }
 
     @Patch(':id/toggle')
@@ -99,9 +83,9 @@ export class WorkflowsController {
     @ApiResponse({ status: 200, description: 'تم تغيير حالة سير العمل' })
     async toggleActive(
         @Param('id', ParseUUIDPipe) id: string,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.workflowsService.toggleActive(id, tenantId);
+        return this.workflowsService.toggleActive(id);
     }
 
     @Post(':id/trigger')
@@ -110,9 +94,9 @@ export class WorkflowsController {
     async manualTrigger(
         @Param('id', ParseUUIDPipe) id: string,
         @Body() triggerData: Record<string, any>,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.workflowsService.manualTrigger(id, tenantId, triggerData);
+        return this.workflowsService.manualTrigger(id, triggerData);
     }
 
     @Delete(':id')
@@ -121,8 +105,8 @@ export class WorkflowsController {
     @ApiResponse({ status: 404, description: 'سير العمل غير موجود' })
     async remove(
         @Param('id', ParseUUIDPipe) id: string,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.workflowsService.remove(id, tenantId);
+        return this.workflowsService.remove(id);
     }
 }

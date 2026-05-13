@@ -1,12 +1,8 @@
-import {
-    Controller, Get, Post, Delete, Patch,
-    Param, Query, Body, UseGuards,
-    UseInterceptors, UploadedFile, BadRequestException,
-} from '@nestjs/common';
+import { Controller, Get, Post, Delete, Patch, Param, Query, Body, UseGuards, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { TenantId } from '../common/decorators/tenant-id.decorator';
+
 import { LegalLibraryService } from './legal-library.service';
 import { LegalAIService } from './legal-ai.service';
 
@@ -34,19 +30,19 @@ export class LegalLibraryController {
     @Post('ai-search')
     aiSearch(
         @Body('query') query: string,
-        @TenantId() tenantId: string,
+
         @CurrentUser() user: any,
     ) {
-        return this.aiService.askAI(query, tenantId, user.id);
+        return this.aiService.askAI(query, user.id);
     }
 
     // ── AI USAGE STATS ────────────────────────────
     @Get('ai-usage')
     getAIUsage(
-        @TenantId() tenantId: string,
+
         @CurrentUser() user: any,
     ) {
-        return this.aiService.getUsageStats(tenantId, user.id);
+        return this.aiService.getUsageStats(user.id);
     }
 
     // ── REGULATIONS ───────────────────────────────
@@ -79,8 +75,7 @@ export class LegalLibraryController {
                     return cb(new BadRequestException('يجب أن يكون الملف بصيغة PDF'), false);
                 }
                 cb(null, true);
-            },
-        }),
+            } }),
     )
     async uploadRegulationPdf(
         @UploadedFile() file: Express.Multer.File,
@@ -96,8 +91,7 @@ export class LegalLibraryController {
             effectiveDate: body.effectiveDate,
             category: body.category || 'SYSTEM',
             status: body.status,
-            tags: body.tags ? JSON.parse(body.tags) : undefined,
-        };
+            tags: body.tags ? JSON.parse(body.tags) : undefined };
         return this.service.createRegulationFromPdf(file.buffer, metadata);
     }
 
@@ -126,8 +120,7 @@ export class LegalLibraryController {
             courtType, caseType, outcome,
             yearFrom: yearFrom ? +yearFrom : undefined,
             yearTo: yearTo ? +yearTo : undefined,
-            search, page: page ? +page : 1,
-        });
+            search, page: page ? +page : 1 });
     }
 
     @Get('precedents/:id')
@@ -184,148 +177,148 @@ export class LegalLibraryController {
     @Post('articles/:articleId/notes')
     createNote(
         @Param('articleId') articleId: string,
-        @TenantId() tenantId: string,
+
         @CurrentUser() user: any,
         @Body() data: any,
     ) {
-        return this.aiService.createNote(articleId, tenantId, user.id, data);
+        return this.aiService.createNote(articleId, user.id, data);
     }
 
     @Get('articles/:articleId/notes')
     getNotes(
         @Param('articleId') articleId: string,
-        @TenantId() tenantId: string,
+
         @CurrentUser() user: any,
     ) {
-        return this.aiService.getNotes(articleId, tenantId, user.id);
+        return this.aiService.getNotes(articleId, user.id);
     }
 
     @Delete('notes/:id')
     deleteNote(
         @Param('id') id: string,
-        @TenantId() tenantId: string,
+
         @CurrentUser() user: any,
     ) {
-        return this.aiService.deleteNote(id, tenantId, user.id);
+        return this.aiService.deleteNote(id, user.id);
     }
 
     // ── BOOKMARKS ─────────────────────────────────
     @Get('bookmarks')
     getBookmarks(
-        @TenantId() tenantId: string,
+
         @CurrentUser() user: any,
         @Query('folderId') folderId?: string,
         @Query('tag') tag?: string,
     ) {
-        return this.service.getBookmarks(tenantId, user.id, folderId, tag);
+        return this.service.getBookmarks(user.id, folderId, tag);
     }
 
     @Post('bookmarks')
     addBookmark(
-        @TenantId() tenantId: string,
+
         @CurrentUser() user: any,
         @Body() data: any,
     ) {
-        return this.service.addBookmark(tenantId, user.id, data);
+        return this.service.addBookmark(user.id, data);
     }
 
     @Patch('bookmarks/:id')
     updateBookmark(
         @Param('id') id: string,
-        @TenantId() tenantId: string,
+
         @CurrentUser() user: any,
         @Body() data: any,
     ) {
-        return this.service.updateBookmark(id, tenantId, user.id, data);
+        return this.service.updateBookmark(id, user.id, data);
     }
 
     @Delete('bookmarks/:id')
     removeBookmark(
         @Param('id') id: string,
-        @TenantId() tenantId: string,
+
         @CurrentUser() user: any,
     ) {
-        return this.service.removeBookmark(id, tenantId, user.id);
+        return this.service.removeBookmark(id, user.id);
     }
 
     // ── BOOKMARK FOLDERS ──────────────────────────
     @Get('folders')
-    getFolders(@TenantId() tenantId: string, @CurrentUser() user: any) {
-        return this.service.getFolders(tenantId, user.id);
+    getFolders(@CurrentUser() user: any) {
+        return this.service.getFolders(user.id);
     }
 
     @Post('folders')
     createFolder(
-        @TenantId() tenantId: string,
+
         @CurrentUser() user: any,
         @Body() data: any,
     ) {
-        return this.service.createFolder(tenantId, user.id, data);
+        return this.service.createFolder(user.id, data);
     }
 
     @Patch('folders/:id')
     updateFolder(
         @Param('id') id: string,
-        @TenantId() tenantId: string,
+
         @CurrentUser() user: any,
         @Body() data: any,
     ) {
-        return this.service.updateFolder(id, tenantId, user.id, data);
+        return this.service.updateFolder(id, user.id, data);
     }
 
     @Delete('folders/:id')
     deleteFolder(
         @Param('id') id: string,
-        @TenantId() tenantId: string,
+
         @CurrentUser() user: any,
     ) {
-        return this.service.deleteFolder(id, tenantId, user.id);
+        return this.service.deleteFolder(id, user.id);
     }
 
     // ── FOLDER COMMENTS ───────────────────────────
     @Get('folders/:folderId/comments')
     getFolderComments(
         @Param('folderId') folderId: string,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.service.getFolderComments(folderId, tenantId);
+        return this.service.getFolderComments(folderId);
     }
 
     @Post('folders/:folderId/comments')
     addFolderComment(
         @Param('folderId') folderId: string,
-        @TenantId() tenantId: string,
+
         @CurrentUser() user: any,
         @Body('content') content: string,
     ) {
-        return this.service.addFolderComment(folderId, tenantId, user.id, content);
+        return this.service.addFolderComment(folderId, user.id, content);
     }
 
     @Delete('folders/comments/:id')
     deleteFolderComment(
         @Param('id') id: string,
-        @TenantId() tenantId: string,
+
         @CurrentUser() user: any,
     ) {
-        return this.service.deleteFolderComment(id, tenantId, user.id);
+        return this.service.deleteFolderComment(id, user.id);
     }
 
     // ── CASE REFERENCES ───────────────────────────
     @Post('cases/:caseId/references')
     linkToCase(
         @Param('caseId') caseId: string,
-        @TenantId() tenantId: string,
+
         @CurrentUser() user: any,
         @Body() data: any,
     ) {
-        return this.service.linkToCase(caseId, tenantId, user.id, data);
+        return this.service.linkToCase(caseId, user.id, data);
     }
 
     @Get('cases/:caseId/references')
     getCaseReferences(
         @Param('caseId') caseId: string,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.service.getCaseReferences(caseId, tenantId);
+        return this.service.getCaseReferences(caseId);
     }
 }

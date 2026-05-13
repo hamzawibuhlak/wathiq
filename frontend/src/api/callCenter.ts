@@ -11,7 +11,6 @@ export interface SipExtension {
     ucmPort: number;
     isActive: boolean;
     userId: string;
-    tenantId: string;
     sipPassword?: string; // decrypted — only returned for the current user
 }
 
@@ -30,7 +29,6 @@ export interface CallRecordItem {
     notes?: string;
     clientId?: string;
     agentId: string;
-    tenantId: string;
     client?: { id: string; name: string; phone: string };
 }
 
@@ -61,7 +59,6 @@ export interface CallStats {
 
 export interface CallCenterSettingsData {
     id: string;
-    tenantId: string;
     ucmHost: string;
     ucmPort: number;
     ucmWebsocketPath: string;

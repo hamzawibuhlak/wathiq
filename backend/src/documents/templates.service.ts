@@ -27,16 +27,15 @@ export class TemplatesService {
     async create(
         file: Express.Multer.File,
         dto: CreateTemplateDto,
-        tenantId: string,
     ) {
         // Generate unique filename
         const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
         const ext = path.extname(file.originalname);
         const fileName = `${uniqueSuffix}${ext}`;
-        const filePath = path.join(this.templatesDir, tenantId, fileName);
+        const filePath = path.join(this.templatesDir, fileName);
 
         // Ensure tenant directory exists
-        const tenantDir = path.join(this.templatesDir, tenantId);
+        const tenantDir = path.join(this.templatesDir);
         if (!fs.existsSync(tenantDir)) {
             fs.mkdirSync(tenantDir, { recursive: true });
         }
@@ -52,29 +51,22 @@ export class TemplatesService {
                 category: dto.category,
                 filePath,
                 fileSize: file.size,
-                mimeType: file.mimetype,
-                tenantId,
-            },
-        });
+                mimeType: file.mimetype } });
 
         return {
             data: template,
-            message: 'تم إنشاء القالب بنجاح',
-        };
+            message: 'تم إنشاء القالب بنجاح' };
     }
 
     /**
      * Get all templates for a tenant
      */
-    async findAll(tenantId: string, category?: DocumentType) {
+    async findAll(category?: DocumentType) {
         const templates = await this.prisma.documentTemplate.findMany({
             where: {
-                tenantId,
                 isActive: true,
-                ...(category && { category }),
-            },
-            orderBy: { name: 'asc' },
-        });
+                ...(category && { category }) },
+            orderBy: { name: 'asc' } });
 
         return { data: templates };
     }
@@ -82,10 +74,9 @@ export class TemplatesService {
     /**
      * Get a specific template
      */
-    async findOne(id: string, tenantId: string) {
+    async findOne(id: string) {
         const template = await this.prisma.documentTemplate.findFirst({
-            where: { id, tenantId, isActive: true },
-        });
+            where: { id, isActive: true } });
 
         if (!template) {
             throw new NotFoundException('القالب غير موجود');
@@ -100,36 +91,31 @@ export class TemplatesService {
     async update(
         id: string,
         dto: Partial<CreateTemplateDto>,
-        tenantId: string,
     ) {
-        const template = await this.findOne(id, tenantId);
+        const template = await this.findOne(id);
 
         const updated = await this.prisma.documentTemplate.update({
             where: { id },
             data: {
                 name: dto.name,
                 description: dto.description,
-                category: dto.category,
-            },
-        });
+                category: dto.category } });
 
         return {
             data: updated,
-            message: 'تم تحديث القالب بنجاح',
-        };
+            message: 'تم تحديث القالب بنجاح' };
     }
 
     /**
      * Delete a template (soft delete)
      */
-    async delete(id: string, tenantId: string) {
-        const template = await this.findOne(id, tenantId);
+    async delete(id: string) {
+        const template = await this.findOne(id);
 
         // Soft delete by marking as inactive
         await this.prisma.documentTemplate.update({
             where: { id },
-            data: { isActive: false },
-        });
+            data: { isActive: false } });
 
         return { message: 'تم حذف القالب بنجاح' };
     }
@@ -137,10 +123,9 @@ export class TemplatesService {
     /**
      * Hard delete a template (remove file and record)
      */
-    async hardDelete(id: string, tenantId: string) {
+    async hardDelete(id: string) {
         const template = await this.prisma.documentTemplate.findFirst({
-            where: { id, tenantId },
-        });
+            where: { id } });
 
         if (!template) {
             throw new NotFoundException('القالب غير موجود');
@@ -157,8 +142,7 @@ export class TemplatesService {
 
         // Delete record
         await this.prisma.documentTemplate.delete({
-            where: { id },
-        });
+            where: { id } });
 
         return { message: 'تم حذف القالب نهائياً' };
     }
@@ -166,8 +150,8 @@ export class TemplatesService {
     /**
      * Get template file for download
      */
-    async getFile(id: string, tenantId: string, res: any) {
-        const template = await this.findOne(id, tenantId);
+    async getFile(id: string, res: any) {
+        const template = await this.findOne(id);
 
         if (!fs.existsSync(template.filePath)) {
             throw new NotFoundException('ملف القالب غير موجود');
@@ -190,16 +174,15 @@ export class TemplatesService {
     async createDocumentFromTemplate(
         templateId: string,
         caseId: string | undefined,
-        tenantId: string,
         userId: string,
     ) {
-        const template = await this.findOne(templateId, tenantId);
+        const template = await this.findOne(templateId);
 
         // Copy template file to documents directory
         const now = new Date();
         const year = now.getFullYear().toString();
         const month = (now.getMonth() + 1).toString().padStart(2, '0');
-        const docDir = path.join('./uploads', tenantId, year, month);
+        const docDir = path.join('./uploads', year, month);
 
         if (!fs.existsSync(docDir)) {
             fs.mkdirSync(docDir, { recursive: true });
@@ -224,18 +207,14 @@ export class TemplatesService {
                 mimeType: template.mimeType,
                 documentType: template.category,
                 caseId,
-                tenantId,
-                uploadedById: userId,
-            },
+
+                uploadedById: userId },
             include: {
                 case: { select: { id: true, caseNumber: true, title: true } },
-                uploadedBy: { select: { id: true, name: true } },
-            },
-        });
+                uploadedBy: { select: { id: true, name: true } } } });
 
         return {
             data: document,
-            message: 'تم إنشاء المستند من القالب بنجاح',
-        };
+            message: 'تم إنشاء المستند من القالب بنجاح' };
     }
 }

@@ -1,12 +1,4 @@
-import {
-    WebSocketGateway,
-    WebSocketServer,
-    SubscribeMessage,
-    MessageBody,
-    ConnectedSocket,
-    OnGatewayConnection,
-    OnGatewayDisconnect,
-} from '@nestjs/websockets';
+import { WebSocketGateway, WebSocketServer, SubscribeMessage, MessageBody, ConnectedSocket, OnGatewayConnection, OnGatewayDisconnect } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -14,8 +6,7 @@ import { ChatService } from './chat.service';
 
 @WebSocketGateway({
     cors: { origin: '*', credentials: true },
-    namespace: '/chat',
-})
+    namespace: '/chat' })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @WebSocketServer()
     server: Server;
@@ -44,35 +35,23 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             }
 
             const payload = this.jwtService.verify(token, {
-                secret: process.env.JWT_SECRET || 'your-secret-key',
-            });
+                secret: process.env.JWT_SECRET || 'your-secret-key' });
 
             const userId = payload.userId || payload.sub;
-            const tenantId = payload.tenantId;
-
-            if (!userId || !tenantId) {
-                client.disconnect();
-                return;
-            }
 
             client.data.userId = userId;
-            client.data.tenantId = tenantId;
 
-            // Join tenant room
-            client.join(`tenant:${tenantId}`);
+            client.join('firm');
 
-            // Join all of user's conversation rooms
-            const conversations = await this.chatService.getUserConversations(userId, tenantId);
+            const conversations = await this.chatService.getUserConversations(userId);
             conversations.forEach(conv => client.join(`conversation:${conv.id}`));
 
-            // Track online status
             if (!this.onlineUsers.has(userId)) {
                 this.onlineUsers.set(userId, new Set());
             }
             this.onlineUsers.get(userId)!.add(client.id);
 
-            // Broadcast to tenant
-            this.server.to(`tenant:${tenantId}`).emit('user:online', { userId });
+            this.server.to('firm').emit('user:online', { userId });
 
             this.logger.log(`Chat client connected: ${client.id} (user: ${userId})`);
         } catch (err) {
@@ -83,7 +62,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     handleDisconnect(client: Socket) {
         const userId = client.data?.userId;
-        const tenantId = client.data?.tenantId;
 
         if (userId) {
             const sockets = this.onlineUsers.get(userId);
@@ -91,12 +69,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
             if (!sockets?.size) {
                 this.onlineUsers.delete(userId);
-                if (tenantId) {
-                    this.server.to(`tenant:${tenantId}`).emit('user:offline', {
-                        userId,
-                        lastSeen: new Date(),
-                    });
-                }
+                this.server.to('firm').emit('user:offline', {
+                    userId,
+                    lastSeen: new Date() });
             }
         }
 
@@ -123,13 +98,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         },
         @ConnectedSocket() client: Socket,
     ) {
-        const { userId, tenantId } = client.data;
+        const { userId } = client.data;
 
         try {
             const message = await this.chatService.sendMessage(
                 data.conversationId,
                 userId,
-                tenantId,
+
                 data as any,
             );
 
@@ -155,8 +130,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         client.to(`conversation:${data.conversationId}`).emit('chat:user_typing', {
             conversationId: data.conversationId,
             userId,
-            isTyping: data.isTyping,
-        });
+            isTyping: data.isTyping });
     }
 
     @SubscribeMessage('chat:mark_read')
@@ -164,19 +138,18 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         @MessageBody() data: { conversationId: string },
         @ConnectedSocket() client: Socket,
     ) {
-        const { userId, tenantId } = client.data;
+        const { userId } = client.data;
 
         const result = await this.chatService.markAsRead(
             data.conversationId,
             userId,
-            tenantId,
+
         );
 
         client.to(`conversation:${data.conversationId}`).emit('chat:messages_read', {
             conversationId: data.conversationId,
             userId,
-            readAt: new Date(),
-        });
+            readAt: new Date() });
 
         return result;
     }
@@ -200,8 +173,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 messageId: data.messageId,
                 userId,
                 emoji: data.emoji,
-                action: result.action,
-            });
+                action: result.action });
     }
 
     @SubscribeMessage('chat:edit_message')
@@ -209,12 +181,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         @MessageBody() data: { messageId: string; conversationId: string; content: string },
         @ConnectedSocket() client: Socket,
     ) {
-        const { userId, tenantId } = client.data;
+        const { userId } = client.data;
 
         const updated = await this.chatService.editMessage(
             data.messageId,
             userId,
-            tenantId,
+
             data.content,
         );
 
@@ -228,16 +200,15 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         @MessageBody() data: { messageId: string; conversationId: string },
         @ConnectedSocket() client: Socket,
     ) {
-        const { userId, tenantId } = client.data;
+        const { userId } = client.data;
 
-        await this.chatService.deleteMessage(data.messageId, userId, tenantId);
+        await this.chatService.deleteMessage(data.messageId, userId);
 
         this.server
             .to(`conversation:${data.conversationId}`)
             .emit('chat:message_deleted', {
                 messageId: data.messageId,
-                conversationId: data.conversationId,
-            });
+                conversationId: data.conversationId });
     }
 
     @SubscribeMessage('chat:join_conversation')

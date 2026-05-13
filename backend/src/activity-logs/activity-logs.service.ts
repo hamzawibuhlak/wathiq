@@ -11,7 +11,7 @@ export class ActivityLogsService {
     entityId?: string;
     description: string;
     userId: string;
-    tenantId: string;
+
     ipAddress?: string;
     userAgent?: string;
   }) {
@@ -19,7 +19,7 @@ export class ActivityLogsService {
   }
 
   async findAll(params: {
-    tenantId: string;
+
     userId?: string;
     userIds?: string[];
     entity?: string;
@@ -33,7 +33,6 @@ export class ActivityLogsService {
     limit?: number;
   }) {
     const {
-      tenantId,
       userId,
       userIds,
       entity,
@@ -47,7 +46,7 @@ export class ActivityLogsService {
       limit = 50,
     } = params;
 
-    const where: any = { tenantId };
+    const where: any = {};
     // User filter: single or multiple
     if (userIds?.length) where.userId = { in: userIds };
     else if (userId) where.userId = userId;
@@ -121,35 +120,35 @@ export class ActivityLogsService {
     return '\uFEFF' + csvLines.join('\n'); // BOM for Excel Arabic support
   }
 
-  async getStats(tenantId: string) {
+  async getStats() {
     const now = new Date();
     const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     const last7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
     const [total, last24hCount, last7dCount, byEntity, byAction, byUser] =
       await Promise.all([
-        this.prisma.activityLog.count({ where: { tenantId } }),
+        this.prisma.activityLog.count({ where: {} }),
         this.prisma.activityLog.count({
-          where: { tenantId, createdAt: { gte: last24h } },
+          where: { createdAt: { gte: last24h } },
         }),
         this.prisma.activityLog.count({
-          where: { tenantId, createdAt: { gte: last7d } },
+          where: { createdAt: { gte: last7d } },
         }),
         this.prisma.activityLog.groupBy({
           by: ['entity'],
-          where: { tenantId },
+          where: {},
           _count: true,
           orderBy: { _count: { entity: 'desc' } },
           take: 5,
         }),
         this.prisma.activityLog.groupBy({
           by: ['action'],
-          where: { tenantId },
+          where: {},
           _count: true,
         }),
         this.prisma.activityLog.groupBy({
           by: ['userId'],
-          where: { tenantId, createdAt: { gte: last7d } },
+          where: { createdAt: { gte: last7d } },
           _count: true,
           orderBy: { _count: { userId: 'desc' } },
           take: 5,
@@ -184,14 +183,12 @@ export class ActivityLogsService {
     };
   }
 
-  async getRecentByEntity(
-    tenantId: string,
-    entity: string,
+  async getRecentByEntity(entity: string,
     entityId: string,
     limit = 10,
   ) {
     return this.prisma.activityLog.findMany({
-      where: { tenantId, entity, entityId },
+      where: { entity, entityId },
       include: {
         user: {
           select: { id: true, name: true, avatar: true },

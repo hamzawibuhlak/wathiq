@@ -1,8 +1,4 @@
-import {
-    Injectable,
-    NotFoundException,
-    ConflictException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { CreateFolderDto, UpdateFolderDto } from './dto/create-folder.dto';
 
@@ -13,9 +9,8 @@ export class DocumentFoldersService {
     /**
      * Get folders (root or by parentId)
      */
-    async findAll(tenantId: string, parentId?: string) {
+    async findAll(parentId?: string) {
         const where: any = {
-            tenantId,
             parentId: parentId || null,
         };
 
@@ -38,9 +33,9 @@ export class DocumentFoldersService {
     /**
      * Get folder by ID with its contents
      */
-    async findOne(id: string, tenantId: string) {
+    async findOne(id: string) {
         const folder = await this.prisma.documentFolder.findFirst({
-            where: { id, tenantId },
+            where: { id },
             include: {
                 children: {
                     include: {
@@ -72,10 +67,10 @@ export class DocumentFoldersService {
     /**
      * Get documents in a folder
      */
-    async getFolderDocuments(folderId: string, tenantId: string, page = 1, limit = 20) {
+    async getFolderDocuments(folderId: string, page = 1, limit = 20) {
         // Verify folder exists
         const folder = await this.prisma.documentFolder.findFirst({
-            where: { id: folderId, tenantId },
+            where: { id: folderId },
         });
 
         if (!folder) {
@@ -88,10 +83,9 @@ export class DocumentFoldersService {
         const [documents, total] = await Promise.all([
             this.prisma.document.findMany({
                 where: {
-                    tenantId,
                     OR: [
                         { folderId }, // Documents moved to this folder
-                        { folderLinks: { some: { folderId, tenantId } } }, // Linked shortcuts
+                        { folderLinks: { some: { folderId } } }, // Linked shortcuts
                     ],
                 },
                 include: {
@@ -105,10 +99,9 @@ export class DocumentFoldersService {
             }),
             this.prisma.document.count({
                 where: {
-                    tenantId,
                     OR: [
                         { folderId },
-                        { folderLinks: { some: { folderId, tenantId } } },
+                        { folderLinks: { some: { folderId } } },
                     ],
                 },
             }),
@@ -128,13 +121,13 @@ export class DocumentFoldersService {
     /**
      * Get breadcrumb path for a folder
      */
-    async getBreadcrumb(folderId: string, tenantId: string) {
+    async getBreadcrumb(folderId: string) {
         const breadcrumb: Array<{ id: string; name: string }> = [];
         let currentId: string | null = folderId;
 
         while (currentId) {
             const folder: { id: string; name: string; parentId: string | null } | null = await this.prisma.documentFolder.findFirst({
-                where: { id: currentId, tenantId },
+                where: { id: currentId },
                 select: { id: true, name: true, parentId: true },
             });
 
@@ -150,11 +143,11 @@ export class DocumentFoldersService {
     /**
      * Create a new folder
      */
-    async create(dto: CreateFolderDto, tenantId: string, userId?: string) {
+    async create(dto: CreateFolderDto, userId?: string) {
         // If parentId provided, verify it exists
         if (dto.parentId) {
             const parent = await this.prisma.documentFolder.findFirst({
-                where: { id: dto.parentId, tenantId },
+                where: { id: dto.parentId },
             });
             if (!parent) {
                 throw new NotFoundException('المجلد الأب غير موجود');
@@ -167,7 +160,7 @@ export class DocumentFoldersService {
                 color: dto.color || '#6366f1',
                 icon: dto.icon || 'folder',
                 parentId: dto.parentId || null,
-                tenantId,
+
                 createdById: userId || null,
             },
             include: {
@@ -186,14 +179,14 @@ export class DocumentFoldersService {
     /**
      * Create a folder for a client (auto)
      */
-    async createClientFolder(clientName: string, clientId: string, tenantId: string, userId?: string) {
+    async createClientFolder(clientName: string, clientId: string, userId?: string) {
         const folder = await this.prisma.documentFolder.create({
             data: {
                 name: clientName,
                 color: '#10b981',
                 icon: 'user',
                 clientId,
-                tenantId,
+
                 createdById: userId || null,
             },
         });
@@ -204,9 +197,9 @@ export class DocumentFoldersService {
     /**
      * Update folder
      */
-    async update(id: string, dto: UpdateFolderDto, tenantId: string) {
+    async update(id: string, dto: UpdateFolderDto) {
         const folder = await this.prisma.documentFolder.findFirst({
-            where: { id, tenantId },
+            where: { id },
         });
 
         if (!folder) {
@@ -219,7 +212,7 @@ export class DocumentFoldersService {
                 throw new ConflictException('لا يمكن نقل المجلد إلى نفسه');
             }
             // Check that parentId is not a child of this folder
-            const isChild = await this.isDescendant(dto.parentId, id, tenantId);
+            const isChild = await this.isDescendant(dto.parentId, id);
             if (isChild) {
                 throw new ConflictException('لا يمكن نقل المجلد إلى أحد مجلداته الفرعية');
             }
@@ -249,9 +242,9 @@ export class DocumentFoldersService {
     /**
      * Delete folder (cascade deletes children and links)
      */
-    async remove(id: string, tenantId: string) {
+    async remove(id: string) {
         const folder = await this.prisma.documentFolder.findFirst({
-            where: { id, tenantId },
+            where: { id },
         });
 
         if (!folder) {
@@ -266,10 +259,10 @@ export class DocumentFoldersService {
     /**
      * Link a document to a folder
      */
-    async linkDocument(folderId: string, documentId: string, tenantId: string) {
+    async linkDocument(folderId: string, documentId: string) {
         // Verify folder exists
         const folder = await this.prisma.documentFolder.findFirst({
-            where: { id: folderId, tenantId },
+            where: { id: folderId },
         });
         if (!folder) {
             throw new NotFoundException('المجلد غير موجود');
@@ -277,7 +270,7 @@ export class DocumentFoldersService {
 
         // Verify document exists
         const document = await this.prisma.document.findFirst({
-            where: { id: documentId, tenantId },
+            where: { id: documentId },
         });
         if (!document) {
             throw new NotFoundException('المستند غير موجود');
@@ -295,7 +288,7 @@ export class DocumentFoldersService {
             data: {
                 documentId,
                 folderId,
-                tenantId,
+
             },
             include: {
                 document: {
@@ -313,10 +306,10 @@ export class DocumentFoldersService {
      * Move a document to a folder (sets document.folderId)
      * Document will disappear from root documents list
      */
-    async moveDocument(folderId: string, documentId: string, tenantId: string) {
+    async moveDocument(folderId: string, documentId: string) {
         // Verify folder exists
         const folder = await this.prisma.documentFolder.findFirst({
-            where: { id: folderId, tenantId },
+            where: { id: folderId },
         });
         if (!folder) {
             throw new NotFoundException('المجلد غير موجود');
@@ -324,7 +317,7 @@ export class DocumentFoldersService {
 
         // Verify document exists
         const document = await this.prisma.document.findFirst({
-            where: { id: documentId, tenantId },
+            where: { id: documentId },
         });
         if (!document) {
             throw new NotFoundException('المستند غير موجود');
@@ -345,9 +338,9 @@ export class DocumentFoldersService {
     /**
      * Unlink a document from a folder
      */
-    async unlinkDocument(folderId: string, documentId: string, tenantId: string) {
+    async unlinkDocument(folderId: string, documentId: string) {
         const link = await this.prisma.documentFolderLink.findFirst({
-            where: { folderId, documentId, tenantId },
+            where: { folderId, documentId },
         });
 
         if (!link) {
@@ -362,9 +355,9 @@ export class DocumentFoldersService {
     /**
      * Move document back to root (set folderId = null)
      */
-    async moveToRoot(documentId: string, tenantId: string) {
+    async moveToRoot(documentId: string) {
         const document = await this.prisma.document.findFirst({
-            where: { id: documentId, tenantId },
+            where: { id: documentId },
         });
         if (!document) {
             throw new NotFoundException('المستند غير موجود');
@@ -384,7 +377,7 @@ export class DocumentFoldersService {
     /**
      * Check if targetId is a descendant of ancestorId
      */
-    private async isDescendant(targetId: string, ancestorId: string, tenantId: string): Promise<boolean> {
+    private async isDescendant(targetId: string, ancestorId: string): Promise<boolean> {
         let currentId: string | null = targetId;
         const visited = new Set<string>();
 
@@ -394,7 +387,7 @@ export class DocumentFoldersService {
             visited.add(currentId);
 
             const folder: { parentId: string | null } | null = await this.prisma.documentFolder.findFirst({
-                where: { id: currentId, tenantId },
+                where: { id: currentId },
                 select: { parentId: true },
             });
 

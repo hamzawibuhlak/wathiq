@@ -1,18 +1,8 @@
-import {
-    Controller,
-    Post,
-    UseGuards,
-    UseInterceptors,
-    UploadedFile,
-    BadRequestException,
-    Get,
-    Param,
-    Res,
-} from '@nestjs/common';
+import { Controller, Post, UseGuards, UseInterceptors, UploadedFile, BadRequestException, Get, Param, Res } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { TenantId } from '../common/decorators/tenant-id.decorator';
+
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
@@ -27,8 +17,7 @@ const storage = diskStorage({
     filename: (req, file, cb) => {
         const uniqueName = `${randomUUID()}${extname(file.originalname)}`;
         cb(null, uniqueName);
-    },
-});
+    } });
 
 // File filter for images
 const imageFilter = (req: any, file: Express.Multer.File, cb: any) => {
@@ -61,10 +50,7 @@ export class UploadsController {
         schema: {
             type: 'object',
             properties: {
-                file: { type: 'string', format: 'binary' },
-            },
-        },
-    })
+                file: { type: 'string', format: 'binary' } } } })
     @UseInterceptors(
         FileInterceptor('file', {
             storage,
@@ -75,7 +61,7 @@ export class UploadsController {
     async uploadAvatar(
         @UploadedFile() file: Express.Multer.File,
         @CurrentUser('id') userId: string,
-        @TenantId() tenantId: string,
+
     ) {
         if (!file) {
             throw new BadRequestException('لم يتم رفع ملف');
@@ -85,13 +71,11 @@ export class UploadsController {
 
         await this.prisma.user.update({
             where: { id: userId },
-            data: { avatar: avatarUrl },
-        });
+            data: { avatar: avatarUrl } });
 
         return {
             data: { avatarUrl },
-            message: 'تم رفع الصورة الشخصية بنجاح',
-        };
+            message: 'تم رفع الصورة الشخصية بنجاح' };
     }
 
     // ========== Tenant Logo Upload ==========
@@ -103,10 +87,7 @@ export class UploadsController {
         schema: {
             type: 'object',
             properties: {
-                file: { type: 'string', format: 'binary' },
-            },
-        },
-    })
+                file: { type: 'string', format: 'binary' } } } })
     @UseInterceptors(
         FileInterceptor('file', {
             storage,
@@ -116,7 +97,7 @@ export class UploadsController {
     )
     async uploadLogo(
         @UploadedFile() file: Express.Multer.File,
-        @TenantId() tenantId: string,
+
     ) {
         if (!file) {
             throw new BadRequestException('لم يتم رفع ملف');
@@ -124,15 +105,19 @@ export class UploadsController {
 
         const logoUrl = `/uploads/${file.filename}`;
 
-        await this.prisma.tenant.update({
-            where: { id: tenantId },
-            data: { logo: logoUrl },
-        });
+        const current = await this.prisma.companySettings.findFirst();
+        if (current) {
+            await this.prisma.companySettings.update({
+                where: { id: current.id },
+                data: { logo: logoUrl } });
+        } else {
+            await this.prisma.companySettings.create({
+                data: { name: 'My Law Office', logo: logoUrl } });
+        }
 
         return {
             data: { logoUrl },
-            message: 'تم رفع شعار المكتب بنجاح',
-        };
+            message: 'تم رفع شعار المكتب بنجاح' };
     }
 
     // ========== Letterhead Upload ==========
@@ -144,10 +129,7 @@ export class UploadsController {
         schema: {
             type: 'object',
             properties: {
-                file: { type: 'string', format: 'binary' },
-            },
-        },
-    })
+                file: { type: 'string', format: 'binary' } } } })
     @UseInterceptors(
         FileInterceptor('file', {
             storage,
@@ -157,7 +139,7 @@ export class UploadsController {
     )
     async uploadLetterhead(
         @UploadedFile() file: Express.Multer.File,
-        @TenantId() tenantId: string,
+
     ) {
         if (!file) {
             throw new BadRequestException('لم يتم رفع ملف');
@@ -165,15 +147,19 @@ export class UploadsController {
 
         const letterheadUrl = `/uploads/${file.filename}`;
 
-        await this.prisma.tenant.update({
-            where: { id: tenantId },
-            data: { letterheadUrl },
-        });
+        const current = await this.prisma.companySettings.findFirst();
+        if (current) {
+            await this.prisma.companySettings.update({
+                where: { id: current.id },
+                data: { letterheadUrl } });
+        } else {
+            await this.prisma.companySettings.create({
+                data: { name: 'My Law Office', letterheadUrl } });
+        }
 
         return {
             data: { letterheadUrl },
-            message: 'تم رفع ورقة الهيد ليتر بنجاح',
-        };
+            message: 'تم رفع ورقة الهيد ليتر بنجاح' };
     }
 
     // ========== Payment Proof Upload ==========
@@ -185,10 +171,7 @@ export class UploadsController {
         schema: {
             type: 'object',
             properties: {
-                file: { type: 'string', format: 'binary' },
-            },
-        },
-    })
+                file: { type: 'string', format: 'binary' } } } })
     @UseInterceptors(
         FileInterceptor('file', {
             storage,
@@ -199,7 +182,7 @@ export class UploadsController {
     async uploadPaymentProof(
         @UploadedFile() file: Express.Multer.File,
         @Param('invoiceId') invoiceId: string,
-        @TenantId() tenantId: string,
+
     ) {
         if (!file) {
             throw new BadRequestException('لم يتم رفع ملف');
@@ -209,13 +192,11 @@ export class UploadsController {
 
         await this.prisma.invoice.update({
             where: { id: invoiceId },
-            data: { paymentProof: proofUrl },
-        });
+            data: { paymentProof: proofUrl } });
 
         return {
             data: { paymentProofUrl: proofUrl },
-            message: 'تم رفع إثبات الدفع بنجاح',
-        };
+            message: 'تم رفع إثبات الدفع بنجاح' };
     }
 
     // ========== Serve uploaded files ==========
@@ -236,8 +217,7 @@ export class UploadsController {
             '.png': 'image/png',
             '.gif': 'image/gif',
             '.webp': 'image/webp',
-            '.pdf': 'application/pdf',
-        };
+            '.pdf': 'application/pdf' };
 
         res.setHeader('Content-Type', mimeTypes[ext] || 'application/octet-stream');
         res.setHeader('Content-Disposition', 'inline');
@@ -254,10 +234,7 @@ export class UploadsController {
         schema: {
             type: 'object',
             properties: {
-                file: { type: 'string', format: 'binary' },
-            },
-        },
-    })
+                file: { type: 'string', format: 'binary' } } } })
     @UseInterceptors(
         FileInterceptor('file', {
             storage,
@@ -276,7 +253,6 @@ export class UploadsController {
 
         return {
             data: { url: documentUrl },
-            message: 'تم رفع المستند بنجاح',
-        };
+            message: 'تم رفع المستند بنجاح' };
     }
 }

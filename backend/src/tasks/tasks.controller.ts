@@ -1,21 +1,5 @@
-import {
-    Controller,
-    Get,
-    Post,
-    Patch,
-    Delete,
-    Body,
-    Param,
-    Query,
-    UseGuards,
-    ParseUUIDPipe,
-} from '@nestjs/common';
-import {
-    ApiTags,
-    ApiOperation,
-    ApiBearerAuth,
-    ApiResponse,
-} from '@nestjs/swagger';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards, ParseUUIDPipe } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { UserRole, TaskStatus } from '@prisma/client';
 import { TasksService } from './tasks.service';
 import { CreateTaskDto } from './dto/create-task.dto';
@@ -25,7 +9,7 @@ import { CreateCommentDto } from './dto/create-comment.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
-import { TenantId } from '../common/decorators/tenant-id.decorator';
+
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 
 @ApiTags('Tasks')
@@ -39,34 +23,34 @@ export class TasksController {
     @ApiOperation({ summary: 'الحصول على جميع المهام مع pagination و filters' })
     @ApiResponse({ status: 200, description: 'قائمة المهام' })
     async findAll(
-        @TenantId() tenantId: string,
+
         @Query() filterDto: FilterTasksDto,
         @CurrentUser('id') userId: string,
         @CurrentUser('role') userRole: UserRole,
     ) {
-        return this.tasksService.findAll(tenantId, filterDto, userId, userRole);
+        return this.tasksService.findAll(filterDto, userId, userRole);
     }
 
     @Get('stats')
     @ApiOperation({ summary: 'إحصائيات المهام' })
     @ApiResponse({ status: 200, description: 'إحصائيات المهام' })
     async getStats(
-        @TenantId() tenantId: string,
+
         @CurrentUser('id') userId: string,
         @CurrentUser('role') userRole: UserRole,
     ) {
-        return this.tasksService.getStats(tenantId, userId, userRole);
+        return this.tasksService.getStats(userId, userRole);
     }
 
     @Get('my')
     @ApiOperation({ summary: 'الحصول على مهامي' })
     @ApiResponse({ status: 200, description: 'قائمة مهامي' })
     async getMyTasks(
-        @TenantId() tenantId: string,
+
         @CurrentUser('id') userId: string,
         @Query() filterDto: FilterTasksDto,
     ) {
-        return this.tasksService.getMyTasks(tenantId, userId, filterDto);
+        return this.tasksService.getMyTasks(userId, filterDto);
     }
 
     @Get(':id')
@@ -75,11 +59,11 @@ export class TasksController {
     @ApiResponse({ status: 404, description: 'المهمة غير موجودة' })
     async findOne(
         @Param('id', ParseUUIDPipe) id: string,
-        @TenantId() tenantId: string,
+
         @CurrentUser('id') userId: string,
         @CurrentUser('role') userRole: UserRole,
     ) {
-        return this.tasksService.findOne(id, tenantId, userId, userRole);
+        return this.tasksService.findOne(id, userId, userRole);
     }
 
     @Post()
@@ -89,10 +73,10 @@ export class TasksController {
     @ApiResponse({ status: 400, description: 'بيانات غير صالحة' })
     async create(
         @Body() createTaskDto: CreateTaskDto,
-        @TenantId() tenantId: string,
+
         @CurrentUser('id') userId: string,
     ) {
-        return this.tasksService.create(createTaskDto, tenantId, userId);
+        return this.tasksService.create(createTaskDto, userId);
     }
 
     @Patch(':id')
@@ -103,11 +87,11 @@ export class TasksController {
     async update(
         @Param('id', ParseUUIDPipe) id: string,
         @Body() updateTaskDto: UpdateTaskDto,
-        @TenantId() tenantId: string,
+
         @CurrentUser('id') userId: string,
         @CurrentUser('role') userRole: UserRole,
     ) {
-        return this.tasksService.update(id, updateTaskDto, tenantId, userId, userRole);
+        return this.tasksService.update(id, updateTaskDto, userId, userRole);
     }
 
     @Delete(':id')
@@ -117,11 +101,11 @@ export class TasksController {
     @ApiResponse({ status: 404, description: 'المهمة غير موجودة' })
     async remove(
         @Param('id', ParseUUIDPipe) id: string,
-        @TenantId() tenantId: string,
+
         @CurrentUser('id') userId: string,
         @CurrentUser('role') userRole: UserRole,
     ) {
-        return this.tasksService.remove(id, tenantId, userId, userRole);
+        return this.tasksService.remove(id, userId, userRole);
     }
 
     @Post(':id/comments')
@@ -131,10 +115,10 @@ export class TasksController {
     async addComment(
         @Param('id', ParseUUIDPipe) id: string,
         @Body() createCommentDto: CreateCommentDto,
-        @TenantId() tenantId: string,
+
         @CurrentUser('id') userId: string,
     ) {
-        return this.tasksService.addComment(id, createCommentDto, tenantId, userId);
+        return this.tasksService.addComment(id, createCommentDto, userId);
     }
 
     @Delete('comments/:commentId')
@@ -143,11 +127,11 @@ export class TasksController {
     @ApiResponse({ status: 200, description: 'تم حذف التعليق بنجاح' })
     async removeComment(
         @Param('commentId', ParseUUIDPipe) commentId: string,
-        @TenantId() tenantId: string,
+
         @CurrentUser('id') userId: string,
         @CurrentUser('role') userRole: UserRole,
     ) {
-        return this.tasksService.removeComment(commentId, tenantId, userId, userRole);
+        return this.tasksService.removeComment(commentId, userId, userRole);
     }
 
     @Delete(':id/assignees/:userId')
@@ -157,9 +141,9 @@ export class TasksController {
     async removeAssignee(
         @Param('id', ParseUUIDPipe) id: string,
         @Param('userId', ParseUUIDPipe) userId: string,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.tasksService.removeAssignee(id, userId, tenantId);
+        return this.tasksService.removeAssignee(id, userId);
     }
 
     @Patch('bulk/status')
@@ -168,9 +152,9 @@ export class TasksController {
     @ApiResponse({ status: 200, description: 'تم تحديث المهام بنجاح' })
     async bulkUpdateStatus(
         @Body() body: { ids: string[]; status: TaskStatus },
-        @TenantId() tenantId: string,
+
     ) {
-        return this.tasksService.bulkUpdateStatus(body.ids, body.status, tenantId);
+        return this.tasksService.bulkUpdateStatus(body.ids, body.status);
     }
 
     @Delete('bulk/delete')
@@ -179,8 +163,8 @@ export class TasksController {
     @ApiResponse({ status: 200, description: 'تم حذف المهام بنجاح' })
     async bulkDelete(
         @Body() body: { ids: string[] },
-        @TenantId() tenantId: string,
+
     ) {
-        return this.tasksService.bulkDelete(body.ids, tenantId);
+        return this.tasksService.bulkDelete(body.ids);
     }
 }

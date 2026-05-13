@@ -7,6 +7,8 @@ import { cn } from '@/lib/utils';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { useWebSocket } from '@/hooks/use-websocket';
+import { useFirmSettings } from '@/hooks/use-settings';
+import { applyTheme, applyThemeMode, getThemeMode } from '@/lib/theme';
 import toast from 'react-hot-toast';
 
 const Softphone = lazy(() => import('@/components/call-center/Softphone'));
@@ -16,6 +18,44 @@ export function AppLayout() {
     const location = useLocation();
     const { subscribe, isConnected } = useWebSocket();
     const queryClient = useQueryClient();
+    const { data: firmData } = useFirmSettings();
+    const firm = firmData?.data;
+    const firmName = firm?.name;
+    const firmLogo = firm?.logo;
+
+    useEffect(() => {
+        applyThemeMode(getThemeMode());
+    }, []);
+
+    useEffect(() => {
+        if (!firm) return;
+        applyTheme({
+            primaryColor: firm.primaryColor,
+            secondaryColor: firm.secondaryColor,
+            tertiaryColor: firm.tertiaryColor,
+            fontArabic: firm.fontArabic,
+            fontEnglish: firm.fontEnglish,
+        });
+    }, [firm?.primaryColor, firm?.secondaryColor, firm?.tertiaryColor, firm?.fontArabic, firm?.fontEnglish]);
+
+    useEffect(() => {
+        if (firmName) document.title = `${firmName} - نظام إدارة المكاتب القانونية`;
+    }, [firmName]);
+
+    useEffect(() => {
+        if (!firmLogo) return;
+        const setIcon = (rel: string) => {
+            let link = document.querySelector<HTMLLinkElement>(`link[rel="${rel}"]`);
+            if (!link) {
+                link = document.createElement('link');
+                link.rel = rel;
+                document.head.appendChild(link);
+            }
+            link.href = firmLogo;
+        };
+        setIcon('icon');
+        setIcon('apple-touch-icon');
+    }, [firmLogo]);
 
     // Subscribe to real-time notifications
     useEffect(() => {

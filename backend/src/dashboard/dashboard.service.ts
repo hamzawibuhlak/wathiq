@@ -51,7 +51,7 @@ export class DashboardService {
      * - LAWYER: see only their assigned cases/hearings/clients
      * - Invoice stats (pending, revenue) only for OWNER/ADMIN/ACCOUNTANT
      */
-    async getStats(tenantId: string, userId?: string, userRole?: UserRole) {
+    async getStats(userId?: string, userRole?: UserRole) {
         const now = new Date();
         const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const startOfTomorrow = new Date(startOfToday);
@@ -66,10 +66,10 @@ export class DashboardService {
         const canSeeFinancials = userRole === UserRole.OWNER || userRole === UserRole.ADMIN;
 
         // Filters based on role
-        const hearingFilter = canSeeAll ? { tenantId } : { tenantId, assignedToId: userId };
-        const caseFilter = canSeeAll ? { tenantId } : { tenantId, assignedToId: userId };
+        const hearingFilter = canSeeAll ? {} : { assignedToId: userId };
+        const caseFilter = canSeeAll ? {} : { assignedToId: userId };
         // For clients: LAWYER sees only clients from their assigned cases
-        const clientFilter = canSeeAll ? { tenantId } : { tenantId, cases: { some: { assignedToId: userId } } };
+        const clientFilter = canSeeAll ? {} : { cases: { some: { assignedToId: userId } } };
 
         // Execute all queries in parallel
         const [
@@ -145,16 +145,16 @@ export class DashboardService {
                 where: { ...clientFilter, cases: { some: {} } },
             }),
             // Invoices queries
-            this.prisma.invoice.count({ where: { tenantId } }),
-            this.prisma.invoice.count({ where: { tenantId, status: InvoiceStatus.PAID } }),
-            this.prisma.invoice.count({ where: { tenantId, status: { in: [InvoiceStatus.DRAFT, InvoiceStatus.SENT] } } }),
-            this.prisma.invoice.count({ where: { tenantId, status: InvoiceStatus.OVERDUE } }),
+            this.prisma.invoice.count({ where: {} }),
+            this.prisma.invoice.count({ where: { status: InvoiceStatus.PAID } }),
+            this.prisma.invoice.count({ where: { status: { in: [InvoiceStatus.DRAFT, InvoiceStatus.SENT] } } }),
+            this.prisma.invoice.count({ where: { status: InvoiceStatus.OVERDUE } }),
             this.prisma.invoice.aggregate({
-                where: { tenantId, status: InvoiceStatus.PAID },
+                where: { status: InvoiceStatus.PAID },
                 _sum: { totalAmount: true },
             }),
             this.prisma.invoice.aggregate({
-                where: { tenantId, status: { in: [InvoiceStatus.DRAFT, InvoiceStatus.SENT, InvoiceStatus.OVERDUE] } },
+                where: { status: { in: [InvoiceStatus.DRAFT, InvoiceStatus.SENT, InvoiceStatus.OVERDUE] } },
                 _sum: { totalAmount: true },
             }),
         ]);
@@ -209,7 +209,7 @@ export class DashboardService {
      * - OWNER/ADMIN: see all upcoming hearings
      * - LAWYER: see only their assigned hearings
      */
-    async getUpcomingHearings(tenantId: string, days: number = 7, userId?: string, userRole?: UserRole) {
+    async getUpcomingHearings(days: number = 7, userId?: string, userRole?: UserRole) {
         const now = new Date();
         const endDate = new Date();
         endDate.setDate(now.getDate() + days);
@@ -219,7 +219,6 @@ export class DashboardService {
 
         // Build where clause
         const whereClause: any = {
-            tenantId,
             hearingDate: { gte: now, lte: endDate },
             status: { in: [HearingStatus.SCHEDULED, HearingStatus.POSTPONED] },
         };
@@ -287,9 +286,9 @@ export class DashboardService {
     /**
      * Get recent cases
      */
-    async getRecentCases(tenantId: string, limit: number = 5) {
+    async getRecentCases(limit: number = 5) {
         const cases = await this.prisma.case.findMany({
-            where: { tenantId },
+            where: {},
             include: {
                 client: { select: { id: true, name: true } },
                 assignedTo: { select: { id: true, name: true } },
@@ -307,7 +306,7 @@ export class DashboardService {
      * - OWNER/ADMIN: see all activities
      * - LAWYER/SECRETARY: see only their own activities
      */
-    async getRecentActivity(tenantId: string, userId: string, userRole: UserRole) {
+    async getRecentActivity(userId: string, userRole: UserRole) {
         // Determine if user can see all or only their own
         const canSeeAll = userRole === UserRole.OWNER || userRole === UserRole.ADMIN;
 
@@ -317,7 +316,7 @@ export class DashboardService {
 
         const [recentCases, recentHearings, recentInvoices, recentDocuments] = await Promise.all([
             this.prisma.case.findMany({
-                where: { tenantId, ...userFilter },
+                where: { ...userFilter },
                 select: {
                     id: true,
                     title: true,
@@ -330,7 +329,7 @@ export class DashboardService {
                 take: 5,
             }),
             this.prisma.hearing.findMany({
-                where: { tenantId, ...(canSeeAll ? {} : { createdById: userId }) },
+                where: { ...(canSeeAll ? {} : { createdById: userId }) },
                 select: {
                     id: true,
                     hearingDate: true,
@@ -343,7 +342,7 @@ export class DashboardService {
                 take: 5,
             }),
             this.prisma.invoice.findMany({
-                where: { tenantId, ...userFilter },
+                where: { ...userFilter },
                 select: {
                     id: true,
                     invoiceNumber: true,
@@ -357,7 +356,7 @@ export class DashboardService {
                 take: 5,
             }),
             this.prisma.document.findMany({
-                where: { tenantId, ...uploadedByFilter },
+                where: { ...uploadedByFilter },
                 select: {
                     id: true,
                     title: true,
@@ -452,7 +451,7 @@ export class DashboardService {
     /**
      * Get cases trend for last 12 months
      */
-    async getCasesTrend(tenantId: string) {
+    async getCasesTrend() {
         const months = [];
         const now = new Date();
 
@@ -463,13 +462,11 @@ export class DashboardService {
             const [created, closed] = await Promise.all([
                 this.prisma.case.count({
                     where: {
-                        tenantId,
                         createdAt: { gte: date, lt: nextMonth },
                     },
                 }),
                 this.prisma.case.count({
                     where: {
-                        tenantId,
                         status: { in: [CaseStatus.CLOSED, CaseStatus.ARCHIVED] },
                         updatedAt: { gte: date, lt: nextMonth },
                     },
@@ -493,7 +490,7 @@ export class DashboardService {
     /**
      * Get revenue trend for last 12 months
      */
-    async getRevenueTrend(tenantId: string) {
+    async getRevenueTrend() {
         const months = [];
         const now = new Date();
 
@@ -503,7 +500,6 @@ export class DashboardService {
 
             const revenue = await this.prisma.invoice.aggregate({
                 where: {
-                    tenantId,
                     status: InvoiceStatus.PAID,
                     paidAt: { gte: date, lt: nextMonth },
                 },
@@ -526,10 +522,10 @@ export class DashboardService {
     /**
      * Get cases distribution by type for pie chart
      */
-    async getCasesByTypeChart(tenantId: string) {
+    async getCasesByTypeChart() {
         const casesByType = await this.prisma.case.groupBy({
             by: ['caseType'],
-            where: { tenantId },
+            where: {},
             _count: true,
         });
 
@@ -556,9 +552,9 @@ export class DashboardService {
     /**
      * Get top clients by cases count
      */
-    async getTopClients(tenantId: string, limit = 5) {
+    async getTopClients(limit = 5) {
         const clients = await this.prisma.client.findMany({
-            where: { tenantId },
+            where: {},
             select: {
                 id: true,
                 name: true,
@@ -585,10 +581,9 @@ export class DashboardService {
     /**
      * Get lawyer performance metrics
      */
-    async getLawyerPerformance(tenantId: string) {
+    async getLawyerPerformance() {
         const lawyers = await this.prisma.user.findMany({
             where: {
-                tenantId,
                 role: { in: ['LAWYER', 'OWNER', 'ADMIN'] },
                 isActive: true,
             },
@@ -604,28 +599,24 @@ export class DashboardService {
                 const [openCases, closedCases, completedTasks, totalTasks] = await Promise.all([
                     this.prisma.case.count({
                         where: {
-                            tenantId,
                             assignedToId: lawyer.id,
                             status: { in: [CaseStatus.OPEN, CaseStatus.IN_PROGRESS] },
                         },
                     }),
                     this.prisma.case.count({
                         where: {
-                            tenantId,
                             assignedToId: lawyer.id,
                             status: { in: [CaseStatus.CLOSED, CaseStatus.ARCHIVED] },
                         },
                     }),
                     this.prisma.task.count({
                         where: {
-                            tenantId,
                             assignedToId: lawyer.id,
                             status: 'COMPLETED',
                         },
                     }),
                     this.prisma.task.count({
                         where: {
-                            tenantId,
                             assignedToId: lawyer.id,
                         },
                     }),
@@ -658,12 +649,11 @@ export class DashboardService {
     /**
      * Get overdue tasks for dashboard
      */
-    async getOverdueTasks(tenantId: string, limit = 5) {
+    async getOverdueTasks(limit = 5) {
         const now = new Date();
 
         const tasks = await this.prisma.task.findMany({
             where: {
-                tenantId,
                 status: { not: 'COMPLETED' },
                 dueDate: { lt: now },
             },

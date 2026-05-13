@@ -32,7 +32,6 @@ export interface DocumentTemplate {
     fileSize: number;
     mimeType: string;
     isActive: boolean;
-    tenantId: string;
     createdAt: string;
     updatedAt: string;
 }

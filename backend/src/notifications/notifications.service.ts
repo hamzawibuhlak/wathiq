@@ -17,7 +17,7 @@ export class NotificationsService {
         type: NotificationType;
         link?: string;
         userId: string;
-        tenantId: string;
+
     }) {
         const notification = await this.prisma.notification.create({ data });
         
@@ -27,42 +27,36 @@ export class NotificationsService {
         return notification;
     }
 
-    async findAll(userId: string, tenantId: string, options?: { limit?: number; onlyUnread?: boolean }) {
+    async findAll(userId: string, options?: { limit?: number; onlyUnread?: boolean }) {
         return this.prisma.notification.findMany({
             where: { 
                 userId, 
-                tenantId,
-                ...(options?.onlyUnread ? { isRead: false } : {}),
-            },
+
+                ...(options?.onlyUnread ? { isRead: false } : {}) },
             orderBy: { createdAt: 'desc' },
-            take: options?.limit || 50,
-        });
+            take: options?.limit || 50 });
     }
 
-    async getUnreadCount(userId: string, tenantId: string) {
+    async getUnreadCount(userId: string) {
         return this.prisma.notification.count({
-            where: { userId, tenantId, isRead: false },
-        });
+            where: { userId, isRead: false } });
     }
 
-    async markAsRead(id: string, userId: string, tenantId: string) {
+    async markAsRead(id: string, userId: string) {
         return this.prisma.notification.updateMany({
-            where: { id, userId, tenantId },
-            data: { isRead: true },
-        });
+            where: { id, userId },
+            data: { isRead: true } });
     }
 
-    async markAllAsRead(userId: string, tenantId: string) {
+    async markAllAsRead(userId: string) {
         return this.prisma.notification.updateMany({
-            where: { userId, tenantId, isRead: false },
-            data: { isRead: true },
-        });
+            where: { userId, isRead: false },
+            data: { isRead: true } });
     }
 
-    async delete(id: string, userId: string, tenantId: string) {
+    async delete(id: string, userId: string) {
         return this.prisma.notification.deleteMany({
-            where: { id, userId, tenantId },
-        });
+            where: { id, userId } });
     }
 
     // Notification Settings - persisted in database
@@ -74,14 +68,12 @@ export class NotificationsService {
             caseUpdates: true,
             invoiceReminders: true,
             dailyDigest: false,
-            reminderHoursBefore: 24,
-        };
+            reminderHoursBefore: 24 };
     }
 
-    async getSettings(userId: string, tenantId: string) {
+    async getSettings(userId: string) {
         const settings = await this.prisma.notificationSettings.findUnique({
-            where: { userId },
-        });
+            where: { userId } });
 
         if (settings) {
             return {
@@ -91,15 +83,14 @@ export class NotificationsService {
                 caseUpdates: settings.caseUpdates,
                 invoiceReminders: settings.invoiceReminders,
                 dailyDigest: settings.dailyDigest,
-                reminderHoursBefore: settings.reminderHoursBefore,
-            };
+                reminderHoursBefore: settings.reminderHoursBefore };
         }
 
         return this.getDefaultSettings();
     }
 
-    async updateSettings(userId: string, tenantId: string, settings: any) {
-        const current = await this.getSettings(userId, tenantId);
+    async updateSettings(userId: string, settings: any) {
+        const current = await this.getSettings(userId);
         const updated = { ...current, ...settings };
 
         await this.prisma.notificationSettings.upsert({
@@ -111,24 +102,20 @@ export class NotificationsService {
                 caseUpdates: updated.caseUpdates,
                 invoiceReminders: updated.invoiceReminders,
                 dailyDigest: updated.dailyDigest,
-                reminderHoursBefore: updated.reminderHoursBefore,
-            },
+                reminderHoursBefore: updated.reminderHoursBefore },
             create: {
                 userId,
-                tenantId,
+
                 emailEnabled: updated.emailEnabled,
                 smsEnabled: updated.smsEnabled,
                 hearingReminders: updated.hearingReminders,
                 caseUpdates: updated.caseUpdates,
                 invoiceReminders: updated.invoiceReminders,
                 dailyDigest: updated.dailyDigest,
-                reminderHoursBefore: updated.reminderHoursBefore,
-            },
-        });
+                reminderHoursBefore: updated.reminderHoursBefore } });
 
         return updated;
     }
-
 
     // =====================================================
     // AUTOMATED NOTIFICATION METHODS
@@ -137,7 +124,7 @@ export class NotificationsService {
     // Hearing notifications
     async notifyHearingReminder(data: {
         userId: string;
-        tenantId: string;
+
         hearingId: string;
         caseTitle: string;
         hearingDate: Date;
@@ -147,14 +134,12 @@ export class NotificationsService {
             message: `لديك جلسة قضائية للقضية "${data.caseTitle}" في ${new Intl.DateTimeFormat('ar-SA').format(new Date(data.hearingDate))}`,
             type: 'INFO',
             link: `/hearings/${data.hearingId}`,
-            userId: data.userId,
-            tenantId: data.tenantId,
-        });
+            userId: data.userId });
     }
 
     async notifyHearingScheduled(data: {
         userId: string;
-        tenantId: string;
+
         hearingId: string;
         caseTitle: string;
         hearingDate: Date;
@@ -165,15 +150,13 @@ export class NotificationsService {
             message: `تم تحديد موعد جلسة جديدة للقضية "${data.caseTitle}" بتاريخ ${new Intl.DateTimeFormat('ar-SA').format(new Date(data.hearingDate))}${data.courtName ? ` في ${data.courtName}` : ''}`,
             type: 'INFO',
             link: `/hearings/${data.hearingId}`,
-            userId: data.userId,
-            tenantId: data.tenantId,
-        });
+            userId: data.userId });
     }
 
     // Invoice notifications
     async notifyInvoiceOverdue(data: {
         userId: string;
-        tenantId: string;
+
         invoiceId: string;
         invoiceNumber: string;
         clientName: string;
@@ -183,14 +166,12 @@ export class NotificationsService {
             message: `الفاتورة ${data.invoiceNumber} للعميل "${data.clientName}" متأخرة عن موعد الاستحقاق`,
             type: 'WARNING',
             link: `/invoices/${data.invoiceId}`,
-            userId: data.userId,
-            tenantId: data.tenantId,
-        });
+            userId: data.userId });
     }
 
     async notifyInvoicePaid(data: {
         userId: string;
-        tenantId: string;
+
         invoiceId: string;
         invoiceNumber: string;
         clientName: string;
@@ -201,15 +182,13 @@ export class NotificationsService {
             message: `تم دفع الفاتورة ${data.invoiceNumber} للعميل "${data.clientName}" بمبلغ ${data.amount} ر.س`,
             type: 'SUCCESS',
             link: `/invoices/${data.invoiceId}`,
-            userId: data.userId,
-            tenantId: data.tenantId,
-        });
+            userId: data.userId });
     }
 
     // Case notifications
     async notifyCaseStatusChange(data: {
         userId: string;
-        tenantId: string;
+
         caseId: string;
         caseTitle: string;
         newStatus: string;
@@ -219,14 +198,12 @@ export class NotificationsService {
             message: `تم تحديث حالة القضية "${data.caseTitle}" إلى: ${data.newStatus}`,
             type: 'SUCCESS',
             link: `/cases/${data.caseId}`,
-            userId: data.userId,
-            tenantId: data.tenantId,
-        });
+            userId: data.userId });
     }
 
     async notifyCaseAssigned(data: {
         userId: string;
-        tenantId: string;
+
         caseId: string;
         caseTitle: string;
         clientName: string;
@@ -236,15 +213,13 @@ export class NotificationsService {
             message: `تم تعيينك على القضية "${data.caseTitle}" للعميل "${data.clientName}"`,
             type: 'INFO',
             link: `/cases/${data.caseId}`,
-            userId: data.userId,
-            tenantId: data.tenantId,
-        });
+            userId: data.userId });
     }
 
     // Document notifications
     async notifyNewDocument(data: {
         userId: string;
-        tenantId: string;
+
         documentId: string;
         documentTitle: string;
         caseTitle: string;
@@ -254,15 +229,13 @@ export class NotificationsService {
             message: `تم إضافة مستند "${data.documentTitle}" للقضية "${data.caseTitle}"`,
             type: 'INFO',
             link: `/documents/${data.documentId}`,
-            userId: data.userId,
-            tenantId: data.tenantId,
-        });
+            userId: data.userId });
     }
 
     // Task notifications
     async notifyTaskAssigned(data: {
         userId: string;
-        tenantId: string;
+
         taskId: string;
         taskTitle: string;
         assignedByName: string;
@@ -277,14 +250,12 @@ export class NotificationsService {
             message,
             type: 'INFO',
             link: `/tasks/${data.taskId}`,
-            userId: data.userId,
-            tenantId: data.tenantId,
-        });
+            userId: data.userId });
     }
 
     async notifyTaskOverdue(data: {
         userId: string;
-        tenantId: string;
+
         taskId: string;
         taskTitle: string;
     }) {
@@ -293,14 +264,12 @@ export class NotificationsService {
             message: `المهمة "${data.taskTitle}" تجاوزت موعد التسليم`,
             type: 'WARNING',
             link: `/tasks/${data.taskId}`,
-            userId: data.userId,
-            tenantId: data.tenantId,
-        });
+            userId: data.userId });
     }
 
     async notifyTaskCompleted(data: {
         userId: string;
-        tenantId: string;
+
         taskId: string;
         taskTitle: string;
         completedByName: string;
@@ -310,15 +279,13 @@ export class NotificationsService {
             message: `تم إكمال المهمة "${data.taskTitle}" بواسطة ${data.completedByName}`,
             type: 'SUCCESS',
             link: `/tasks/${data.taskId}`,
-            userId: data.userId,
-            tenantId: data.tenantId,
-        });
+            userId: data.userId });
     }
 
     // Message notifications  
     async notifyNewMessage(data: {
         userId: string;
-        tenantId: string;
+
         messageId: string;
         senderName: string;
         subject: string;
@@ -328,9 +295,7 @@ export class NotificationsService {
             message: `رسالة جديدة من ${data.senderName}: "${data.subject}"`,
             type: 'INFO',
             link: `/messages/${data.messageId}`,
-            userId: data.userId,
-            tenantId: data.tenantId,
-        });
+            userId: data.userId });
     }
 
     // =====================================================
@@ -338,7 +303,7 @@ export class NotificationsService {
     // =====================================================
 
     async notifyAllTenantUsers(data: {
-        tenantId: string;
+
         title: string;
         message: string;
         type: NotificationType;
@@ -347,12 +312,10 @@ export class NotificationsService {
     }) {
         const users = await this.prisma.user.findMany({
             where: { 
-                tenantId: data.tenantId, 
+
                 isActive: true,
-                ...(data.excludeUserIds?.length ? { id: { notIn: data.excludeUserIds } } : {}),
-            },
-            select: { id: true },
-        });
+                ...(data.excludeUserIds?.length ? { id: { notIn: data.excludeUserIds } } : {}) },
+            select: { id: true } });
 
         const notifications = await Promise.all(
             users.map(user => 
@@ -361,9 +324,7 @@ export class NotificationsService {
                     message: data.message,
                     type: data.type,
                     link: data.link,
-                    userId: user.id,
-                    tenantId: data.tenantId,
-                })
+                    userId: user.id })
             )
         );
 

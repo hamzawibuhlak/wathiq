@@ -19,7 +19,6 @@ export class ImportService {
      */
     async importClients(
         buffer: Buffer,
-        tenantId: string,
         userId: string,
     ): Promise<ImportResult> {
         const workbook = new ExcelJS.Workbook();
@@ -63,7 +62,7 @@ export class ImportService {
 
                 // Check for duplicate by phone
                 const existingClient = await this.prisma.client.findFirst({
-                    where: { tenantId, phone },
+                    where: { phone },
                 });
 
                 if (existingClient) {
@@ -86,7 +85,7 @@ export class ImportService {
                         address,
                         city,
                         notes,
-                        tenantId,
+
                     },
                 });
 
@@ -107,7 +106,6 @@ export class ImportService {
      */
     async importCases(
         buffer: Buffer,
-        tenantId: string,
         userId: string,
     ): Promise<ImportResult> {
         const workbook = new ExcelJS.Workbook();
@@ -169,7 +167,7 @@ export class ImportService {
 
                 // Find client by phone
                 const client = await this.prisma.client.findFirst({
-                    where: { tenantId, phone: clientPhone },
+                    where: { phone: clientPhone },
                 });
 
                 if (!client) {
@@ -183,7 +181,7 @@ export class ImportService {
 
                 // Generate case number
                 const lastCase = await this.prisma.case.findFirst({
-                    where: { tenantId },
+                    where: {},
                     orderBy: { createdAt: 'desc' },
                 });
 
@@ -206,7 +204,7 @@ export class ImportService {
                         opposingParty,
                         priority: priorityMap[priorityAr] || 'MEDIUM',
                         clientId: client.id,
-                        tenantId,
+
                         createdById: userId,
                     },
                 });

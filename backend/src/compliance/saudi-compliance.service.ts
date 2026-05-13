@@ -36,15 +36,15 @@ export class SaudiComplianceService {
      * Audit Access Controls
      * تدقيق ضوابط الوصول
      */
-    async auditAccessControls(tenantId: string) {
+    async auditAccessControls() {
         const [admins, allUsers, usersWithout2FA] = await Promise.all([
             this.prisma.user.findMany({
-                where: { tenantId, role: { in: ['ADMIN', 'OWNER'] } },
+                where: { role: { in: ['ADMIN', 'OWNER'] } },
                 select: { id: true, name: true, twoFactorEnabled: true },
             }),
-            this.prisma.user.count({ where: { tenantId, isActive: true } }),
+            this.prisma.user.count({ where: { isActive: true } }),
             this.prisma.user.count({
-                where: { tenantId, isActive: true, twoFactorEnabled: false },
+                where: { isActive: true, twoFactorEnabled: false },
             }),
         ]);
 
@@ -130,7 +130,7 @@ export class SaudiComplianceService {
         description: string;
         affectedUsers: number;
         dataBreached: boolean;
-        tenantId: string;
+
         reportedBy: string;
     }) {
         // Log the incident
@@ -141,7 +141,7 @@ export class SaudiComplianceService {
                 entityId: null,
                 description: `[${incident.severity}] ${incident.type}: ${incident.description}`,
                 userId: incident.reportedBy,
-                tenantId: incident.tenantId,
+
             },
         });
 
@@ -171,10 +171,10 @@ export class SaudiComplianceService {
      * Get Compliance Dashboard
      * لوحة الامتثال الشاملة
      */
-    async getComplianceDashboard(tenantId: string) {
+    async getComplianceDashboard() {
         const [dataLocalization, accessControls, encryption, logRetention] = await Promise.all([
             this.verifyDataLocalization(),
-            this.auditAccessControls(tenantId),
+            this.auditAccessControls(),
             this.verifyEncryption(),
             this.checkLogRetention(),
         ]);

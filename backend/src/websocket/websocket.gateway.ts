@@ -1,27 +1,22 @@
-import {
-  WebSocketGateway,
-  WebSocketServer,
-  OnGatewayConnection,
-  OnGatewayDisconnect,
-} from '@nestjs/websockets';
+import { WebSocketGateway, WebSocketServer, OnGatewayConnection, OnGatewayDisconnect } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 
+const FIRM_ROOM = 'firm';
+
 @WebSocketGateway({
   cors: {
     origin: '*',
-    credentials: true,
-  },
-  namespace: '/ws',
-})
+    credentials: true },
+  namespace: '/ws' })
 export class WebSocketGatewayService
   implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
   private readonly logger = new Logger(WebSocketGatewayService.name);
-  private userSockets = new Map<string, Set<string>>(); // userId -> Set of socketIds
+  private userSockets = new Map<string, Set<string>>();
 
   constructor(private jwtService: JwtService) { }
 
@@ -32,41 +27,28 @@ export class WebSocketGatewayService
 
       if (!token) {
         this.logger.warn(`Client ${client.id} connected without token`);
-        // Allow connection but don't join rooms
         return;
       }
 
       const payload = this.jwtService.verify(token, {
-        secret: process.env.JWT_SECRET || 'your-secret-key',
-      });
+        secret: process.env.JWT_SECRET || 'your-secret-key' });
 
       const userId = payload.userId || payload.clientId;
-      const tenantId = payload.tenantId;
 
-      if (!userId || !tenantId) {
-        client.disconnect();
-        return;
-      }
-
-      // Store socket for user
       if (!this.userSockets.has(userId)) {
         this.userSockets.set(userId, new Set());
       }
       this.userSockets.get(userId)!.add(client.id);
 
-      // Join rooms
-      client.join(`tenant:${tenantId}`);
+      client.join(FIRM_ROOM);
       client.join(`user:${userId}`);
 
-      // Store data on socket
       client.data.userId = userId;
-      client.data.tenantId = tenantId;
       client.data.isClient = !!payload.clientId;
 
-      this.logger.log(`Client connected: ${client.id} (user: ${userId}, tenant: ${tenantId})`);
+      this.logger.log(`Client connected: ${client.id} (user: ${userId})`);
     } catch (error) {
       this.logger.error('Connection error:', error.message);
-      // Don't disconnect, allow anonymous connection
     }
   }
 
@@ -82,109 +64,54 @@ export class WebSocketGatewayService
     this.logger.log(`Client disconnected: ${client.id}`);
   }
 
-  /**
-   * Check if user is online
-   */
   isUserOnline(userId: string): boolean {
     const sockets = this.userSockets.get(userId);
     return !!sockets && sockets.size > 0;
   }
 
-  /**
-   * Get online users count for a tenant
-   */
-  getOnlineUsersCount(tenantId: string): number {
-    let count = 0;
-    this.server?.sockets?.sockets?.forEach((socket) => {
-      if (socket.data?.tenantId === tenantId) {
-        count++;
-      }
-    });
-    return count;
+  getOnlineUsersCount(): number {
+    return this.userSockets.size;
   }
 
-  /**
-   * Send notification to specific user
-   */
   sendNotificationToUser(userId: string, notification: any) {
     this.server?.to(`user:${userId}`).emit('notification', notification);
     this.logger.debug(`Sent notification to user ${userId}`);
   }
 
-  /**
-   * Send notification to all users in a tenant
-   */
-  sendNotificationToTenant(tenantId: string, notification: any) {
-    this.server?.to(`tenant:${tenantId}`).emit('notification', notification);
-    this.logger.debug(`Sent notification to tenant ${tenantId}`);
+  sendNotificationToFirm(notification: any) {
+    this.server?.to(FIRM_ROOM).emit('notification', notification);
+    this.logger.debug('Sent notification to firm');
   }
 
-  /**
-   * Broadcast case update
-   */
-  broadcastCaseUpdate(tenantId: string, caseData: any) {
-    this.server?.to(`tenant:${tenantId}`).emit('case:update', caseData);
-    this.logger.debug(`Broadcast case update to tenant ${tenantId}`);
+  broadcastCaseUpdate(caseData: any) {
+    this.server?.to(FIRM_ROOM).emit('case:update', caseData);
   }
 
-  /**
-   * Broadcast hearing update
-   */
-  broadcastHearingUpdate(tenantId: string, hearingData: any) {
-    this.server?.to(`tenant:${tenantId}`).emit('hearing:update', hearingData);
-    this.logger.debug(`Broadcast hearing update to tenant ${tenantId}`);
+  broadcastHearingUpdate(hearingData: any) {
+    this.server?.to(FIRM_ROOM).emit('hearing:update', hearingData);
   }
 
-  /**
-   * Broadcast invoice update
-   */
-  broadcastInvoiceUpdate(tenantId: string, invoiceData: any) {
-    this.server?.to(`tenant:${tenantId}`).emit('invoice:update', invoiceData);
-    this.logger.debug(`Broadcast invoice update to tenant ${tenantId}`);
+  broadcastInvoiceUpdate(invoiceData: any) {
+    this.server?.to(FIRM_ROOM).emit('invoice:update', invoiceData);
   }
 
-  /**
-   * Broadcast new WhatsApp message
-   */
-  broadcastWhatsAppMessage(tenantId: string, message: any) {
-    this.server?.to(`tenant:${tenantId}`).emit('whatsapp:message', message);
-    this.logger.debug(`Broadcast WhatsApp message to tenant ${tenantId}`);
+  broadcastWhatsAppMessage(message: any) {
+    this.server?.to(FIRM_ROOM).emit('whatsapp:message', message);
   }
 
-  /**
-   * Broadcast document upload
-   */
-  broadcastDocumentUpload(tenantId: string, document: any) {
-    this.server?.to(`tenant:${tenantId}`).emit('document:upload', document);
-    this.logger.debug(`Broadcast document upload to tenant ${tenantId}`);
+  broadcastDocumentUpload(document: any) {
+    this.server?.to(FIRM_ROOM).emit('document:upload', document);
   }
 
-  /**
-   * Broadcast client update (for client portal)
-   */
   broadcastClientUpdate(clientId: string, data: any) {
     this.server?.to(`user:${clientId}`).emit('client:update', data);
-    this.logger.debug(`Broadcast client update to client ${clientId}`);
   }
 
-  // =====================================================
-  // Phase 32: WhatsApp QR (Baileys)
-  // =====================================================
-
-  /**
-   * Broadcast WhatsApp QR code to tenant admins
-   */
-  broadcastWhatsAppQR(tenantId: string, qrDataUrl: string) {
-    this.server?.to(`tenant:${tenantId}`).emit('whatsapp:qr', { qr: qrDataUrl });
-    this.logger.debug(`Broadcast WhatsApp QR to tenant ${tenantId}`);
+  broadcastWhatsAppQR(qrDataUrl: string) {
+    this.server?.to(FIRM_ROOM).emit('whatsapp:qr', { qr: qrDataUrl });
   }
 
-  /**
-   * Broadcast WhatsApp connection status to tenant admins
-   */
-  broadcastWhatsAppStatus(tenantId: string, status: string, phone?: string) {
-    this.server?.to(`tenant:${tenantId}`).emit('whatsapp:status', { status, phone });
-    this.logger.debug(`Broadcast WhatsApp status '${status}' to tenant ${tenantId}`);
+  broadcastWhatsAppStatus(status: string, phone?: string) {
+    this.server?.to(FIRM_ROOM).emit('whatsapp:status', { status, phone });
   }
 }
-

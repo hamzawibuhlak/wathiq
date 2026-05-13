@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  NestInterceptor,
-  ExecutionContext,
-  CallHandler,
-} from '@nestjs/common';
+import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { ActivityLogsService } from '../../activity-logs/activity-logs.service';
@@ -81,7 +76,7 @@ export class ActivityLogInterceptor implements NestInterceptor {
               entityId,
               description,
               userId: user.id || user.userId || user.sub,
-              tenantId: user.tenantId,
+
               ipAddress: ip || request.connection?.remoteAddress,
               userAgent: headers['user-agent'],
             })

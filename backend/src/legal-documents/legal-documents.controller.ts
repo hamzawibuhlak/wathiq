@@ -1,7 +1,4 @@
-import {
-    Controller, Get, Post, Patch, Delete, Param,
-    Body, Query, UseGuards, Res, Header
-} from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards, Res, Header } from '@nestjs/common';
 import { Response } from 'express';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -25,7 +22,7 @@ export class LegalDocumentsController {
         @Query('search') search?: string,
         @Query('page') page?: number,
     ) {
-        return this.service.findAll(user.tenantId, { type, status, caseId, search, page: page ? Number(page) : undefined });
+        return this.service.findAll({ type, status, caseId, search, page: page ? Number(page) : undefined });
     }
 
     @Get('templates/list')
@@ -33,17 +30,17 @@ export class LegalDocumentsController {
         @CurrentUser() user: any,
         @Query('type') type?: string,
     ) {
-        return this.service.getTemplates(user.tenantId, type);
+        return this.service.getTemplates(type);
     }
 
     @Get('search/query')
     search(@Query('q') q: string, @CurrentUser() user: any) {
-        return this.service.search(q, user.tenantId);
+        return this.service.search(q);
     }
 
     @Get(':id')
     findOne(@Param('id') id: string, @CurrentUser() user: any) {
-        return this.service.findOne(id, user.tenantId);
+        return this.service.findOne(id);
     }
 
     @Get(':id/export/html')
@@ -52,7 +49,7 @@ export class LegalDocumentsController {
         @CurrentUser() user: any,
         @Res() res: Response,
     ) {
-        const html = await this.service.getExportHtml(id, user.tenantId);
+        const html = await this.service.getExportHtml(id);
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
         res.send(html);
     }
@@ -62,7 +59,7 @@ export class LegalDocumentsController {
         @CurrentUser() user: any,
         @Body() data: any,
     ) {
-        return this.service.create(user.tenantId, user.id, data);
+        return this.service.create(user.id, data);
     }
 
     @Patch(':id')
@@ -71,12 +68,12 @@ export class LegalDocumentsController {
         @CurrentUser() user: any,
         @Body() data: any,
     ) {
-        return this.service.update(id, user.tenantId, user.id, data);
+        return this.service.update(id, user.id, data);
     }
 
     @Delete(':id')
     delete(@Param('id') id: string, @CurrentUser() user: any) {
-        return this.service.delete(id, user.tenantId);
+        return this.service.delete(id);
     }
 
     @Post(':id/duplicate')
@@ -84,7 +81,7 @@ export class LegalDocumentsController {
         @Param('id') id: string,
         @CurrentUser() user: any,
     ) {
-        return this.service.duplicate(id, user.tenantId, user.id);
+        return this.service.duplicate(id, user.id);
     }
 
     // ── VERSION HISTORY ───────────────────────────
@@ -94,7 +91,7 @@ export class LegalDocumentsController {
         @Param('versionId') versionId: string,
         @CurrentUser() user: any,
     ) {
-        return this.service.restoreVersion(id, versionId, user.tenantId, user.id);
+        return this.service.restoreVersion(id, versionId, user.id);
     }
 
     // ── TEMPLATES ─────────────────────────────────
@@ -103,7 +100,7 @@ export class LegalDocumentsController {
         @CurrentUser() user: any,
         @Body() data: any,
     ) {
-        return this.service.createTemplate(user.tenantId, data);
+        return this.service.createTemplate(data);
     }
 
     // ── AI ────────────────────────────────────────
@@ -112,6 +109,6 @@ export class LegalDocumentsController {
         @CurrentUser() user: any,
         @Body() data: any,
     ) {
-        return this.service.generateWithAI(user.tenantId, data);
+        return this.service.generateWithAI(data);
     }
 }

@@ -21,8 +21,7 @@ export class ScheduledNotificationsService {
             // Get all notification settings grouped by reminderHoursBefore
             const settings = await this.prisma.notificationSettings.findMany({
                 where: { hearingReminders: true },
-                select: { userId: true, tenantId: true, reminderHoursBefore: true },
-            });
+                select: { userId: true, reminderHoursBefore: true } });
 
             // For each user setting, check if they have hearings coming up
             for (const setting of settings) {
@@ -34,18 +33,14 @@ export class ScheduledNotificationsService {
                 // Find hearings within the reminder window
                 const hearings = await this.prisma.hearing.findMany({
                     where: {
-                        tenantId: setting.tenantId,
+
                         assignedToId: setting.userId,
                         status: 'SCHEDULED',
                         hearingDate: {
                             gte: reminderTime,
-                            lt: oneHourAfter,
-                        },
-                    },
+                            lt: oneHourAfter } },
                     include: {
-                        case: { select: { title: true } },
-                    },
-                });
+                        case: { select: { title: true } } } });
 
                 for (const hearing of hearings) {
                     // Check if we already sent a reminder for this hearing
@@ -54,18 +49,15 @@ export class ScheduledNotificationsService {
                             userId: setting.userId,
                             link: `/hearings/${hearing.id}`,
                             title: 'تذكير بجلسة قادمة',
-                            createdAt: { gte: new Date(now.getTime() - 24 * 60 * 60 * 1000) },
-                        },
-                    });
+                            createdAt: { gte: new Date(now.getTime() - 24 * 60 * 60 * 1000) } } });
 
                     if (!existingNotification) {
                         await this.notificationsService.notifyHearingReminder({
                             userId: setting.userId,
-                            tenantId: setting.tenantId,
+
                             hearingId: hearing.id,
                             caseTitle: hearing.case?.title || 'جلسة',
-                            hearingDate: hearing.hearingDate,
-                        });
+                            hearingDate: hearing.hearingDate });
                         this.logger.log(`Sent hearing reminder for hearing ${hearing.id} to user ${setting.userId}`);
                     }
                 }
@@ -88,30 +80,23 @@ export class ScheduledNotificationsService {
             const overdueInvoices = await this.prisma.invoice.findMany({
                 where: {
                     status: { in: ['PENDING', 'SENT'] },
-                    dueDate: { lt: now },
-                },
+                    dueDate: { lt: now } },
                 include: {
                     client: { select: { name: true } },
-                    createdBy: { select: { id: true } },
-                    tenant: { select: { id: true } },
-                },
-            });
+                    createdBy: { select: { id: true } } } });
 
             // Update status to OVERDUE and notify
             for (const invoice of overdueInvoices) {
                 await this.prisma.invoice.update({
                     where: { id: invoice.id },
-                    data: { status: 'OVERDUE' },
-                });
+                    data: { status: 'OVERDUE' } });
 
                 // Get users with invoice reminder settings enabled
                 const usersToNotify = await this.prisma.notificationSettings.findMany({
                     where: {
-                        tenantId: invoice.tenantId,
-                        invoiceReminders: true,
-                    },
-                    select: { userId: true },
-                });
+
+                        invoiceReminders: true },
+                    select: { userId: true } });
 
                 // Also notify the invoice creator
                 const userIds = [...new Set([
@@ -122,11 +107,10 @@ export class ScheduledNotificationsService {
                 for (const userId of userIds) {
                     await this.notificationsService.notifyInvoiceOverdue({
                         userId,
-                        tenantId: invoice.tenantId,
+
                         invoiceId: invoice.id,
                         invoiceNumber: invoice.invoiceNumber,
-                        clientName: invoice.client.name,
-                    });
+                        clientName: invoice.client.name });
                 }
 
                 this.logger.log(`Marked invoice ${invoice.invoiceNumber} as overdue and notified users`);
@@ -149,13 +133,9 @@ export class ScheduledNotificationsService {
             const overdueTasks = await this.prisma.task.findMany({
                 where: {
                     status: { notIn: ['COMPLETED', 'CANCELLED'] },
-                    dueDate: { lt: now },
-                },
+                    dueDate: { lt: now } },
                 include: {
-                    assignedTo: { select: { id: true } },
-                    tenant: { select: { id: true } },
-                },
-            });
+                    assignedTo: { select: { id: true } } } });
 
             for (const task of overdueTasks) {
                 // Check if we already sent a notification today
@@ -164,17 +144,14 @@ export class ScheduledNotificationsService {
                         userId: task.assignedToId,
                         link: `/tasks/${task.id}`,
                         title: 'مهمة متأخرة',
-                        createdAt: { gte: now },
-                    },
-                });
+                        createdAt: { gte: now } } });
 
                 if (!existingNotification) {
                     await this.notificationsService.notifyTaskOverdue({
                         userId: task.assignedToId,
-                        tenantId: task.tenantId,
+
                         taskId: task.id,
-                        taskTitle: task.title,
-                    });
+                        taskTitle: task.title });
                     this.logger.log(`Sent overdue task notification for task ${task.id}`);
                 }
             }
@@ -192,8 +169,7 @@ export class ScheduledNotificationsService {
             // Get users who want daily digest
             const usersWithDigest = await this.prisma.notificationSettings.findMany({
                 where: { dailyDigest: true },
-                select: { userId: true, tenantId: true },
-            });
+                select: { userId: true} });
 
             for (const setting of usersWithDigest) {
                 const today = new Date();
@@ -204,31 +180,25 @@ export class ScheduledNotificationsService {
                 // Get today's hearings
                 const todayHearings = await this.prisma.hearing.count({
                     where: {
-                        tenantId: setting.tenantId,
+
                         assignedToId: setting.userId,
                         status: 'SCHEDULED',
-                        hearingDate: { gte: today, lt: tomorrow },
-                    },
-                });
+                        hearingDate: { gte: today, lt: tomorrow } } });
 
                 // Get pending tasks due today
                 const tasksDueToday = await this.prisma.task.count({
                     where: {
-                        tenantId: setting.tenantId,
+
                         assignedToId: setting.userId,
                         status: { notIn: ['COMPLETED', 'CANCELLED'] },
-                        dueDate: { gte: today, lt: tomorrow },
-                    },
-                });
+                        dueDate: { gte: today, lt: tomorrow } } });
 
                 // Get unread notifications count
                 const unreadNotifications = await this.prisma.notification.count({
                     where: {
                         userId: setting.userId,
-                        tenantId: setting.tenantId,
-                        isRead: false,
-                    },
-                });
+
+                        isRead: false } });
 
                 if (todayHearings > 0 || tasksDueToday > 0 || unreadNotifications > 0) {
                     const parts = [];
@@ -241,9 +211,7 @@ export class ScheduledNotificationsService {
                         message: parts.join(' | '),
                         type: 'INFO',
                         link: '/dashboard',
-                        userId: setting.userId,
-                        tenantId: setting.tenantId,
-                    });
+                        userId: setting.userId });
 
                     this.logger.log(`Sent daily digest to user ${setting.userId}`);
                 }
@@ -265,9 +233,7 @@ export class ScheduledNotificationsService {
             const result = await this.prisma.notification.deleteMany({
                 where: {
                     isRead: true,
-                    createdAt: { lt: thirtyDaysAgo },
-                },
-            });
+                    createdAt: { lt: thirtyDaysAgo } } });
 
             this.logger.log(`Deleted ${result.count} old notifications`);
         } catch (error) {

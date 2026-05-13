@@ -29,7 +29,7 @@ export class ExportsController {
     if (status) filters.status = status;
     if (ids) filters.ids = ids.split(',').map(id => id.trim());
 
-    const buffer = await this.exportsService.exportCases(user.tenantId, filters);
+    const buffer = await this.exportsService.exportCases(filters);
 
     res.setHeader(
       'Content-Type',
@@ -59,7 +59,7 @@ export class ExportsController {
     if (ids) filters.ids = ids.split(',').map(id => id.trim());
 
     const buffer = await this.exportsService.exportInvoices(
-      user.tenantId,
+
       filters,
     );
 
@@ -87,7 +87,7 @@ export class ExportsController {
     const filters: any = {};
     if (ids) filters.ids = ids.split(',').map(id => id.trim());
 
-    const buffer = await this.exportsService.exportClients(user.tenantId, filters);
+    const buffer = await this.exportsService.exportClients(filters);
 
     res.setHeader(
       'Content-Type',
@@ -117,7 +117,7 @@ export class ExportsController {
     if (ids) filters.ids = ids.split(',').map(id => id.trim());
 
     const buffer = await this.exportsService.exportHearings(
-      user.tenantId,
+
       filters,
     );
 
@@ -166,7 +166,7 @@ export class ExportsController {
     if (isNaN(start.getTime())) start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
     const buffer = await this.exportsService.exportFinancialReport(
-      user.tenantId,
+
       start,
       end,
     );
@@ -204,7 +204,7 @@ export class ExportsController {
     if (startDate) filters.startDate = new Date(startDate);
     if (endDate) filters.endDate = new Date(endDate);
 
-    const buffer = await this.exportsService.exportDocuments(user.tenantId, filters);
+    const buffer = await this.exportsService.exportDocuments(filters);
 
     res.setHeader(
       'Content-Type',
@@ -239,7 +239,7 @@ export class ExportsController {
     if (startDate) filters.startDate = new Date(startDate);
     if (endDate) filters.endDate = new Date(endDate);
 
-    const buffer = await this.exportsService.exportTasks(user.tenantId, filters);
+    const buffer = await this.exportsService.exportTasks(filters);
 
     res.setHeader(
       'Content-Type',

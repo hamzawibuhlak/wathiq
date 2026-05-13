@@ -305,8 +305,8 @@ export function PrivacyPolicyPage() {
       {/* Hero */}
       <div className="legal-hero">
         <a href="https://bewathiq.com" className="logo-link">
-          <img src="/logo.png" alt="وثيق" />
-          <span>وثيق — إدارة مكاتب المحاماة</span>
+          <img src="/logo.png" alt="وسم الثقة" />
+          <span>وسم الثقة — إدارة مكاتب المحاماة</span>
         </a>
         <h1>الشروط والخصوصية</h1>
         <p>نلتزم بحماية خصوصيتك وشفافية التعامل معك</p>
@@ -347,7 +347,7 @@ export function PrivacyPolicyPage() {
         {activeTab === 'privacy' && (
           <>
             <Section id="intro" title="1. المقدمة" icon={FileText} isExpanded={isExp('intro')} onToggle={() => toggle('intro')}>
-              <p>مرحباً بك في <strong>وثيق</strong>، منصة إدارة مكاتب المحاماة الرائدة في المملكة العربية السعودية. نحن نلتزم بحماية خصوصيتك وأمان بياناتك. توضح هذه السياسة كيفية جمع واستخدام وحماية معلوماتك الشخصية.</p>
+              <p>مرحباً بك في <strong>وسم الثقة</strong>، منصة إدارة مكاتب المحاماة الرائدة في المملكة العربية السعودية. نحن نلتزم بحماية خصوصيتك وأمان بياناتك. توضح هذه السياسة كيفية جمع واستخدام وحماية معلوماتك الشخصية.</p>
               <div className="legal-box">
                 <p><strong>الجهة المشغّلة:</strong></p>
                 <ul>
@@ -355,7 +355,7 @@ export function PrivacyPolicyPage() {
                   <li>الموقع: bewathiq.com</li>
                 </ul>
               </div>
-              <p><strong>باستخدامك لمنصة وثيق، فإنك توافق على جمع ومعالجة معلوماتك وفقاً لهذه السياسة.</strong></p>
+              <p><strong>باستخدامك لمنصة وسم الثقة، فإنك توافق على جمع ومعالجة معلوماتك وفقاً لهذه السياسة.</strong></p>
             </Section>
 
             <Section id="collection" title="2. المعلومات التي نجمعها" icon={Database} isExpanded={isExp('collection')} onToggle={() => toggle('collection')}>
@@ -452,7 +452,7 @@ export function PrivacyPolicyPage() {
             </Section>
 
             <Section id="children" title="9. خصوصية الأطفال" icon={Baby} isExpanded={isExp('children')} onToggle={() => toggle('children')}>
-              <p><strong>وثيق ليس موجهاً للأطفال.</strong> لا نجمع معلومات من أشخاص دون 18 عاماً عمداً. إذا اكتشفنا جمع بيانات طفل، نحذفها فوراً.</p>
+              <p><strong>وسم الثقة ليس موجهاً للأطفال.</strong> لا نجمع معلومات من أشخاص دون 18 عاماً عمداً. إذا اكتشفنا جمع بيانات طفل، نحذفها فوراً.</p>
             </Section>
 
             <Section id="compliance" title="10. الامتثال للقوانين" icon={Scale} isExpanded={isExp('compliance')} onToggle={() => toggle('compliance')}>
@@ -500,13 +500,13 @@ export function PrivacyPolicyPage() {
         {activeTab === 'terms' && (
           <>
             <Section id="acceptance" title="1. قبول الشروط" icon={FileText} isExpanded={isExp('acceptance')} onToggle={() => toggle('acceptance')}>
-              <p>باستخدامك لمنصة وثيق، فإنك توافق على الالتزام بهذه الشروط. إذا لم توافق، يرجى عدم استخدام الخدمة.</p>
+              <p>باستخدامك لمنصة وسم الثقة، فإنك توافق على الالتزام بهذه الشروط. إذا لم توافق، يرجى عدم استخدام الخدمة.</p>
             </Section>
 
             <Section id="definitions" title="2. تعريفات" icon={HelpCircle} isExpanded={isExp('definitions')} onToggle={() => toggle('definitions')}>
               <ul>
-                <li><strong>"المنصة" أو "الخدمة":</strong> نظام وثيق لإدارة مكاتب المحاماة</li>
-                <li><strong>"نحن" أو "وثيق":</strong> الشركة المشغّلة</li>
+                <li><strong>"المنصة" أو "الخدمة":</strong> نظام وسم الثقة لإدارة مكاتب المحاماة</li>
+                <li><strong>"نحن" أو "وسم الثقة":</strong> الشركة المشغّلة</li>
                 <li><strong>"أنت" أو "المستخدم":</strong> الشخص أو الكيان المستخدم</li>
                 <li><strong>"المكتب":</strong> مكتب المحاماة المشترك</li>
                 <li><strong>"المحتوى":</strong> جميع البيانات المُدخلة في النظام</li>
@@ -572,7 +572,7 @@ export function PrivacyPolicyPage() {
 
             <Section id="ip" title="7. الملكية الفكرية" icon={Shield} isExpanded={isExp('ip')} onToggle={() => toggle('ip')}>
               <ul>
-                <li><strong>ملكية المنصة:</strong> جميع الحقوق محفوظة لوثيق — الكود والتصميم والشعار</li>
+                <li><strong>ملكية المنصة:</strong> جميع الحقوق محفوظة لوسم الثقة — الكود والتصميم والشعار</li>
                 <li><strong>ملكية المحتوى:</strong> أنت تملك جميع بياناتك — نمنحنا ترخيصاً فقط لتقديم الخدمة</li>
                 <li><strong>لا نملك محتواك ولن نستخدمه لأغراض أخرى</strong></li>
               </ul>
@@ -650,7 +650,7 @@ export function PrivacyPolicyPage() {
         <div className="legal-back-link">
           <a href="https://bewathiq.com">
             <ArrowRight style={{ width: 16, height: 16 }} />
-            العودة إلى وثيق
+            العودة إلى وسم الثقة
           </a>
         </div>
       </div>

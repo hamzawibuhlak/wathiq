@@ -1,6 +1,5 @@
 # Dependencies
 node_modules/
-package-lock.json
 
 # Build
 dist/
@@ -34,8 +33,8 @@ coverage/
 # Prisma
 prisma/migrations/
 
-# Uploads
-uploads/
+# Uploads (runtime storage dir only — not the source module)
+/uploads/
 
 # Temp
 tmp/

@@ -1,21 +1,8 @@
-import {
-    Controller,
-    Get,
-    Post,
-    Patch,
-    Delete,
-    Body,
-    Param,
-    Query,
-    UseGuards,
-    ParseUUIDPipe,
-    ParseIntPipe,
-    DefaultValuePipe,
-} from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards, ParseUUIDPipe, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags, ApiQuery } from '@nestjs/swagger';
 import { IsNotEmpty, IsString, IsUUID, MaxLength } from 'class-validator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { TenantId } from '../common/decorators/tenant-id.decorator';
+
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { MessagesService } from './messages.service';
 
@@ -48,9 +35,9 @@ export class MessagesController {
     async send(
         @Body() dto: SendMessageDto,
         @CurrentUser('id') userId: string,
-        @TenantId() tenantId: string,
+
     ) {
-        const message = await this.messagesService.send(dto, userId, tenantId);
+        const message = await this.messagesService.send(dto, userId);
         return { data: message, message: 'تم إرسال الرسالة بنجاح' };
     }
 
@@ -60,11 +47,11 @@ export class MessagesController {
     @ApiQuery({ name: 'offset', required: false, type: Number })
     async getInbox(
         @CurrentUser('id') userId: string,
-        @TenantId() tenantId: string,
+
         @Query('limit', new DefaultValuePipe(50), ParseIntPipe) limit: number,
         @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
     ) {
-        const result = await this.messagesService.getInbox(userId, tenantId, { limit, offset });
+        const result = await this.messagesService.getInbox(userId, { limit, offset });
         return result;
     }
 
@@ -74,11 +61,11 @@ export class MessagesController {
     @ApiQuery({ name: 'offset', required: false, type: Number })
     async getSent(
         @CurrentUser('id') userId: string,
-        @TenantId() tenantId: string,
+
         @Query('limit', new DefaultValuePipe(50), ParseIntPipe) limit: number,
         @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
     ) {
-        const result = await this.messagesService.getSent(userId, tenantId, { limit, offset });
+        const result = await this.messagesService.getSent(userId, { limit, offset });
         return result;
     }
 
@@ -86,9 +73,9 @@ export class MessagesController {
     @ApiOperation({ summary: 'عدد الرسائل غير المقروءة' })
     async getUnreadCount(
         @CurrentUser('id') userId: string,
-        @TenantId() tenantId: string,
+
     ) {
-        const count = await this.messagesService.getUnreadCount(userId, tenantId);
+        const count = await this.messagesService.getUnreadCount(userId);
         return { data: { count } };
     }
 
@@ -96,9 +83,9 @@ export class MessagesController {
     @ApiOperation({ summary: 'قائمة المستلمين المتاحين' })
     async getRecipients(
         @CurrentUser('id') userId: string,
-        @TenantId() tenantId: string,
+
     ) {
-        const recipients = await this.messagesService.getRecipients(userId, tenantId);
+        const recipients = await this.messagesService.getRecipients(userId);
         return { data: recipients };
     }
 
@@ -107,9 +94,9 @@ export class MessagesController {
     async findOne(
         @Param('id', ParseUUIDPipe) id: string,
         @CurrentUser('id') userId: string,
-        @TenantId() tenantId: string,
+
     ) {
-        const message = await this.messagesService.findOne(id, userId, tenantId);
+        const message = await this.messagesService.findOne(id, userId);
         return { data: message };
     }
 
@@ -118,9 +105,9 @@ export class MessagesController {
     async markAsRead(
         @Param('id', ParseUUIDPipe) id: string,
         @CurrentUser('id') userId: string,
-        @TenantId() tenantId: string,
+
     ) {
-        await this.messagesService.markAsRead(id, userId, tenantId);
+        await this.messagesService.markAsRead(id, userId);
         return { message: 'تم تعليم الرسالة كمقروءة' };
     }
 
@@ -128,9 +115,9 @@ export class MessagesController {
     @ApiOperation({ summary: 'تعليم جميع الرسائل كمقروءة' })
     async markAllAsRead(
         @CurrentUser('id') userId: string,
-        @TenantId() tenantId: string,
+
     ) {
-        await this.messagesService.markAllAsRead(userId, tenantId);
+        await this.messagesService.markAllAsRead(userId);
         return { message: 'تم تعليم جميع الرسائل كمقروءة' };
     }
 
@@ -139,9 +126,9 @@ export class MessagesController {
     async delete(
         @Param('id', ParseUUIDPipe) id: string,
         @CurrentUser('id') userId: string,
-        @TenantId() tenantId: string,
+
     ) {
-        await this.messagesService.delete(id, userId, tenantId);
+        await this.messagesService.delete(id, userId);
         return { message: 'تم حذف الرسالة' };
     }
 }

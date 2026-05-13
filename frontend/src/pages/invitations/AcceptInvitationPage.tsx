@@ -148,7 +148,7 @@ export function AcceptInvitationPage() {
                         <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
                         <h1 className="text-xl font-bold mb-2">تم إنشاء حسابك بنجاح!</h1>
                         <p className="text-muted-foreground mb-6">
-                            يمكنك الآن تسجيل الدخول للوصول إلى نظام {invitation.tenant.name}
+                            يمكنك الآن تسجيل الدخول للوصول إلى نظام {invitation.company.name}
                         </p>
                         <Link to="/login">
                             <Button className="w-full">
@@ -168,10 +168,10 @@ export function AcceptInvitationPage() {
                 <CardContent className="py-8">
                     {/* Header */}
                     <div className="text-center mb-8">
-                        {invitation.tenant.logo ? (
+                        {invitation.company.logo ? (
                             <img
-                                src={invitation.tenant.logo}
-                                alt={invitation.tenant.name}
+                                src={invitation.company.logo}
+                                alt={invitation.company.name}
                                 className="w-16 h-16 mx-auto mb-4 rounded-lg"
                             />
                         ) : (
@@ -180,7 +180,7 @@ export function AcceptInvitationPage() {
                             </div>
                         )}
                         <h1 className="text-xl font-bold mb-2">
-                            انضم إلى {invitation.tenant.name}
+                            انضم إلى {invitation.company.name}
                         </h1>
                         <p className="text-sm text-muted-foreground">
                             تمت دعوتك بواسطة {invitation.inviter.name} كـ{roleLabels[invitation.role]}

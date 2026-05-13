@@ -1,21 +1,5 @@
-import {
-    Controller,
-    Get,
-    Post,
-    Patch,
-    Delete,
-    Body,
-    Param,
-    Query,
-    UseGuards,
-    ParseUUIDPipe,
-} from '@nestjs/common';
-import {
-    ApiTags,
-    ApiOperation,
-    ApiBearerAuth,
-    ApiResponse,
-} from '@nestjs/swagger';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards, ParseUUIDPipe } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { InvoicesService } from './invoices.service';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
@@ -24,7 +8,7 @@ import { FilterInvoicesDto } from './dto/filter-invoices.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
-import { TenantId } from '../common/decorators/tenant-id.decorator';
+
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 
 @ApiTags('Invoices')
@@ -39,18 +23,18 @@ export class InvoicesController {
     @ApiOperation({ summary: 'الحصول على جميع الفواتير مع pagination و filters' })
     @ApiResponse({ status: 200, description: 'قائمة الفواتير' })
     async findAll(
-        @TenantId() tenantId: string,
+
         @Query() filterDto: FilterInvoicesDto,
     ) {
-        return this.invoicesService.findAll(tenantId, filterDto);
+        return this.invoicesService.findAll(filterDto);
     }
 
     @Get('stats')
     @Roles(UserRole.OWNER, UserRole.ADMIN)
     @ApiOperation({ summary: 'إحصائيات الفواتير' })
     @ApiResponse({ status: 200, description: 'إحصائيات الفواتير' })
-    async getStats(@TenantId() tenantId: string) {
-        return this.invoicesService.getStats(tenantId);
+    async getStats() {
+        return this.invoicesService.getStats();
     }
 
     @Get(':id')
@@ -60,9 +44,9 @@ export class InvoicesController {
     @ApiResponse({ status: 404, description: 'الفاتورة غير موجودة' })
     async findOne(
         @Param('id', ParseUUIDPipe) id: string,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.invoicesService.findOne(id, tenantId);
+        return this.invoicesService.findOne(id);
     }
 
     @Post()
@@ -72,10 +56,10 @@ export class InvoicesController {
     @ApiResponse({ status: 400, description: 'بيانات غير صالحة' })
     async create(
         @Body() createInvoiceDto: CreateInvoiceDto,
-        @TenantId() tenantId: string,
+
         @CurrentUser('id') userId: string,
     ) {
-        return this.invoicesService.create(createInvoiceDto, tenantId, userId);
+        return this.invoicesService.create(createInvoiceDto, userId);
     }
 
     @Patch(':id')
@@ -86,9 +70,9 @@ export class InvoicesController {
     async update(
         @Param('id', ParseUUIDPipe) id: string,
         @Body() updateInvoiceDto: UpdateInvoiceDto,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.invoicesService.update(id, updateInvoiceDto, tenantId);
+        return this.invoicesService.update(id, updateInvoiceDto);
     }
 
     @Patch(':id/pay')
@@ -98,9 +82,9 @@ export class InvoicesController {
     @ApiResponse({ status: 404, description: 'الفاتورة غير موجودة' })
     async markAsPaid(
         @Param('id', ParseUUIDPipe) id: string,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.invoicesService.update(id, { status: 'PAID' as any }, tenantId);
+        return this.invoicesService.update(id, { status: 'PAID' as any });
     }
 
     @Delete(':id')
@@ -110,9 +94,9 @@ export class InvoicesController {
     @ApiResponse({ status: 404, description: 'الفاتورة غير موجودة' })
     async remove(
         @Param('id', ParseUUIDPipe) id: string,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.invoicesService.remove(id, tenantId);
+        return this.invoicesService.remove(id);
     }
 
     @Post(':id/send-email')
@@ -123,9 +107,9 @@ export class InvoicesController {
     @ApiResponse({ status: 404, description: 'الفاتورة غير موجودة' })
     async sendEmail(
         @Param('id', ParseUUIDPipe) id: string,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.invoicesService.sendEmail(id, tenantId);
+        return this.invoicesService.sendEmail(id);
     }
 
     @Post(':id/send-sms')
@@ -136,8 +120,8 @@ export class InvoicesController {
     @ApiResponse({ status: 404, description: 'الفاتورة غير موجودة' })
     async sendSms(
         @Param('id', ParseUUIDPipe) id: string,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.invoicesService.sendSms(id, tenantId);
+        return this.invoicesService.sendSms(id);
     }
 }

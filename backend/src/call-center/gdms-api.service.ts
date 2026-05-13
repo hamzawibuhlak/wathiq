@@ -8,8 +8,7 @@ export class GdmsApiService {
     private readonly logger = new Logger(GdmsApiService.name);
     private readonly GDMS_BASE_URL = 'https://www.gdms.cloud';
 
-    // Cache tokens per tenant to avoid re-auth on every call
-    private tokenCache: Map<string, { token: string; expiresAt: number }> = new Map();
+    private tokenCache: { token: string; expiresAt: number } | null = null;
 
     constructor(private prisma: PrismaService) { }
 
@@ -64,16 +63,12 @@ export class GdmsApiService {
     // 🔑 OAUTH2 TOKEN MANAGEMENT
     // ══════════════════════════════════════════════════════════
 
-    private async getAccessToken(tenantId: string): Promise<string> {
-        // Check cache first
-        const cached = this.tokenCache.get(tenantId);
-        if (cached && cached.expiresAt > Date.now()) {
-            return cached.token;
+    private async getAccessToken(): Promise<string> {
+        if (this.tokenCache && this.tokenCache.expiresAt > Date.now()) {
+            return this.tokenCache.token;
         }
 
-        const settings = await this.prisma.callCenterSettings.findUnique({
-            where: { tenantId },
-        });
+        const settings = await this.prisma.callCenterSettings.findFirst();
         if (!settings) {
             throw new BadRequestException('إعدادات السنترال غير موجودة');
         }
@@ -99,26 +94,21 @@ export class GdmsApiService {
                     password: hashedPassword,
                     grant_type: 'password',
                     client_id: clientId,
-                    client_secret: clientSecret,
-                }).toString(),
+                    client_secret: clientSecret }).toString(),
                 {
                     headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    timeout: 30000,
-                },
+                        'Content-Type': 'application/x-www-form-urlencoded' },
+                    timeout: 30000 },
             );
 
             const token = response.data.access_token;
             const expiresIn = response.data.expires_in || 3600;
 
-            // Cache the token (expire 5 min early to be safe)
-            this.tokenCache.set(tenantId, {
+            this.tokenCache = {
                 token,
-                expiresAt: Date.now() + (expiresIn - 300) * 1000,
-            });
+                expiresAt: Date.now() + (expiresIn - 300) * 1000 };
 
-            this.logger.log(`GDMS OAuth token obtained for tenant ${tenantId}`);
+            this.logger.log('GDMS OAuth token obtained');
             return token;
         } catch (error) {
             this.logger.error('GDMS OAuth token request failed', error?.response?.data || error.message);
@@ -133,33 +123,27 @@ export class GdmsApiService {
     // 🌐 AUTHENTICATED API CLIENT
     // ══════════════════════════════════════════════════════════
 
-    private async getApiClient(tenantId: string): Promise<AxiosInstance> {
-        const token = await this.getAccessToken(tenantId);
+    private async getApiClient(): Promise<AxiosInstance> {
+        const token = await this.getAccessToken();
 
         return axios.create({
             baseURL: `${this.GDMS_BASE_URL}/oapi/v1.0.0`,
             headers: {
                 Authorization: `Bearer ${token}`,
-                'Content-Type': 'application/json',
-            },
-            timeout: 30000,
-        });
+                'Content-Type': 'application/json' },
+            timeout: 30000 });
     }
 
     // ══════════════════════════════════════════════════════════
     // ✅ TEST CONNECTION
     // ══════════════════════════════════════════════════════════
 
-    async testConnection(
-        tenantId: string,
-    ): Promise<{ success: boolean; message: string; deviceInfo?: any }> {
+    async testConnection(): Promise<{ success: boolean; message: string; deviceInfo?: any }> {
         try {
             // Step 1: Get OAuth token (this validates credentials)
-            const token = await this.getAccessToken(tenantId);
+            const token = await this.getAccessToken();
 
-            const settings = await this.prisma.callCenterSettings.findUnique({
-                where: { tenantId },
-            });
+            const settings = await this.prisma.callCenterSettings.findFirst();
             if (!settings) {
                 return { success: false, message: 'إعدادات السنترال غير موجودة' };
             }
@@ -169,10 +153,8 @@ export class GdmsApiService {
                 baseURL: `${this.GDMS_BASE_URL}/oapi/v1.0.0`,
                 headers: {
                     Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                timeout: 30000,
-            });
+                    'Content-Type': 'application/json' },
+                timeout: 30000 });
 
             // Try to get device info if Device ID is provided
             let deviceInfo: any = null;
@@ -183,48 +165,43 @@ export class GdmsApiService {
                         model: deviceResponse.data?.data?.model || 'UCM6301',
                         firmware: deviceResponse.data?.data?.firmware_version,
                         status: deviceResponse.data?.data?.status,
-                        mac: deviceResponse.data?.data?.mac,
-                    };
+                        mac: deviceResponse.data?.data?.mac };
                 } catch (devErr) {
                     this.logger.warn('Could not fetch device info, but token is valid');
                     // Token works but device endpoint may use different path - still a success
                 }
             }
 
-            // Update connection status
             await this.prisma.callCenterSettings.update({
-                where: { tenantId },
+                where: { id: settings.id },
                 data: {
                     isConnected: true,
                     lastSync: new Date(),
                     lastError: null,
-                    syncAttempts: 0,
-                },
-            });
+                    syncAttempts: 0 } });
 
             return {
                 success: true,
                 message: deviceInfo
                     ? 'تم الاتصال بنجاح — الجهاز متصل'
                     : 'تم الاتصال بنجاح — Token صالح',
-                deviceInfo,
-            };
+                deviceInfo };
         } catch (error) {
             this.logger.error('GDMS Connection Test Failed', error.message);
 
-            await this.prisma.callCenterSettings.update({
-                where: { tenantId },
-                data: {
-                    isConnected: false,
-                    lastError: error.message,
-                    syncAttempts: { increment: 1 },
-                },
-            }).catch(() => { });
+            const cur = await this.prisma.callCenterSettings.findFirst();
+            if (cur) {
+                await this.prisma.callCenterSettings.update({
+                    where: { id: cur.id },
+                    data: {
+                        isConnected: false,
+                        lastError: error.message,
+                        syncAttempts: { increment: 1 } } }).catch(() => { });
+            }
 
             return {
                 success: false,
-                message: error.message || 'فشل الاتصال بـ GDMS',
-            };
+                message: error.message || 'فشل الاتصال بـ GDMS' };
         }
     }
 
@@ -232,15 +209,11 @@ export class GdmsApiService {
     // 📞 EXTENSION MANAGEMENT
     // ══════════════════════════════════════════════════════════
 
-    async createExtensionOnGdms(
-        tenantId: string,
-        data: { extensionNumber: string; displayName: string; password: string },
+    async createExtensionOnGdms(data: { extensionNumber: string; displayName: string; password: string },
     ) {
         try {
-            const client = await this.getApiClient(tenantId);
-            const settings = await this.prisma.callCenterSettings.findUnique({
-                where: { tenantId },
-            });
+            const client = await this.getApiClient();
+            const settings = await this.prisma.callCenterSettings.findFirst();
             if (!settings) throw new BadRequestException('إعدادات السنترال غير موجودة');
 
             const response = await client.post(
@@ -252,8 +225,7 @@ export class GdmsApiService {
                     enable_webrtc: true,
                     nat: settings.enableNat,
                     stun_server: settings.stunServer,
-                    codec: ['PCMU', 'PCMA', 'G729'],
-                },
+                    codec: ['PCMU', 'PCMA', 'G729'] },
             );
 
             return { success: true, gdmsExtensionId: response.data?.data?.id || response.data?.id };
@@ -265,12 +237,10 @@ export class GdmsApiService {
         }
     }
 
-    async deleteExtensionFromGdms(tenantId: string, gdmsExtensionId: string) {
+    async deleteExtensionFromGdms(gdmsExtensionId: string) {
         try {
-            const client = await this.getApiClient(tenantId);
-            const settings = await this.prisma.callCenterSettings.findUnique({
-                where: { tenantId },
-            });
+            const client = await this.getApiClient();
+            const settings = await this.prisma.callCenterSettings.findFirst();
             if (!settings) throw new BadRequestException('إعدادات السنترال غير موجودة');
 
             await client.delete(
@@ -283,12 +253,10 @@ export class GdmsApiService {
         }
     }
 
-    async syncExtensionStatus(tenantId: string, extensionNumber: string) {
+    async syncExtensionStatus(extensionNumber: string) {
         try {
-            const client = await this.getApiClient(tenantId);
-            const settings = await this.prisma.callCenterSettings.findUnique({
-                where: { tenantId },
-            });
+            const client = await this.getApiClient();
+            const settings = await this.prisma.callCenterSettings.findFirst();
             if (!settings) return null;
 
             const response = await client.get(
@@ -296,14 +264,12 @@ export class GdmsApiService {
             );
 
             await this.prisma.sipExtension.updateMany({
-                where: { tenantId, extension: extensionNumber },
+                where: { extension: extensionNumber },
                 data: {
                     registrationStatus: response.data?.data?.registered
                         ? 'REGISTERED'
                         : 'UNREGISTERED',
-                    lastRegistered: response.data?.data?.registered ? new Date() : undefined,
-                },
-            });
+                    lastRegistered: response.data?.data?.registered ? new Date() : undefined } });
 
             return response.data;
         } catch (error) {
@@ -316,12 +282,10 @@ export class GdmsApiService {
     // 📊 CALL LOGS & CDR
     // ══════════════════════════════════════════════════════════
 
-    async syncCallLogs(tenantId: string, fromDate?: Date, toDate?: Date) {
+    async syncCallLogs(fromDate?: Date, toDate?: Date) {
         try {
-            const client = await this.getApiClient(tenantId);
-            const settings = await this.prisma.callCenterSettings.findUnique({
-                where: { tenantId },
-            });
+            const client = await this.getApiClient();
+            const settings = await this.prisma.callCenterSettings.findFirst();
             if (!settings) throw new BadRequestException('إعدادات السنترال غير موجودة');
 
             const response = await client.get(
@@ -331,9 +295,7 @@ export class GdmsApiService {
                         from_date:
                             fromDate?.toISOString() ||
                             new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-                        to_date: toDate?.toISOString() || new Date().toISOString(),
-                    },
-                },
+                        to_date: toDate?.toISOString() || new Date().toISOString() } },
             );
 
             const callLogs = response.data?.data?.logs || response.data?.data || [];
@@ -341,17 +303,14 @@ export class GdmsApiService {
 
             for (const log of callLogs) {
                 const existing = await this.prisma.callRecord.findFirst({
-                    where: { gdmsCallId: log.id?.toString() },
-                });
+                    where: { gdmsCallId: log.id?.toString() } });
 
                 if (!existing) {
                     const agent = await this.prisma.sipExtension.findFirst({
-                        where: { tenantId, extension: log.src },
-                    });
+                        where: { extension: log.src } });
 
                     await this.prisma.callRecord.create({
                         data: {
-                            tenantId,
                             gdmsCallId: log.id?.toString(),
                             callId: log.uniqueid || `gdms-${log.id}`,
                             direction:
@@ -367,9 +326,7 @@ export class GdmsApiService {
                                 : null,
                             endedAt: new Date(log.end_time || Date.now()),
                             recordingUrl: log.recording_url || null,
-                            agentId: agent?.userId || '',
-                        },
-                    });
+                            agentId: agent?.userId || '' } });
                     syncedCount++;
                 }
             }
@@ -385,15 +342,11 @@ export class GdmsApiService {
     // 🎙️ RECORDING MANAGEMENT
     // ══════════════════════════════════════════════════════════
 
-    async getRecordingDownloadUrl(
-        tenantId: string,
-        gdmsCallId: string,
+    async getRecordingDownloadUrl(gdmsCallId: string,
     ): Promise<string> {
         try {
-            const client = await this.getApiClient(tenantId);
-            const settings = await this.prisma.callCenterSettings.findUnique({
-                where: { tenantId },
-            });
+            const client = await this.getApiClient();
+            const settings = await this.prisma.callCenterSettings.findFirst();
             if (!settings) throw new BadRequestException('إعدادات السنترال غير موجودة');
 
             const response = await client.get(
@@ -407,37 +360,33 @@ export class GdmsApiService {
         }
     }
 
-    async downloadAndStoreRecording(tenantId: string, callRecordId: string) {
+    async downloadAndStoreRecording(callRecordId: string) {
         try {
             const callRecord = await this.prisma.callRecord.findUnique({
-                where: { id: callRecordId },
-            });
+                where: { id: callRecordId } });
 
             if (!callRecord || !callRecord.gdmsCallId) {
                 throw new BadRequestException('سجل المكالمة غير موجود');
             }
 
             const downloadUrl = await this.getRecordingDownloadUrl(
-                tenantId,
+
                 callRecord.gdmsCallId,
             );
 
             const response = await axios.get(downloadUrl, {
-                responseType: 'arraybuffer',
-            });
+                responseType: 'arraybuffer' });
             const buffer = Buffer.from(response.data);
 
             const fileName = `${callRecord.callId}.wav`;
-            const filePath = `/storage/recordings/${tenantId}/${fileName}`;
+            const filePath = `/storage/recordings//${fileName}`;
 
             await this.prisma.callRecord.update({
                 where: { id: callRecordId },
                 data: {
                     recordingUrl: filePath,
                     recordingSize: buffer.length,
-                    recordingDownloaded: true,
-                },
-            });
+                    recordingDownloaded: true } });
 
             return { success: true, filePath };
         } catch (error) {

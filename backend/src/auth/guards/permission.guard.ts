@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  CanActivate,
-  ExecutionContext,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { PERMISSION_KEY } from '../decorators/require-permission.decorator';
 import { PermissionsService } from '../../permissions/permissions.service';
@@ -34,7 +29,7 @@ export class PermissionGuard implements CanActivate {
 
     const hasPermission = await this.permissionsService.hasPermission(
       user.userId,
-      user.tenantId,
+
       requiredPermission,
     );
 

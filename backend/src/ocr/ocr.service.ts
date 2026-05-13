@@ -14,19 +14,17 @@ export class OcrService {
   /**
    * Process a document with OCR
    */
-  async processDocument(documentId: string, tenantId?: string) {
+  async processDocument(documentId: string) {
     try {
       this.logger.log(`Starting OCR processing for document: ${documentId}`);
 
       // Update status to PROCESSING
       await this.prisma.document.update({
         where: { id: documentId },
-        data: { ocrStatus: 'PROCESSING' },
-      });
+        data: { ocrStatus: 'PROCESSING' } });
 
       const document = await this.prisma.document.findUnique({
-        where: { id: documentId },
-      });
+        where: { id: documentId } });
 
       if (!document) {
         throw new NotFoundException('Document not found');
@@ -55,9 +53,7 @@ export class OcrService {
           where: { id: documentId },
           data: {
             ocrStatus: 'NOT_APPLICABLE',
-            ocrError: 'File type not supported for OCR',
-          },
-        });
+            ocrError: 'File type not supported for OCR' } });
         return { success: true, message: 'File type not supported for OCR' };
       }
 
@@ -67,9 +63,7 @@ export class OcrService {
         data: {
           ocrText: extractedText,
           ocrStatus: 'COMPLETED',
-          ocrError: null,
-        },
-      });
+          ocrError: null } });
 
       this.logger.log(`OCR completed for document: ${documentId}, extracted ${extractedText.length} characters`);
       return { success: true, textLength: extractedText.length };
@@ -80,9 +74,7 @@ export class OcrService {
         where: { id: documentId },
         data: {
           ocrStatus: 'FAILED',
-          ocrError: error.message,
-        },
-      });
+          ocrError: error.message } });
 
       throw error;
     }
@@ -163,8 +155,7 @@ export class OcrService {
         savePath: tempDir,
         format: 'png',
         width: 1600,
-        height: 2200,
-      };
+        height: 2200 };
 
       const convert = fromPath(filePath, options);
       
@@ -255,8 +246,7 @@ export class OcrService {
           if (m.status === 'recognizing text') {
             this.logger.debug(`OCR Progress: ${(m.progress * 100).toFixed(2)}%`);
           }
-        },
-      });
+        } });
 
       return text;
     } catch (error) {
@@ -268,12 +258,12 @@ export class OcrService {
   /**
    * Batch process multiple documents
    */
-  async batchProcess(documentIds: string[], tenantId: string) {
+  async batchProcess(documentIds: string[]) {
     const results = [];
 
     for (const id of documentIds) {
       try {
-        const result = await this.processDocument(id, tenantId);
+        const result = await this.processDocument(id);
         results.push({ id, success: true, result });
       } catch (error) {
         results.push({ id, success: false, error: error.message });
@@ -286,14 +276,11 @@ export class OcrService {
   /**
    * Re-process failed documents
    */
-  async retryFailed(tenantId: string) {
+  async retryFailed() {
     const failedDocs = await this.prisma.document.findMany({
       where: {
-        tenantId,
-        ocrStatus: 'FAILED',
-      },
-      select: { id: true },
-    });
+        ocrStatus: 'FAILED' },
+      select: { id: true } });
 
     if (failedDocs.length === 0) {
       return { message: 'No failed documents to retry', processed: 0 };
@@ -301,21 +288,21 @@ export class OcrService {
 
     return this.batchProcess(
       failedDocs.map((d) => d.id),
-      tenantId,
+
     );
   }
 
   /**
    * Get OCR stats for a tenant
    */
-  async getStats(tenantId: string) {
+  async getStats() {
     const [total, pending, processing, completed, failed, notApplicable] = await Promise.all([
-      this.prisma.document.count({ where: { tenantId, isLatest: true } }),
-      this.prisma.document.count({ where: { tenantId, isLatest: true, ocrStatus: 'PENDING' } }),
-      this.prisma.document.count({ where: { tenantId, isLatest: true, ocrStatus: 'PROCESSING' } }),
-      this.prisma.document.count({ where: { tenantId, isLatest: true, ocrStatus: 'COMPLETED' } }),
-      this.prisma.document.count({ where: { tenantId, isLatest: true, ocrStatus: 'FAILED' } }),
-      this.prisma.document.count({ where: { tenantId, isLatest: true, ocrStatus: 'NOT_APPLICABLE' } }),
+      this.prisma.document.count({ where: { isLatest: true } }),
+      this.prisma.document.count({ where: { isLatest: true, ocrStatus: 'PENDING' } }),
+      this.prisma.document.count({ where: { isLatest: true, ocrStatus: 'PROCESSING' } }),
+      this.prisma.document.count({ where: { isLatest: true, ocrStatus: 'COMPLETED' } }),
+      this.prisma.document.count({ where: { isLatest: true, ocrStatus: 'FAILED' } }),
+      this.prisma.document.count({ where: { isLatest: true, ocrStatus: 'NOT_APPLICABLE' } }),
     ]);
 
     return {
@@ -324,35 +311,28 @@ export class OcrService {
       processing,
       completed,
       failed,
-      notApplicable,
-    };
+      notApplicable };
   }
 
   /**
    * Search in OCR text
    */
-  async searchInOcrText(query: string, tenantId: string, limit = 20) {
+  async searchInOcrText(query: string, limit = 20) {
     const documents = await this.prisma.document.findMany({
       where: {
-        tenantId,
         isLatest: true,
         ocrStatus: 'COMPLETED',
         ocrText: {
           contains: query,
-          mode: 'insensitive',
-        },
-      },
+          mode: 'insensitive' } },
       select: {
         id: true,
         title: true,
         fileName: true,
         ocrText: true,
         case: {
-          select: { id: true, title: true, caseNumber: true },
-        },
-      },
-      take: limit,
-    });
+          select: { id: true, title: true, caseNumber: true } } },
+      take: limit });
 
     // Highlight matches
     return documents.map((doc) => {
@@ -365,8 +345,7 @@ export class OcrService {
       return {
         ...doc,
         ocrText: undefined, // Don't return full text
-        snippet,
-      };
+        snippet };
     });
   }
 }

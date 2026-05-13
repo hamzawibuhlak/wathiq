@@ -1,25 +1,10 @@
-import {
-    Controller,
-    Get,
-    Post,
-    Patch,
-    Body,
-    Param,
-    Query,
-    UseGuards,
-    ParseUUIDPipe,
-} from '@nestjs/common';
-import {
-    ApiTags,
-    ApiOperation,
-    ApiBearerAuth,
-    ApiResponse,
-} from '@nestjs/swagger';
+import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards, ParseUUIDPipe } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { UserInvitationsService, CreateInvitationDto, AcceptInvitationDto } from './user-invitations.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
-import { TenantId } from '../common/decorators/tenant-id.decorator';
+
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UserRole, InvitationStatus } from '@prisma/client';
 import { IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
@@ -84,10 +69,10 @@ export class InvitationsController {
     @ApiOperation({ summary: 'الحصول على جميع الدعوات' })
     @ApiResponse({ status: 200, description: 'قائمة الدعوات' })
     async findAll(
-        @TenantId() tenantId: string,
+
         @Query('status') status?: InvitationStatus,
     ) {
-        return this.invitationsService.findAll(tenantId, status);
+        return this.invitationsService.findAll(status);
     }
 
     @Get('stats')
@@ -95,8 +80,8 @@ export class InvitationsController {
     @Roles(UserRole.OWNER, UserRole.ADMIN)
     @ApiBearerAuth('JWT-auth')
     @ApiOperation({ summary: 'إحصائيات الدعوات' })
-    async getStats(@TenantId() tenantId: string) {
-        return this.invitationsService.getStats(tenantId);
+    async getStats() {
+        return this.invitationsService.getStats();
     }
 
     @Post()
@@ -108,10 +93,10 @@ export class InvitationsController {
     @ApiResponse({ status: 409, description: 'البريد الإلكتروني مسجل بالفعل' })
     async create(
         @Body() dto: CreateInvitationBodyDto,
-        @TenantId() tenantId: string,
+
         @CurrentUser('id') inviterId: string,
     ) {
-        return this.invitationsService.create(dto, tenantId, inviterId);
+        return this.invitationsService.create(dto, inviterId);
     }
 
     @Patch(':id/cancel')
@@ -122,9 +107,9 @@ export class InvitationsController {
     @ApiResponse({ status: 200, description: 'تم إلغاء الدعوة بنجاح' })
     async cancel(
         @Param('id', ParseUUIDPipe) id: string,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.invitationsService.cancel(id, tenantId);
+        return this.invitationsService.cancel(id);
     }
 
     @Patch(':id/resend')
@@ -135,8 +120,8 @@ export class InvitationsController {
     @ApiResponse({ status: 200, description: 'تم إعادة إرسال الدعوة بنجاح' })
     async resend(
         @Param('id', ParseUUIDPipe) id: string,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.invitationsService.resend(id, tenantId);
+        return this.invitationsService.resend(id);
     }
 }

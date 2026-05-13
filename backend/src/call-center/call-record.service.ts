@@ -5,7 +5,7 @@ import { PrismaService } from '../common/prisma/prisma.service';
 export class CallRecordService {
     constructor(private prisma: PrismaService) { }
 
-    async logCall(tenantId: string, agentId: string, data: {
+    async logCall(agentId: string, data: {
         callId: string;
         direction: 'INBOUND' | 'OUTBOUND';
         fromNumber: string;
@@ -15,7 +15,6 @@ export class CallRecordService {
         // ابحث تلقائياً هل الرقم موجود كعميل
         const client = await this.prisma.client.findFirst({
             where: {
-                tenantId,
                 OR: [
                     { phone: data.fromNumber },
                     { phone: data.toNumber },
@@ -31,20 +30,20 @@ export class CallRecordService {
                 fromNumber: data.fromNumber,
                 toNumber: data.toNumber,
                 agentId,
-                tenantId,
+
                 clientId: client?.id || null,
             },
         });
     }
 
-    async updateCallStatus(callId: string, tenantId: string, data: {
+    async updateCallStatus(callId: string, data: {
         status: string;
         answeredAt?: Date;
         endedAt?: Date;
         duration?: number;
     }) {
         return this.prisma.callRecord.updateMany({
-            where: { callId, tenantId },
+            where: { callId },
             data: {
                 status: data.status as any,
                 answeredAt: data.answeredAt,
@@ -54,14 +53,14 @@ export class CallRecordService {
         });
     }
 
-    async addNotes(callId: string, tenantId: string, notes: string, caseId?: string) {
+    async addNotes(callId: string, notes: string, caseId?: string) {
         return this.prisma.callRecord.updateMany({
-            where: { callId, tenantId },
+            where: { callId },
             data: { notes, caseId },
         });
     }
 
-    async getCallHistory(tenantId: string, filters?: {
+    async getCallHistory(filters?: {
         agentId?: string;
         clientId?: string;
         direction?: string;
@@ -70,7 +69,7 @@ export class CallRecordService {
         page?: number;
     }) {
         const { page = 1 } = filters || {};
-        const where: any = { tenantId };
+        const where: any = {};
         if (filters?.agentId) where.agentId = filters.agentId;
         if (filters?.clientId) where.clientId = filters.clientId;
         if (filters?.direction) where.direction = filters.direction;
@@ -101,30 +100,30 @@ export class CallRecordService {
         };
     }
 
-    async getStats(tenantId: string) {
+    async getStats() {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
         const [total, answered, missed, inbound, outbound] = await Promise.all([
             this.prisma.callRecord.count({
-                where: { tenantId, startedAt: { gte: today } },
+                where: { startedAt: { gte: today } },
             }),
             this.prisma.callRecord.count({
-                where: { tenantId, status: 'ANSWERED', startedAt: { gte: today } },
+                where: { status: 'ANSWERED', startedAt: { gte: today } },
             }),
             this.prisma.callRecord.count({
-                where: { tenantId, status: { in: ['NO_ANSWER', 'BUSY'] }, startedAt: { gte: today } },
+                where: { status: { in: ['NO_ANSWER', 'BUSY'] }, startedAt: { gte: today } },
             }),
             this.prisma.callRecord.count({
-                where: { tenantId, direction: 'INBOUND', startedAt: { gte: today } },
+                where: { direction: 'INBOUND', startedAt: { gte: today } },
             }),
             this.prisma.callRecord.count({
-                where: { tenantId, direction: 'OUTBOUND', startedAt: { gte: today } },
+                where: { direction: 'OUTBOUND', startedAt: { gte: today } },
             }),
         ]);
 
         const avgDuration = await this.prisma.callRecord.aggregate({
-            where: { tenantId, status: 'ANSWERED', startedAt: { gte: today } },
+            where: { status: 'ANSWERED', startedAt: { gte: today } },
             _avg: { duration: true },
         });
 

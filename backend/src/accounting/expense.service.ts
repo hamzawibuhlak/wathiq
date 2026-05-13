@@ -10,23 +10,23 @@ export class ExpenseService {
         private readonly entityCodeService: EntityCodeService,
     ) { }
 
-    async createCategory(tenantId: string, dto: { name: string; accountId: string; description?: string }) {
-        return this.prisma.expenseCategory.create({ data: { ...dto, tenantId } });
+    async createCategory(dto: { name: string; accountId: string; description?: string }) {
+        return this.prisma.expenseCategory.create({ data: { ...dto } });
     }
 
-    async getCategories(tenantId: string) {
-        return this.prisma.expenseCategory.findMany({ where: { tenantId }, include: { account: true } });
+    async getCategories() {
+        return this.prisma.expenseCategory.findMany({ where: {}, include: { account: true } });
     }
 
-    async submit(tenantId: string, userId: string, dto: {
+    async submit(userId: string, dto: {
         date: Date; amount: number; expenseCategoryId: string; description: string;
         reference?: string; paymentMethod: any; vendorId?: string; costCenterId?: string;
         attachments?: string[]; notes?: string;
     }) {
-        const expenseNumber = await this.generateNumber(tenantId);
+        const expenseNumber = await this.generateNumber();
 
         // Phase 37: Generate flat expense code
-        const expenseCode = await this.entityCodeService.generateFlatCode(tenantId, 'expense');
+        const expenseCode = await this.entityCodeService.generateFlatCode('expense');
 
         return this.prisma.expense.create({
             data: {
@@ -35,34 +35,30 @@ export class ExpenseService {
                 reference: dto.reference, paymentMethod: dto.paymentMethod,
                 vendorId: dto.vendorId, costCenterId: dto.costCenterId,
                 attachments: dto.attachments || [], notes: dto.notes,
-                submittedBy: userId, tenantId,
+                submittedBy: userId,
                 code: expenseCode.code,
-                codeNumber: expenseCode.codeNumber,
-            },
-            include: { expenseCategory: true, vendor: true, costCenter: true },
-        });
+                codeNumber: expenseCode.codeNumber },
+            include: { expenseCategory: true, vendor: true, costCenter: true } });
     }
 
-    async approve(tenantId: string, expenseId: string, userId: string) {
-        const expense = await this.prisma.expense.findFirst({ where: { id: expenseId, tenantId } });
+    async approve(expenseId: string, userId: string) {
+        const expense = await this.prisma.expense.findFirst({ where: { id: expenseId } });
         if (!expense) throw new BadRequestException('المصروف غير موجود');
         if (expense.status !== 'EXP_PENDING') throw new BadRequestException('لا يمكن الموافقة');
 
         return this.prisma.expense.update({
             where: { id: expenseId },
-            data: { status: 'EXP_APPROVED', approvedBy: userId, approvedAt: new Date() },
-        });
+            data: { status: 'EXP_APPROVED', approvedBy: userId, approvedAt: new Date() } });
     }
 
-    async reject(tenantId: string, expenseId: string, userId: string) {
+    async reject(expenseId: string, userId: string) {
         return this.prisma.expense.update({
             where: { id: expenseId },
-            data: { status: 'EXP_REJECTED', approvedBy: userId, approvedAt: new Date() },
-        });
+            data: { status: 'EXP_REJECTED', approvedBy: userId, approvedAt: new Date() } });
     }
 
-    async findAll(tenantId: string, filters?: { status?: string; startDate?: Date; endDate?: Date }) {
-        const where: any = { tenantId };
+    async findAll(filters?: { status?: string; startDate?: Date; endDate?: Date }) {
+        const where: any = {};
         if (filters?.status) where.status = filters.status;
         if (filters?.startDate || filters?.endDate) {
             where.date = {};
@@ -71,15 +67,13 @@ export class ExpenseService {
         }
         return this.prisma.expense.findMany({
             where, include: { expenseCategory: true, vendor: true, costCenter: true, submitter: { select: { id: true, name: true } } },
-            orderBy: { date: 'desc' },
-        });
+            orderBy: { date: 'desc' } });
     }
 
-    async getByCategory(tenantId: string, startDate: Date, endDate: Date) {
+    async getByCategory(startDate: Date, endDate: Date) {
         const expenses = await this.prisma.expense.findMany({
-            where: { tenantId, status: { in: ['EXP_APPROVED', 'EXP_PAID'] }, date: { gte: startDate, lte: endDate } },
-            include: { expenseCategory: true },
-        });
+            where: { status: { in: ['EXP_APPROVED', 'EXP_PAID'] }, date: { gte: startDate, lte: endDate } },
+            include: { expenseCategory: true } });
 
         const byCategory: Record<string, { name: string; total: number; count: number }> = {};
         expenses.forEach(e => {
@@ -91,9 +85,9 @@ export class ExpenseService {
         return Object.values(byCategory);
     }
 
-    private async generateNumber(tenantId: string) {
+    private async generateNumber() {
         const year = new Date().getFullYear();
-        const count = await this.prisma.expense.count({ where: { tenantId, expenseNumber: { startsWith: `EXP-${year}` } } });
+        const count = await this.prisma.expense.count({ where: { expenseNumber: { startsWith: `EXP-${year}` } } });
         return `EXP-${year}-${String(count + 1).padStart(4, '0')}`;
     }
 }

@@ -39,9 +39,7 @@ export class TasksService {
     /**
      * Get all tasks with pagination, search, and filters
      */
-    async findAll(
-        tenantId: string,
-        filterDto: FilterTasksDto,
+    async findAll(filterDto: FilterTasksDto,
         userId?: string,
         userRole?: UserRole,
     ): Promise<PaginatedResponse<unknown>> {
@@ -57,11 +55,10 @@ export class TasksService {
             sortBy = 'createdAt',
             sortOrder = 'desc',
             overdue,
-            rootOnly,
-        } = filterDto;
+            rootOnly } = filterDto;
 
         // Build where clause
-        const where: Prisma.TaskWhereInput = { tenantId };
+        const where: Prisma.TaskWhereInput = {};
 
         // LAWYER can only see their own tasks
         if (userRole === UserRole.LAWYER && userId) {
@@ -111,8 +108,7 @@ export class TasksService {
                     OR: [
                         { title: { contains: search, mode: 'insensitive' } },
                         { description: { contains: search, mode: 'insensitive' } },
-                    ],
-                },
+                    ] },
             ];
         }
 
@@ -133,20 +129,16 @@ export class TasksService {
                 include: {
                     assignedTo: { select: { id: true, name: true, avatar: true } },
                     assignees: {
-                        include: { user: { select: { id: true, name: true, avatar: true } } },
-                    },
+                        include: { user: { select: { id: true, name: true, avatar: true } } } },
                     createdBy: { select: { id: true, name: true } },
                     case: { select: { id: true, title: true, caseNumber: true } },
                     hearing: { select: { id: true, hearingDate: true, courtName: true } },
                     subtasks: {
-                        select: { id: true, title: true, status: true },
-                    },
-                    _count: { select: { comments: true, subtasks: true } },
-                },
+                        select: { id: true, title: true, status: true } },
+                    _count: { select: { comments: true, subtasks: true } } },
                 orderBy,
                 skip,
-                take: limit,
-            }),
+                take: limit }),
             this.prisma.task.count({ where }),
         ]);
 
@@ -156,40 +148,31 @@ export class TasksService {
                 page,
                 limit,
                 total,
-                totalPages: Math.ceil(total / limit),
-            },
-        };
+                totalPages: Math.ceil(total / limit) } };
     }
 
     /**
      * Get task by ID with all related data
      */
-    async findOne(id: string, tenantId: string, userId?: string, userRole?: UserRole) {
+    async findOne(id: string, userId?: string, userRole?: UserRole) {
         const task = await this.prisma.task.findFirst({
-            where: { id, tenantId },
+            where: { id },
             include: {
                 assignedTo: { select: { id: true, name: true, email: true, phone: true, avatar: true } },
                 assignees: {
-                    include: { user: { select: { id: true, name: true, avatar: true } } },
-                },
+                    include: { user: { select: { id: true, name: true, avatar: true } } } },
                 createdBy: { select: { id: true, name: true } },
                 case: { select: { id: true, title: true, caseNumber: true } },
                 hearing: { select: { id: true, hearingDate: true, courtName: true } },
                 parent: { select: { id: true, title: true } },
                 subtasks: {
                     include: {
-                        assignedTo: { select: { id: true, name: true, avatar: true } },
-                    },
-                    orderBy: { createdAt: 'asc' },
-                },
+                        assignedTo: { select: { id: true, name: true, avatar: true } } },
+                    orderBy: { createdAt: 'asc' } },
                 comments: {
                     include: {
-                        user: { select: { id: true, name: true, avatar: true } },
-                    },
-                    orderBy: { createdAt: 'asc' },
-                },
-            },
-        });
+                        user: { select: { id: true, name: true, avatar: true } } },
+                    orderBy: { createdAt: 'asc' } } } });
 
         if (!task) {
             throw new NotFoundException('المهمة غير موجودة');
@@ -211,9 +194,9 @@ export class TasksService {
     /**
      * Create new task
      */
-    async create(dto: CreateTaskDto, tenantId: string, userId: string) {
+    async create(dto: CreateTaskDto, userId: string) {
         // Phase 37: Generate flat task code
-        const taskCode = await this.entityCodeService.generateFlatCode(tenantId, 'task');
+        const taskCode = await this.entityCodeService.generateFlatCode('task');
 
         const data: Prisma.TaskCreateInput = {
             title: dto.title,
@@ -223,12 +206,11 @@ export class TasksService {
             dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
             dueTime: dto.dueTime,
             tags: dto.tags || [],
-            tenant: { connect: { id: tenantId } },
+
             assignedTo: { connect: { id: dto.assignedToId } },
             createdBy: { connect: { id: userId } },
             code: taskCode.code,
-            codeNumber: taskCode.codeNumber,
-        };
+            codeNumber: taskCode.codeNumber };
 
         if (dto.caseId) {
             data.case = { connect: { id: dto.caseId } };
@@ -247,9 +229,7 @@ export class TasksService {
             include: {
                 assignedTo: { select: { id: true, name: true, avatar: true } },
                 createdBy: { select: { id: true, name: true } },
-                case: { select: { id: true, title: true, caseNumber: true } },
-            },
-        });
+                case: { select: { id: true, title: true, caseNumber: true } } } });
 
         // Create additional assignees (multi-assignee)
         const additionalIds = (dto.assignedToIds || []).filter(id => id !== dto.assignedToId);
@@ -257,16 +237,14 @@ export class TasksService {
             await this.prisma.taskAssignee.createMany({
                 data: [
                     // Always include the primary assignee
-                    { taskId: task.id, userId: dto.assignedToId, tenantId },
-                    ...additionalIds.map(uid => ({ taskId: task.id, userId: uid, tenantId })),
+                    { taskId: task.id, userId: dto.assignedToId },
+                    ...additionalIds.map(uid => ({ taskId: task.id, userId: uid })),
                 ],
-                skipDuplicates: true,
-            });
+                skipDuplicates: true });
         } else {
             // At minimum, add the primary assignee to TaskAssignee table
             await this.prisma.taskAssignee.create({
-                data: { taskId: task.id, userId: dto.assignedToId, tenantId },
-            }).catch(() => { /* ignore duplicate */ });
+                data: { taskId: task.id, userId: dto.assignedToId } }).catch(() => { /* ignore duplicate */ });
         }
 
         // Send notification to assigned users (if different from creator)
@@ -278,16 +256,13 @@ export class TasksService {
                     message: `تم إسناد مهمة "${task.title}" إليك`,
                     type: 'INFO',
                     link: `/tasks/${task.id}`,
-                    userId: assigneeId,
-                    tenantId,
-                });
+                    userId: assigneeId });
             }
         }
 
         return {
             data: task,
-            message: 'تم إنشاء المهمة بنجاح',
-        };
+            message: 'تم إنشاء المهمة بنجاح' };
     }
 
     /**
@@ -296,13 +271,11 @@ export class TasksService {
     async update(
         id: string,
         dto: UpdateTaskDto,
-        tenantId: string,
         userId?: string,
         userRole?: UserRole,
     ) {
         const existingTask = await this.prisma.task.findFirst({
-            where: { id, tenantId },
-        });
+            where: { id } });
 
         if (!existingTask) {
             throw new NotFoundException('المهمة غير موجودة');
@@ -348,9 +321,8 @@ export class TasksService {
                 : dto.assignedToIds;
             if (allIds.length > 0) {
                 await this.prisma.taskAssignee.createMany({
-                    data: allIds.map(uid => ({ taskId: id, userId: uid, tenantId })),
-                    skipDuplicates: true,
-                });
+                    data: allIds.map(uid => ({ taskId: id, userId: uid })),
+                    skipDuplicates: true });
             }
         }
         if (dto.caseId !== undefined) {
@@ -374,23 +346,19 @@ export class TasksService {
             include: {
                 assignedTo: { select: { id: true, name: true, avatar: true } },
                 createdBy: { select: { id: true, name: true } },
-                case: { select: { id: true, title: true, caseNumber: true } },
-            },
-        });
+                case: { select: { id: true, title: true, caseNumber: true } } } });
 
         return {
             data: task,
-            message: 'تم تحديث المهمة بنجاح',
-        };
+            message: 'تم تحديث المهمة بنجاح' };
     }
 
     /**
      * Delete task
      */
-    async remove(id: string, tenantId: string, userId?: string, userRole?: UserRole) {
+    async remove(id: string, userId?: string, userRole?: UserRole) {
         const existingTask = await this.prisma.task.findFirst({
-            where: { id, tenantId },
-        });
+            where: { id } });
 
         if (!existingTask) {
             throw new NotFoundException('المهمة غير موجودة');
@@ -409,13 +377,12 @@ export class TasksService {
     /**
      * Remove assignee from task
      */
-    async removeAssignee(taskId: string, userId: string, tenantId: string) {
-        const task = await this.prisma.task.findFirst({ where: { id: taskId, tenantId } });
+    async removeAssignee(taskId: string, userId: string) {
+        const task = await this.prisma.task.findFirst({ where: { id: taskId } });
         if (!task) throw new NotFoundException('المهمة غير موجودة');
 
         await this.prisma.taskAssignee.deleteMany({
-            where: { taskId, userId },
-        });
+            where: { taskId, userId } });
 
         return { message: 'تم إزالة الشخص من المهمة' };
     }
@@ -423,10 +390,9 @@ export class TasksService {
     /**
      * Add comment to task
      */
-    async addComment(taskId: string, dto: CreateCommentDto, tenantId: string, userId: string) {
+    async addComment(taskId: string, dto: CreateCommentDto, userId: string) {
         const task = await this.prisma.task.findFirst({
-            where: { id: taskId, tenantId },
-        });
+            where: { id: taskId } });
 
         if (!task) {
             throw new NotFoundException('المهمة غير موجودة');
@@ -437,12 +403,9 @@ export class TasksService {
                 content: dto.content,
                 mentions: dto.mentions as any || [],
                 task: { connect: { id: taskId } },
-                user: { connect: { id: userId } },
-            },
+                user: { connect: { id: userId } } },
             include: {
-                user: { select: { id: true, name: true, avatar: true } },
-            },
-        });
+                user: { select: { id: true, name: true, avatar: true } } } });
 
         // Send notifications to mentioned users
         if (dto.mentions && dto.mentions.length > 0) {
@@ -456,28 +419,24 @@ export class TasksService {
                     message: `تم ذكرك في تعليق على مهمة "${task.title}"`,
                     type: 'INFO',
                     link: `/tasks/${taskId}`,
-                    userId: mentionedUserId,
-                    tenantId,
-                });
+                    userId: mentionedUserId });
             }
         }
 
         return {
             data: comment,
-            message: 'تم إضافة التعليق بنجاح',
-        };
+            message: 'تم إضافة التعليق بنجاح' };
     }
 
     /**
      * Delete comment
      */
-    async removeComment(commentId: string, tenantId: string, userId: string, userRole: UserRole) {
+    async removeComment(commentId: string, userId: string, userRole: UserRole) {
         const comment = await this.prisma.taskComment.findFirst({
             where: { id: commentId },
-            include: { task: { select: { tenantId: true } } },
-        });
+            include: { task: { select: {} } } });
 
-        if (!comment || comment.task.tenantId !== tenantId) {
+        if (!comment) {
             throw new NotFoundException('التعليق غير موجود');
         }
 
@@ -494,12 +453,10 @@ export class TasksService {
     /**
      * Get task statistics
      */
-    async getStats(
-        tenantId: string,
-        userId?: string,
+    async getStats(userId?: string,
         userRole?: UserRole,
     ): Promise<{ data: TaskStats }> {
-        const baseWhere: Prisma.TaskWhereInput = { tenantId };
+        const baseWhere: Prisma.TaskWhereInput = {};
 
         // LAWYER only sees their own task stats
         if (userRole === UserRole.LAWYER && userId) {
@@ -533,14 +490,11 @@ export class TasksService {
                 where: {
                     ...baseWhere,
                     dueDate: { lt: now },
-                    status: { notIn: [TaskStatus.COMPLETED, TaskStatus.CANCELLED] },
-                },
-            }),
+                    status: { notIn: [TaskStatus.COMPLETED, TaskStatus.CANCELLED] } } }),
             this.prisma.task.groupBy({
                 by: ['priority'],
                 where: baseWhere,
-                _count: { id: true },
-            }),
+                _count: { id: true } }),
         ]);
 
         const byPriority: Record<string, number> = {};
@@ -554,8 +508,7 @@ export class TasksService {
             review: reviewCount,
             blocked: blockedCount,
             completed: completedCount,
-            cancelled: cancelledCount,
-        };
+            cancelled: cancelledCount };
 
         return {
             data: {
@@ -565,23 +518,21 @@ export class TasksService {
                 completed: completedCount,
                 overdue: overdueCount,
                 byPriority,
-                byStatus,
-            },
-        };
+                byStatus } };
     }
 
     /**
      * Get my tasks (for current user)
      */
-    async getMyTasks(tenantId: string, userId: string, filterDto: FilterTasksDto) {
+    async getMyTasks(userId: string, filterDto: FilterTasksDto) {
         const modifiedFilter = { ...filterDto, assignedToId: userId };
-        return this.findAll(tenantId, modifiedFilter);
+        return this.findAll(modifiedFilter);
     }
 
     /**
      * Bulk update status
      */
-    async bulkUpdateStatus(ids: string[], status: TaskStatus, tenantId: string) {
+    async bulkUpdateStatus(ids: string[], status: TaskStatus) {
         const updateData: Prisma.TaskUpdateInput = { status };
 
         if (status === TaskStatus.COMPLETED) {
@@ -590,35 +541,26 @@ export class TasksService {
 
         const result = await this.prisma.task.updateMany({
             where: {
-                id: { in: ids },
-                tenantId,
-            },
+                id: { in: ids } },
             data: {
                 status,
-                completedAt: status === TaskStatus.COMPLETED ? new Date() : undefined,
-            },
-        });
+                completedAt: status === TaskStatus.COMPLETED ? new Date() : undefined } });
 
         return {
             message: `تم تحديث ${result.count} مهمة بنجاح`,
-            count: result.count,
-        };
+            count: result.count };
     }
 
     /**
      * Bulk delete
      */
-    async bulkDelete(ids: string[], tenantId: string) {
+    async bulkDelete(ids: string[]) {
         const result = await this.prisma.task.deleteMany({
             where: {
-                id: { in: ids },
-                tenantId,
-            },
-        });
+                id: { in: ids } } });
 
         return {
             message: `تم حذف ${result.count} مهمة بنجاح`,
-            count: result.count,
-        };
+            count: result.count };
     }
 }
