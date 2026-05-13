@@ -28,4 +28,10 @@ export class UpdateCompanySettingsDto {
     @IsOptional() @IsString() whatsappBusinessId?: string;
     @IsOptional() @IsString() whatsappWebhookToken?: string;
     @IsOptional() @IsBoolean() whatsappEnabled?: boolean;
+
+    @IsOptional() @IsString() primaryColor?: string;
+    @IsOptional() @IsString() secondaryColor?: string;
+    @IsOptional() @IsString() tertiaryColor?: string;
+    @IsOptional() @IsString() fontArabic?: string;
+    @IsOptional() @IsString() fontEnglish?: string;
 }

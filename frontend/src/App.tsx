@@ -53,6 +53,7 @@ const AccountLayout = lazy(() => import('@/pages/settings/AccountLayout'));
 const ProfilePage = lazy(() => import('@/pages/settings/ProfilePage'));
 const UsersPage = lazy(() => import('@/pages/settings/UsersPage'));
 const FirmPage = lazy(() => import('@/pages/settings/FirmPage'));
+const ThemePage = lazy(() => import('@/pages/settings/ThemePage'));
 const NotificationsPage = lazy(() => import('@/pages/settings/NotificationsPage'));
 const WhatsAppSettingsPage = lazy(() => import('@/pages/settings/WhatsAppSettingsPage'));
 const EmailSettingsPage = lazy(() => import('@/pages/settings/EmailSettingsPage'));
@@ -237,6 +238,7 @@ function App() {
                             <Route index element={<Navigate to="firm" replace />} />
                             <Route path="users" element={<UsersPage />} />
                             <Route path="firm" element={<FirmPage />} />
+                            <Route path="theme" element={<ThemePage />} />
                             <Route path="email" element={<EmailSettingsPage />} />
                             <Route path="whatsapp" element={<WhatsAppSettingsPage />} />
                             <Route path="security" element={<TwoFactorPage />} />

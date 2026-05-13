@@ -7,10 +7,12 @@ import {
     Shield,
     Upload,
     PhoneCall,
+    Palette,
 } from 'lucide-react';
 
 const tabs = [
     { to: 'firm', label: 'بيانات المكتب', icon: Building2 },
+    { to: 'theme', label: 'الهوية البصرية', icon: Palette },
     { to: 'users', label: 'المستخدمون', icon: Users },
     { to: 'email', label: 'البريد (SMTP)', icon: Mail },
     { to: 'whatsapp', label: 'واتساب', icon: MessageCircle },

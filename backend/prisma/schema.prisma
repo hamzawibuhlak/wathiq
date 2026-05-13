@@ -3780,6 +3780,13 @@ model CompanySettings {
   whatsappWebhookToken  String?
   whatsappEnabled       Boolean @default(false)
 
+  // Theme — visual identity
+  primaryColor   String? // hex e.g. #c49353
+  secondaryColor String? // hex e.g. #423e3f
+  tertiaryColor  String? // hex e.g. #e1ded9
+  fontArabic     String? // Google Font family, e.g. "Almarai"
+  fontEnglish    String? // Google Font family, e.g. "Inter"
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

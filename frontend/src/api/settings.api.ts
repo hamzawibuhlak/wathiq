@@ -162,6 +162,11 @@ export interface FirmSettings {
     taxNumber?: string;
     commercialReg?: string;
     website?: string;
+    primaryColor?: string;
+    secondaryColor?: string;
+    tertiaryColor?: string;
+    fontArabic?: string;
+    fontEnglish?: string;
 }
 
 export interface UpdateFirmData {
@@ -173,6 +178,12 @@ export interface UpdateFirmData {
     taxNumber?: string;
     commercialReg?: string;
     website?: string;
+    primaryColor?: string;
+    secondaryColor?: string;
+    tertiaryColor?: string;
+    fontArabic?: string;
+    fontEnglish?: string;
+    letterheadUrl?: string;
 }
 
 export const firmApi = {

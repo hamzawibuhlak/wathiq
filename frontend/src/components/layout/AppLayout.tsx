@@ -8,6 +8,7 @@ import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { useWebSocket } from '@/hooks/use-websocket';
 import { useFirmSettings } from '@/hooks/use-settings';
+import { applyTheme } from '@/lib/theme';
 import toast from 'react-hot-toast';
 
 const Softphone = lazy(() => import('@/components/call-center/Softphone'));
@@ -18,8 +19,20 @@ export function AppLayout() {
     const { subscribe, isConnected } = useWebSocket();
     const queryClient = useQueryClient();
     const { data: firmData } = useFirmSettings();
-    const firmName = firmData?.data?.name;
-    const firmLogo = firmData?.data?.logo;
+    const firm = firmData?.data;
+    const firmName = firm?.name;
+    const firmLogo = firm?.logo;
+
+    useEffect(() => {
+        if (!firm) return;
+        applyTheme({
+            primaryColor: firm.primaryColor,
+            secondaryColor: firm.secondaryColor,
+            tertiaryColor: firm.tertiaryColor,
+            fontArabic: firm.fontArabic,
+            fontEnglish: firm.fontEnglish,
+        });
+    }, [firm?.primaryColor, firm?.secondaryColor, firm?.tertiaryColor, firm?.fontArabic, firm?.fontEnglish]);
 
     useEffect(() => {
         if (firmName) document.title = `${firmName} - نظام إدارة المكاتب القانونية`;
