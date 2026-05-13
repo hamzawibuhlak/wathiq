@@ -100,11 +100,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
-        run: npm install --legacy-peer-deps
+        run: |
+          rm -f package-lock.json
+          npm install --legacy-peer-deps
 
       - name: Run ESLint
         run: npm run lint || true
