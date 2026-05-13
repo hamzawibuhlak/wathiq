@@ -209,7 +209,7 @@ export class UsersController {
     @ApiOperation({ summary: 'تعطيل مستخدم (soft delete)' })
     @ApiResponse({ status: 200, description: 'تم تعطيل المستخدم بنجاح' })
     @ApiResponse({ status: 404, description: 'المستخدم غير موجود' })
-    @Roles(UserRole.OWNER)
+    @Roles(UserRole.OWNER, UserRole.ADMIN)
     async remove(
         @Param('id', ParseUUIDPipe) id: string,
         @TenantId() tenantId: string,

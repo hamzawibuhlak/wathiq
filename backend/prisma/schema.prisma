@@ -163,13 +163,13 @@ model Tenant {
   taxNumber     String? // الرقم الضريبي
   commercialReg String? // السجل التجاري
   website       String? // الموقع الإلكتروني
-  logo              String?
-  letterheadUrl     String? // ورقة الهيد ليتر للمكتب
-  isActive          Boolean @default(true)
+  logo          String?
+  letterheadUrl String? // ورقة الهيد ليتر للمكتب
+  isActive      Boolean @default(true)
 
   // Phase 37: Entity Codes
-  code       String?  @unique // e.g. "test_law"
-  codePrefix String?           // e.g. "test" (used to generate child codes)
+  code       String? @unique // e.g. "test_law"
+  codePrefix String? // e.g. "test" (used to generate child codes)
 
   // Plan / Subscription
   planType      PlanType  @default(BASIC)
@@ -314,9 +314,9 @@ model Tenant {
   tenantRoles TenantRole[]
 
   // Phase 38: Dynamic Forms
-  forms              Form[]
-  formTemplates      FormTemplate[]
-  formAnswerNotes    FormAnswerNote[]
+  forms                 Form[]
+  formTemplates         FormTemplate[]
+  formAnswerNotes       FormAnswerNote[]
   formAnswerDiscussions FormAnswerDiscussion[]
 
   // Phase 42: Module Control
@@ -329,6 +329,8 @@ model Tenant {
 
   // Job Titles
   jobTitles          JobTitle[]
+  SocialConversation SocialConversation[]
+  SocialMessage      SocialMessage[]
 
   @@map("tenants")
 }
@@ -353,7 +355,7 @@ model User {
 
   // Phase 37: Entity Codes
   code       String? @unique // e.g. "test_US0001"
-  codeNumber Int?            // 1, 2, 3...
+  codeNumber Int? // 1, 2, 3...
 
   // Two-Factor Authentication
   twoFactorEnabled     Boolean  @default(false)
@@ -461,6 +463,10 @@ model User {
   discussionInvites   FormAnswerDiscussion[] @relation("DiscussionParticipants")
   discussionMessages  FormAnswerMessage[]    @relation("DiscussionMessageAuthor")
 
+  // Phase: Social Inbox
+  assignedSocialConvs SocialConversation[] @relation("AssignedSocialConv")
+  sentSocialMessages  SocialMessage[]      @relation("SentSocialMessages")
+
   @@index([tenantId])
   @@index([email])
   @@index([tenantRoleId])
@@ -486,23 +492,23 @@ model Client {
   isActive      Boolean @default(true)
 
   // Enhanced Company Info (Phase 34)
-  brandName        String?   // العلامة التجارية
-  unifiedNumber    String?   // الرقم الموحد
-  commercialRegDoc String?   // مستند السجل التجاري
+  brandName          String? // العلامة التجارية
+  unifiedNumber      String? // الرقم الموحد
+  commercialRegDoc   String? // مستند السجل التجاري
   nationalAddressDoc String? // مستند العنوان الوطني
 
   // Representative Info
-  repName      String? // اسم الممثل
-  repPhone     String? // رقم الممثل
-  repEmail     String? // إيميل الممثل
+  repName        String? // اسم الممثل
+  repPhone       String? // رقم الممثل
+  repEmail       String? // إيميل الممثل
   repIdentity    String? // هوية الممثل (National ID)
   repIdentityDoc String? // مستند هوية الممثل
-  repDocType   String? // نوع مستند التمثيل: COMMERCIAL_REG, ARTICLES_OF_ASSOC, AUTH_LETTER, POWER_OF_ATTORNEY
-  repDoc       String? // مستند التمثيل
+  repDocType     String? // نوع مستند التمثيل: COMMERCIAL_REG, ARTICLES_OF_ASSOC, AUTH_LETTER, POWER_OF_ATTORNEY
+  repDoc         String? // مستند التمثيل
 
   // Phase 37: Entity Codes
   code       String? @unique // e.g. "test_CL0001"
-  codeNumber Int?            // 1, 2, 3...
+  codeNumber Int? // 1, 2, 3...
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -533,8 +539,9 @@ model Client {
   whatsappBaileysMessages WhatsappBaileysMessage[]
 
   // Phase 38: Dynamic Forms linkage
-  linkedFormSubmissions    FormSubmission[] @relation("SubmissionClient")
-  convertedFormSubmissions FormSubmission[] @relation("SubmissionConvertedClient")
+  linkedFormSubmissions    FormSubmission[]     @relation("SubmissionClient")
+  convertedFormSubmissions FormSubmission[]     @relation("SubmissionConvertedClient")
+  SocialConversation       SocialConversation[]
 
   @@index([tenantId])
   @@index([phone])
@@ -563,7 +570,7 @@ model Case {
 
   // Phase 37: Entity Codes
   code       String? @unique // e.g. "test_CL0001_CA00001"
-  codeNumber Int?            // 1, 2, 3... (per client)
+  codeNumber Int? // 1, 2, 3... (per client)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -602,8 +609,8 @@ model Case {
   callRecords CallRecord[]
 
   // Phase 38: Dynamic Forms
-  forms                  Form[]
-  linkedFormSubmissions  FormSubmission[] @relation("SubmissionCase")
+  forms                    Form[]
+  linkedFormSubmissions    FormSubmission[] @relation("SubmissionCase")
   convertedFormSubmissions FormSubmission[] @relation("SubmissionConvertedCase")
 
   @@unique([tenantId, caseNumber])
@@ -623,7 +630,7 @@ model Hearing {
 
   // Phase 37: Entity Codes
   code       String? @unique // e.g. "test_CL0001_CA00001_CS00001"
-  codeNumber Int?            // 1, 2, 3... (per case)
+  codeNumber Int? // 1, 2, 3... (per case)
 
   // رقم الجلسة من المحكمة
   hearingNumber String @default("")
@@ -686,7 +693,7 @@ model Document {
 
   // Phase 37: Entity Codes
   code       String? @unique // e.g. "test_DOC00001"
-  codeNumber Int?            // 1, 2, 3...
+  codeNumber Int? // 1, 2, 3...
 
   // Versioning
   version  Int        @default(1)
@@ -741,7 +748,7 @@ model DocumentFolder {
   id    String  @id @default(uuid())
   name  String
   color String? @default("#6366f1") // لون المجلد
-  icon  String? @default("folder")  // أيقونة المجلد
+  icon  String? @default("folder") // أيقونة المجلد
 
   // Nested folders (self-relation)
   parentId String?
@@ -842,7 +849,7 @@ model Invoice {
 
   // Phase 37: Entity Codes
   code       String? @unique // e.g. "test_INV00001"
-  codeNumber Int?            // 1, 2, 3...
+  codeNumber Int? // 1, 2, 3...
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1151,11 +1158,11 @@ model Task {
   status      TaskStatus   @default(TODO)
   priority    TaskPriority @default(MEDIUM)
   dueDate     DateTime?
-  dueTime     String?      // e.g. "14:30" (optional delivery time)
+  dueTime     String? // e.g. "14:30" (optional delivery time)
 
   // Phase 37: Entity Codes
   code       String? @unique // e.g. "test_TK00001"
-  codeNumber Int?            // 1, 2, 3...
+  codeNumber Int? // 1, 2, 3...
 
   // Relations
   caseId String?
@@ -1218,7 +1225,7 @@ model TaskAssignee {
 model TaskComment {
   id       String @id @default(uuid())
   content  String @db.Text
-  mentions Json?  // Array of {type, id, name} for @mentions
+  mentions Json? // Array of {type, id, name} for @mentions
 
   taskId String
   task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
@@ -1936,13 +1943,13 @@ model ExpenseCategory {
 }
 
 model Expense {
-  id                String        @id @default(uuid())
-  expenseNumber     String
-  date              DateTime
+  id            String   @id @default(uuid())
+  expenseNumber String
+  date          DateTime
 
   // Phase 37: Entity Codes
-  code       String? @unique // e.g. "test_EX00001"
-  codeNumber Int?            // 1, 2, 3...
+  code              String?       @unique // e.g. "test_EX00001"
+  codeNumber        Int? // 1, 2, 3...
   amount            Decimal       @db.Decimal(15, 2)
   expenseCategoryId String
   description       String
@@ -2889,6 +2896,11 @@ enum IntegrationType {
   ABSHER
   GOOGLE_CALENDAR
   ZAPIER
+  INSTAGRAM
+  FACEBOOK
+  TWITTER
+  TELEGRAM
+  TIKTOK
 }
 
 // =====================================================
@@ -3492,19 +3504,19 @@ model LegalRegulation {
 }
 
 model RegulationArticle {
-  id           String   @id @default(uuid())
-  regulationId String
-  number       String
-  title        String?
-  content      String   @db.Text
-  editorialNotes String? @db.Text
-  keywords     String[]
-  chapter      String?
-  section      String?
+  id             String   @id @default(uuid())
+  regulationId   String
+  number         String
+  title          String?
+  content        String   @db.Text
+  editorialNotes String?  @db.Text
+  keywords       String[]
+  chapter        String?
+  section        String?
 
-  regulation    LegalRegulation    @relation(fields: [regulationId], references: [id], onDelete: Cascade)
-  bookmarks     LegalBookmark[]
-  articleNotes  LegalArticleNote[]
+  regulation   LegalRegulation    @relation(fields: [regulationId], references: [id], onDelete: Cascade)
+  bookmarks    LegalBookmark[]
+  articleNotes LegalArticleNote[]
 
   @@index([regulationId])
   @@map("regulation_articles")
@@ -3566,7 +3578,7 @@ model LegalBookmark {
   notes           String?      @db.Text
   highlightedText String?      @db.Text // النص المحدد المحفوظ
   tags            String[]     @default([])
-  caseId          String?      // ربط بقضية معينة
+  caseId          String? // ربط بقضية معينة
   folderId        String?
   sortOrder       Int          @default(0)
   tenantId        String
@@ -3635,7 +3647,7 @@ model CaseLegalReference {
   precedentId     String?
   termId          String?
   notes           String?      @db.Text
-  purpose         String?      // "للاستناد", "للدفاع", "للرد"
+  purpose         String? // "للاستناد", "للدفاع", "للرد"
   highlightedText String?      @db.Text
   addedBy         String
   tenantId        String
@@ -3662,7 +3674,7 @@ model LegalSearchLog {
   aiResponse   String?  @db.Text
   aiCitations  Json?
   aiTokensUsed Int?
-  responseTime Int?     // milliseconds
+  responseTime Int? // milliseconds
   cached       Boolean  @default(false)
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
@@ -3734,12 +3746,12 @@ enum BookmarkType {
 // =====================================================
 
 model LegalArticleNote {
-  id             String   @id @default(uuid())
+  id             String  @id @default(uuid())
   articleId      String
-  noteText       String   @db.Text
+  noteText       String  @db.Text
   highlightStart Int?
   highlightEnd   Int?
-  isPrivate      Boolean  @default(true)
+  isPrivate      Boolean @default(true)
   tenantId       String
   createdBy      String
 
@@ -4161,8 +4173,8 @@ model PermissionCache {
 // =====================================================
 
 model Form {
-  id         String  @id @default(uuid())
-  code       String  @unique
+  id         String @id @default(uuid())
+  code       String @unique
   codeNumber Int
 
   title       String
@@ -4182,9 +4194,9 @@ model Form {
   otpExpiryMinutes  Int     @default(30)
 
   // Appearance
-  theme       String @default("light")
+  theme       String  @default("light")
   coverImage  String?
-  accentColor String @default("#3b82f6")
+  accentColor String  @default("#3b82f6")
 
   // Notifications
   notifyOnSubmit   Boolean  @default(true)
@@ -4302,11 +4314,11 @@ model FormSubmission {
   user     User? @relation(fields: [userId], references: [id])
   reviewer User? @relation("ReviewedSubmissions", fields: [reviewedBy], references: [id])
 
-  linkedClient       Client?  @relation("SubmissionClient", fields: [linkedClientId], references: [id])
-  linkedCase         Case?    @relation("SubmissionCase", fields: [linkedCaseId], references: [id])
-  linkedHearing      Hearing? @relation("SubmissionHearing", fields: [linkedHearingId], references: [id])
-  convertedToClient  Client?  @relation("SubmissionConvertedClient", fields: [convertedToClientId], references: [id])
-  convertedToCase    Case?    @relation("SubmissionConvertedCase", fields: [convertedToCaseId], references: [id])
+  linkedClient      Client?  @relation("SubmissionClient", fields: [linkedClientId], references: [id])
+  linkedCase        Case?    @relation("SubmissionCase", fields: [linkedCaseId], references: [id])
+  linkedHearing     Hearing? @relation("SubmissionHearing", fields: [linkedHearingId], references: [id])
+  convertedToClient Client?  @relation("SubmissionConvertedClient", fields: [convertedToClientId], references: [id])
+  convertedToCase   Case?    @relation("SubmissionConvertedCase", fields: [convertedToCaseId], references: [id])
 
   answers FormFieldAnswer[]
 
@@ -4465,7 +4477,7 @@ model ModuleChangeLog {
   tenantId      String
   changedBy     String
   moduleKey     String
-  action        String   // ENABLE or DISABLE
+  action        String // ENABLE or DISABLE
   previousValue Boolean
   newValue      Boolean
   reason        String?  @db.Text
@@ -4484,14 +4496,14 @@ model ModuleChangeLog {
 // =====================================================
 
 model EmailVerificationToken {
-  id         String   @id @default(uuid())
-  email      String
-  tenantId   String?
-  token      String   // bcrypt-hashed OTP
-  expiresAt  DateTime // +15 min from creation
-  isUsed     Boolean  @default(false)
-  attempts   Int      @default(0) // max 5 wrong attempts
-  createdAt  DateTime @default(now())
+  id        String   @id @default(uuid())
+  email     String
+  tenantId  String?
+  token     String // bcrypt-hashed OTP
+  expiresAt DateTime // +15 min from creation
+  isUsed    Boolean  @default(false)
+  attempts  Int      @default(0) // max 5 wrong attempts
+  createdAt DateTime @default(now())
 
   @@index([email])
   @@map("email_verification_tokens")
@@ -4503,8 +4515,8 @@ model EmailVerificationToken {
 
 model JobTitle {
   id        String   @id @default(uuid())
-  name      String   // اسم المسمى بالعربي
-  nameEn    String?  // English name (optional)
+  name      String // اسم المسمى بالعربي
+  nameEn    String? // English name (optional)
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -4516,4 +4528,87 @@ model JobTitle {
   @@unique([tenantId, name])
   @@index([tenantId])
   @@map("job_titles")
+}
+
+// =====================================================
+// PHASE: OMNICHANNEL SOCIAL INBOX (التواصل الاجتماعي الموحد)
+// =====================================================
+
+enum SocialPlatform {
+  WHATSAPP
+  INSTAGRAM
+  FACEBOOK
+  TIKTOK
+  TWITTER
+  TELEGRAM
+}
+
+enum SocialConversationStatus {
+  OPEN
+  ASSIGNED
+  RESOLVED
+  CLOSED
+}
+
+model SocialConversation {
+  id           String                   @id @default(uuid())
+  platform     SocialPlatform
+  externalId   String // External identifier (e.g. Phone Number, Instagram Handle, etc.)
+  clientName   String // Display name of the client/sender
+  clientAvatar String? // URL to avatar
+  status       SocialConversationStatus @default(OPEN)
+
+  // Link to CRM Client if available
+  clientId String?
+  client   Client? @relation(fields: [clientId], references: [id])
+
+  // Assignment (صلاحية موظف معين بالرد عليها فقط)
+  assignedToId String?
+  assignedTo   User?   @relation("AssignedSocialConv", fields: [assignedToId], references: [id])
+
+  // Tenant
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  messages SocialMessage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, platform, externalId])
+  @@index([tenantId, platform])
+  @@index([assignedToId])
+  @@map("social_conversations")
+}
+
+model SocialMessage {
+  id             String  @id @default(uuid())
+  conversationId String
+  externalId     String? // Message ID from the platform
+  direction      String // INBOUND, OUTBOUND
+
+  // Content
+  content   String? @db.Text
+  mediaUrl  String?
+  mediaType String? // image, document, video, audio
+
+  // Sender mapping: if OUTBOUND, which User sent it?
+  senderId String?
+  sender   User?   @relation("SentSocialMessages", fields: [senderId], references: [id])
+
+  status      String  @default("SENT") // SENT, DELIVERED, READ, FAILED
+  errorReason String? @db.Text
+
+  conversation SocialConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  // Tenant
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([conversationId, createdAt])
+  @@index([tenantId])
+  @@map("social_messages")
 }

@@ -88,17 +88,17 @@ export const Softphone: React.FC = () => {
 
     return (
         <>
-            {/* Floating button */}
+            {/* Floating button — moved to top-left to avoid overlap with chat windows */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className="softphone-fab"
                 style={{
                     position: 'fixed',
-                    bottom: 24,
+                    top: 76,
                     left: 24,
                     zIndex: 9999,
-                    width: 56,
-                    height: 56,
+                    width: 48,
+                    height: 48,
                     borderRadius: '50%',
                     background: state === 'in_call' || state === 'incoming' ? '#22c55e' : '#2563eb',
                     color: '#fff',
@@ -108,7 +108,7 @@ export const Softphone: React.FC = () => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: 24,
+                    fontSize: 20,
                     transition: 'all 0.3s',
                     animation: state === 'incoming' ? 'pulse-ring 1.5s infinite' : undefined,
                 }}
@@ -117,13 +117,13 @@ export const Softphone: React.FC = () => {
                 📞
             </button>
 
-            {/* Softphone panel */}
+            {/* Softphone panel — opens below the top button */}
             {isOpen && (
                 <div
                     className="softphone-panel"
                     style={{
                         position: 'fixed',
-                        bottom: 90,
+                        top: 132,
                         left: 24,
                         zIndex: 9998,
                         width: 320,

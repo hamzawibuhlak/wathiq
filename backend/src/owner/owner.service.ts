@@ -279,63 +279,110 @@ export class OwnerService {
         try {
             // Use a transaction to clean up all references then delete
             await this.prisma.$transaction(async (tx) => {
-                // Reassign non-nullable Case references to owner
+                // ── Cases ──────────────────────────────────────────────
                 await tx.case.updateMany({ where: { assignedToId: userId }, data: { assignedToId: ownerId } });
                 await tx.case.updateMany({ where: { createdById: userId }, data: { createdById: ownerId } });
 
-                // Nullify nullable Hearing references
+                // ── Hearings ───────────────────────────────────────────
                 await tx.hearing.updateMany({ where: { assignedToId: userId }, data: { assignedToId: null } });
                 await tx.hearing.updateMany({ where: { createdById: userId }, data: { createdById: null } });
+                try { await (tx as any).hearing.updateMany({ where: { postponedById: userId }, data: { postponedById: null } }); } catch { }
+                try { await (tx as any).hearing.updateMany({ where: { cancelledById: userId }, data: { cancelledById: null } }); } catch { }
+                try { await (tx as any).hearing.updateMany({ where: { reassignedById: userId }, data: { reassignedById: null } }); } catch { }
 
-                // Reassign non-nullable Document references to owner
+                // ── Documents ──────────────────────────────────────────
                 await tx.document.updateMany({ where: { uploadedById: userId }, data: { uploadedById: ownerId } });
+                try { await tx.documentFolder.updateMany({ where: { createdById: userId }, data: { createdById: null } }); } catch { }
 
-                // Reassign non-nullable Invoice references to owner
+                // ── Legal Documents ────────────────────────────────────
+                try { await tx.legalDocument.updateMany({ where: { createdBy: userId }, data: { createdBy: ownerId } }); } catch { }
+                // Delete LegalDocumentVersion records saved by this user
+                try { await tx.legalDocumentVersion.deleteMany({ where: { savedBy: userId } }); } catch { }
+
+                // ── Invoices ───────────────────────────────────────────
                 await tx.invoice.updateMany({ where: { createdById: userId }, data: { createdById: ownerId } });
+                try { await (tx as any).invoice.updateMany({ where: { paymentRecordedById: userId }, data: { paymentRecordedById: null } }); } catch { }
 
-                // Reassign non-nullable Task references to owner
+                // ── Tasks ──────────────────────────────────────────────
                 await tx.task.updateMany({ where: { assignedToId: userId }, data: { assignedToId: ownerId } });
                 await tx.task.updateMany({ where: { createdById: userId }, data: { createdById: ownerId } });
-
-                // Delete task comments by the user
+                try { await tx.taskAssignee.deleteMany({ where: { userId } }); } catch { }
                 await tx.taskComment.deleteMany({ where: { userId } });
 
-                // Delete messages sent/received by user
+                // ── Internal Messages (old) ────────────────────────────
                 await tx.message.deleteMany({ where: { OR: [{ senderId: userId }, { receiverId: userId }] } });
-
-                // Delete group memberships and messages
                 await tx.groupMessage.deleteMany({ where: { senderId: userId } });
                 await tx.groupMember.deleteMany({ where: { userId } });
 
-                // Delete calls
+                // ── Chat System (new) ──────────────────────────────────
+                // Delete chat message reactions by user
+                try { await tx.chatMessageReaction.deleteMany({ where: { userId } }); } catch { }
+                // Delete chat message receipts
+                try { await tx.chatMessageReceipt.deleteMany({ where: { userId } }); } catch { }
+                // Reassign chat messages sent by user to owner
+                try { await tx.chatMessage.updateMany({ where: { senderId: userId }, data: { senderId: ownerId } }); } catch { }
+                // Remove user from all conversation memberships
+                try { await tx.chatConversationMember.deleteMany({ where: { userId } }); } catch { }
+                // Reassign conversations created by user to owner
+                try { await tx.chatConversation.updateMany({ where: { createdBy: userId }, data: { createdBy: ownerId } }); } catch { }
+
+                // ── Calls ──────────────────────────────────────────────
                 await tx.call.deleteMany({ where: { userId } });
 
-                // Reassign reports
+                // ── Reports ────────────────────────────────────────────
                 await tx.report.updateMany({ where: { createdById: userId }, data: { createdById: ownerId } });
                 await tx.reportExecution.updateMany({ where: { executedById: userId }, data: { executedById: ownerId } });
 
-                // Delete notifications
+                // ── Notifications ──────────────────────────────────────
                 await tx.notification.deleteMany({ where: { userId } });
 
-                // Delete activity logs
+                // ── Activity Logs ──────────────────────────────────────
                 await tx.activityLog.deleteMany({ where: { userId } });
 
-                // Delete sessions
+                // ── Sessions ───────────────────────────────────────────
                 await tx.userSession.deleteMany({ where: { userId } });
 
-                // Remove from client visibility (many-to-many)
+                // ── Invitations ────────────────────────────────────────
+                try { await tx.userInvitation.deleteMany({ where: { inviterId: userId } }); } catch { }
+                try { await (tx as any).userInvitation.deleteMany({ where: { acceptedUserId: userId } }); } catch { }
+
+                // ── HR Tables ──────────────────────────────────────────
+                // LeaveRequest: reviewedBy is nullable (User relation)
+                try { await (tx as any).leaveRequest.updateMany({ where: { reviewedBy: userId }, data: { reviewedBy: null } }); } catch { }
+                // Payroll: processedBy is nullable
+                try { await tx.payroll.updateMany({ where: { processedBy: userId }, data: { processedBy: null } }); } catch { }
+
+                // ── Marketing Tables ───────────────────────────────────
+                // Lead.assignedTo is nullable
+                try { await tx.lead.updateMany({ where: { assignedTo: userId }, data: { assignedTo: null } }); } catch { }
+                // LeadActivity.createdBy is non-nullable - reassign to owner
+                try { await tx.leadActivity.updateMany({ where: { createdBy: userId }, data: { createdBy: ownerId } }); } catch { }
+                // CallLog.callerUserId is non-nullable - reassign to owner
+                try { await tx.callLog.updateMany({ where: { callerUserId: userId }, data: { callerUserId: ownerId } }); } catch { }
+
+                // ── Workflow executions ────────────────────────────────
+                try { await (tx as any).workflowExecution.updateMany({ where: { triggeredById: userId }, data: { triggeredById: ownerId } }); } catch { }
+
+                // ── Form submissions ───────────────────────────────────
+                try { await (tx as any).formSubmission.updateMany({ where: { userId }, data: { userId: null } }); } catch { }
+
+                // ── Notification Settings ──────────────────────────────
+                try { await (tx as any).notificationSettings.deleteMany({ where: { userId } }); } catch { }
+
+                // ── Remove from client visibility (many-to-many) ───────
                 await tx.user.update({
                     where: { id: userId },
                     data: { visibleClients: { set: [] } },
                 });
 
-                // Reassign created users
+                // ── Reassign created users ─────────────────────────────
                 await tx.user.updateMany({ where: { createdById: userId }, data: { createdById: null } });
 
-                // Delete the user
+                // ── Finally delete the user ────────────────────────────
                 await tx.user.delete({ where: { id: userId } });
             });
         } catch (error) {
+            console.error('[deleteUser] Transaction failed:', error?.message || error);
             throw new BadRequestException('لا يمكن حذف هذا المستخدم لارتباطه ببيانات أخرى. يمكنك تعطيل حسابه بدلاً من ذلك.');
         }
 
@@ -362,6 +409,11 @@ export class OwnerService {
         const allTypes = [
             { type: 'EMAIL_SMTP', name: 'بريد إلكتروني (SMTP)', icon: '📧' },
             { type: 'WHATSAPP', name: 'واتساب Business', icon: '💬' },
+            { type: 'FACEBOOK', name: 'فيسبوك', icon: '👥' },
+            { type: 'INSTAGRAM', name: 'انستجرام', icon: '📸' },
+            { type: 'TWITTER', name: 'تويتر (X)', icon: '🐦' },
+            { type: 'TELEGRAM', name: 'تليجرام', icon: '✈️' },
+            { type: 'TIKTOK', name: 'تيكتوك', icon: '🎵' },
             { type: 'CALL_CENTER', name: 'مركز الاتصال', icon: '📞' },
             { type: 'NAFATH', name: 'نفاذ', icon: '🆔' },
             { type: 'ZATCA', name: 'زاتكا', icon: '🧾' },

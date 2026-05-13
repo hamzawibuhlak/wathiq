@@ -114,17 +114,18 @@ export function useCreateUser() {
     });
 }
 
-export function useUpdateUser(id: string) {
+export function useUpdateUser() {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (data: UpdateUserData) => usersApi.update(id, data),
+        mutationFn: ({ id, data }: { id: string; data: UpdateUserData }) => usersApi.update(id, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['users'] });
             toast.success('تم تحديث المستخدم بنجاح');
         },
-        onError: () => {
-            toast.error('حدث خطأ أثناء تحديث المستخدم');
+        onError: (error: any) => {
+            const msg = error?.response?.data?.message || 'حدث خطأ أثناء تحديث المستخدم';
+            toast.error(msg);
         },
     });
 }
@@ -138,8 +139,9 @@ export function useDeleteUser() {
             queryClient.invalidateQueries({ queryKey: ['users'] });
             toast.success('تم حذف المستخدم بنجاح');
         },
-        onError: () => {
-            toast.error('حدث خطأ أثناء حذف المستخدم');
+        onError: (error: any) => {
+            const msg = error?.response?.data?.message || 'حدث خطأ أثناء حذف المستخدم';
+            toast.error(msg);
         },
     });
 }

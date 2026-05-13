@@ -58,6 +58,7 @@ import { TenantRolesModule } from './tenant-roles/tenant-roles.module';
 import { FormsModule } from './forms/forms.module';
 import { DocumentFoldersModule } from './document-folders/document-folders.module';
 import { AppController } from './app.controller';
+import { SocialInboxModule } from './social-inbox/social-inbox.module';
 
 @Module({
     imports: [
@@ -160,6 +161,8 @@ import { AppController } from './app.controller';
 
         // Document Folders (nested folder organization)
         DocumentFoldersModule,
+
+        SocialInboxModule,
     ],
     controllers: [AppController],
     providers: [

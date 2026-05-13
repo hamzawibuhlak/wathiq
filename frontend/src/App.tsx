@@ -5,6 +5,7 @@ import { AuthLayout, AppLayout } from '@/components/layout';
 import { OfflineIndicator } from '@/components/layout/OfflineIndicator';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import { UpdatePrompt } from '@/components/UpdatePrompt';
+import { GlobalChatOverlay, HeartbeatManager } from '@/components/chat/GlobalChatOverlay';
 
 // Loading Fallback
 const PageLoader = () => (
@@ -70,6 +71,9 @@ const ActivityLogsPage = lazy(() => import('@/pages/activity-logs/ActivityLogsPa
 
 // WhatsApp
 const WhatsAppMessagesPage = lazy(() => import('@/pages/whatsapp/WhatsAppMessagesPage'));
+
+// Social Inbox (Omnichannel)
+const SocialInboxPage = lazy(() => import('@/pages/social/SocialInboxPage'));
 
 // Tasks
 const TasksListPage = lazy(() => import('@/pages/tasks/TasksListPage'));
@@ -252,6 +256,9 @@ function App() {
             <InstallPrompt />
             <UpdatePrompt />
             <OfflineIndicator />
+            {/* Global heartbeat + floating chats (persist across all pages) */}
+            <HeartbeatManager />
+            <GlobalChatOverlay />
 
             <Suspense fallback={<PageLoader />}>
                 <Routes>
@@ -380,6 +387,9 @@ function App() {
 
                         {/* Internal Chat (Phase 26) */}
                         <Route path="chat" element={<ChatPage />} />
+
+                        {/* Social Media Inbox (Omnichannel) */}
+                        <Route path="social-inbox" element={<SocialInboxPage />} />
 
                         {/* Legal Document Editor (Phase 28) */}
                         <Route path="legal-documents" element={<LegalDocumentsPage />} />

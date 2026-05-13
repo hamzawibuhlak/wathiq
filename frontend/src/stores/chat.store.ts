@@ -4,7 +4,10 @@ interface ChatState {
     onlineUsers: Set<string>;
     selectedConversationId: string | null;
     unreadCounts: Record<string, number>;
-    typingUsers: Record<string, string[]>; // conversationId -> userNames[]
+    typingUsers: Record<string, string[]>;
+
+    // Global floating mini-chats (persist across pages)
+    miniChats: Array<{ id: string; minimized: boolean }>;
 
     setOnline: (userId: string) => void;
     setOffline: (userId: string) => void;
@@ -15,6 +18,10 @@ interface ChatState {
     setTypingUsers: (conversationId: string, users: string[]) => void;
     isOnline: (userId: string) => boolean;
     totalUnread: () => number;
+
+    openMiniChat: (convId: string) => void;
+    closeMiniChat: (convId: string) => void;
+    toggleMinimizeChat: (convId: string) => void;
 }
 
 export const useChatStore = create<ChatState>()((set, get) => ({
@@ -22,6 +29,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     selectedConversationId: null,
     unreadCounts: {},
     typingUsers: {},
+    miniChats: [],
 
     setOnline: (userId) =>
         set((state) => {
@@ -66,4 +74,22 @@ export const useChatStore = create<ChatState>()((set, get) => ({
 
     totalUnread: () =>
         Object.values(get().unreadCounts).reduce((sum, c) => sum + c, 0),
+
+    openMiniChat: (convId) =>
+        set((state) => {
+            if (state.miniChats.find(mc => mc.id === convId)) return state;
+            const next = [...state.miniChats, { id: convId, minimized: false }];
+            return { miniChats: next.slice(-3) }; // max 3
+        }),
+
+    closeMiniChat: (convId) =>
+        set((state) => ({ miniChats: state.miniChats.filter(mc => mc.id !== convId) })),
+
+    toggleMinimizeChat: (convId) =>
+        set((state) => ({
+            miniChats: state.miniChats.map(mc =>
+                mc.id === convId ? { ...mc, minimized: !mc.minimized } : mc
+            ),
+        })),
 }));
+

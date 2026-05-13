@@ -2,6 +2,7 @@ import {
     Controller,
     Get,
     Post,
+    Delete,
     Param,
     Body,
     Query,
@@ -16,6 +17,7 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { ChatService } from './chat.service';
+import { ChatGateway } from './chat.gateway';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { randomUUID } from 'crypto';
@@ -28,7 +30,10 @@ const onlineUsers = new Map<string, number>();
 @UseGuards(JwtAuthGuard)
 @Controller('chat')
 export class ChatController {
-    constructor(private chatService: ChatService) { }
+    constructor(
+        private chatService: ChatService,
+        private chatGateway: ChatGateway,
+    ) { }
 
     // Heartbeat - user pings every 10s to stay online
     @Post('heartbeat')
@@ -101,7 +106,7 @@ export class ChatController {
 
     // Send message via REST (fallback for WebSocket)
     @Post('conversations/:id/messages')
-    sendMessage(
+    async sendMessage(
         @Param('id') conversationId: string,
         @Body() data: {
             content?: string;
@@ -114,7 +119,12 @@ export class ChatController {
         },
         @CurrentUser() user: any,
     ) {
-        return this.chatService.sendMessage(conversationId, user.id, user.tenantId, data as any);
+        const message = await this.chatService.sendMessage(conversationId, user.id, user.tenantId, data as any);
+        // Broadcast via socket immediately so all participants see the message in real-time
+        this.chatGateway.server
+            .to(`conversation:${conversationId}`)
+            .emit('chat:new_message', message);
+        return message;
     }
 
     // Upload file for chat
@@ -151,5 +161,61 @@ export class ChatController {
         @CurrentUser() user: any,
     ) {
         return this.chatService.searchMessages(query, user.id, user.tenantId);
+    }
+
+    // Delete / leave conversation
+    @Delete('conversations/:id')
+    deleteConversation(
+        @Param('id') id: string,
+        @CurrentUser() user: any,
+    ) {
+        return this.chatService.deleteConversation(id, user.id, user.tenantId);
+    }
+
+    // Forward a message to another conversation
+    @Post('messages/:id/forward')
+    forwardMessage(
+        @Param('id') messageId: string,
+        @Body('targetConversationId') targetConversationId: string,
+        @CurrentUser() user: any,
+    ) {
+        return this.chatService.forwardMessage(messageId, targetConversationId, user.id, user.tenantId);
+    }
+
+    // ── Group Management ──────────────────────────────
+    @Post('conversations/:id/update')
+    updateGroup(
+        @Param('id') id: string,
+        @Body() data: { name?: string; description?: string },
+        @CurrentUser() user: any,
+    ) {
+        return this.chatService.updateGroup(id, user.id, user.tenantId, data);
+    }
+
+    @Post('conversations/:id/members')
+    addMember(
+        @Param('id') id: string,
+        @Body('userId') userId: string,
+        @CurrentUser() user: any,
+    ) {
+        return this.chatService.addMember(id, user.id, user.tenantId, userId);
+    }
+
+    @Delete('conversations/:id/members/:userId')
+    removeMember(
+        @Param('id') id: string,
+        @Param('userId') userId: string,
+        @CurrentUser() user: any,
+    ) {
+        return this.chatService.removeMember(id, user.id, user.tenantId, userId);
+    }
+
+    @Post('conversations/:id/members/:userId/toggle-admin')
+    toggleAdmin(
+        @Param('id') id: string,
+        @Param('userId') userId: string,
+        @CurrentUser() user: any,
+    ) {
+        return this.chatService.toggleAdmin(id, user.id, user.tenantId, userId);
     }
 }

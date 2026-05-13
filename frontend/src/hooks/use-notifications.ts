@@ -149,10 +149,58 @@ export function useSendMessage() {
         mutationFn: messagesApi.send,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['messages', 'sent'] });
+            queryClient.invalidateQueries({ queryKey: ['messages', 'inbox'] });
             toast.success('تم إرسال الرسالة بنجاح');
         },
         onError: () => {
             toast.error('فشل إرسال الرسالة');
+        },
+    });
+}
+
+export function useSendBulkMessage() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: messagesApi.sendBulk,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['messages', 'sent'] });
+            toast.success('تم إرسال الرسالة الجماعية بنجاح');
+        },
+        onError: () => {
+            toast.error('فشل إرسال الرسالة الجماعية');
+        },
+    });
+}
+
+export function useReplyMessage() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ id, data }: { id: string; data: { content: string; attachments?: string[] } }) =>
+            messagesApi.reply(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['messages'] });
+            toast.success('تم إرسال الرد بنجاح');
+        },
+        onError: () => {
+            toast.error('فشل إرسال الرد');
+        },
+    });
+}
+
+export function useForwardMessage() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ id, data }: { id: string; data: { receiverIds: string[]; content?: string } }) =>
+            messagesApi.forward(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['messages', 'sent'] });
+            toast.success('تم تحويل الرسالة بنجاح');
+        },
+        onError: () => {
+            toast.error('فشل تحويل الرسالة');
         },
     });
 }
