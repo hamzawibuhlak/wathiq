@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth.store';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useModuleStore } from '@/hooks/useModules';
+import { useFirmSettings } from '@/hooks/use-settings';
 import {
     LayoutDashboard,
     Calendar,
@@ -191,8 +192,9 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
     const userRole = user?.role;
     const { can } = usePermissions();
     const { isModuleEnabled, fetchModules } = useModuleStore();
+    const { data: firmData } = useFirmSettings();
+    const firm = firmData?.data;
 
-    // Fetch modules on mount
     useEffect(() => { fetchModules(); }, [fetchModules]);
 
     const slugPrefix = '';
@@ -281,13 +283,17 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         >
             {/* Logo */}
             <div className="h-16 flex items-center justify-between px-4 border-b bg-gradient-to-l from-primary/5 to-transparent">
-                <Link to={`${slugPrefix}/dashboard`} className="flex items-center gap-3">
-                    <div className="w-9 h-9 bg-gradient-to-br from-primary to-[hsl(var(--gold))] rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm">
-                        <Scale className="w-5 h-5 text-primary-foreground" />
+                <Link to={`${slugPrefix}/dashboard`} className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 bg-gradient-to-br from-primary to-[hsl(var(--gold))] rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm overflow-hidden">
+                        {firm?.logo ? (
+                            <img src={firm.logo} alt={firm.name || 'logo'} className="w-full h-full object-contain" />
+                        ) : (
+                            <Scale className="w-5 h-5 text-primary-foreground" />
+                        )}
                     </div>
                     {!isCollapsed && (
-                        <span className="text-xl font-bold bg-gradient-to-l from-primary to-[hsl(var(--gold))] bg-clip-text text-transparent">
-                            وسم الثقة
+                        <span className="text-xl font-bold bg-gradient-to-l from-primary to-[hsl(var(--gold))] bg-clip-text text-transparent truncate">
+                            {firm?.name || 'وسم الثقة'}
                         </span>
                     )}
                 </Link>
