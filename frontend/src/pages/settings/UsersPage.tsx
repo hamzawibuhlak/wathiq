@@ -83,7 +83,7 @@ export function UsersPage() {
 
     // Mutations
     const createMutation = useCreateUser();
-    const updateMutation = useUpdateUser(editingUser?.id || '');
+    const updateMutation = useUpdateUser();
     const deleteMutation = useDeleteUser();
     const deactivateMutation = useDeactivateUser();
     const reactivateMutation = useReactivateUser();
@@ -134,7 +134,10 @@ export function UsersPage() {
                 email: data.email,
                 phone: data.phone,
             };
-            updateMutation.mutate(updateData, { onSuccess: handleCloseForm });
+            updateMutation.mutate(
+                { id: editingUser.id, data: updateData },
+                { onSuccess: handleCloseForm }
+            );
         } else {
             createMutation.mutate(
                 { ...data, password: data.password! },
@@ -154,7 +157,12 @@ export function UsersPage() {
 
     const handleDelete = (id: string) => {
         if (window.confirm('هل أنت متأكد من حذف هذا المستخدم؟')) {
-            deleteMutation.mutate(id);
+            deleteMutation.mutate(id, {
+                onError: (error: any) => {
+                    const msg = error?.response?.data?.message || 'حدث خطأ أثناء الحذف';
+                    alert(msg);
+                }
+            });
         }
     };
 

@@ -55,6 +55,7 @@ import { CallCenterModule } from './call-center/call-center.module';
 import { FormsModule } from './forms/forms.module';
 import { DocumentFoldersModule } from './document-folders/document-folders.module';
 import { AppController } from './app.controller';
+import { SocialInboxModule } from './social-inbox/social-inbox.module';
 
 @Module({
     imports: [
@@ -121,6 +122,8 @@ import { AppController } from './app.controller';
         CallCenterModule,
         FormsModule,
         DocumentFoldersModule,
+
+        SocialInboxModule,
     ],
     controllers: [AppController],
     providers: [

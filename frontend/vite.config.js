@@ -126,6 +126,12 @@ export default defineConfig({
                         },
                     },
                 ],
+                // Prevent SW from intercepting /uploads/ and /api/ navigation requests
+                // Without this, opening a PDF in a new tab serves React index.html instead
+                navigateFallbackDenylist: [
+                    /^\/uploads\//,
+                    /^\/api\//,
+                ],
             },
             devOptions: {
                 enabled: true,

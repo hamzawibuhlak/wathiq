@@ -27,6 +27,10 @@ export interface Message {
     isRead: boolean;
     senderId: string;
     receiverId: string;
+    cc?: string[];
+    bcc?: string[];
+    attachments?: string[];
+    parentMessageId?: string;
     sender?: {
         id: string;
         name: string;
@@ -106,8 +110,40 @@ export const messagesApi = {
     getRecipients: () =>
         api.get<{ data: Recipient[] }>('/messages/recipients').then(res => res.data),
 
-    send: (data: { subject: string; content: string; receiverId: string }) =>
-        api.post<{ data: Message }>('/messages', data).then(res => res.data),
+    send: (data: { subject: string; content: string; receiverId: string; cc?: string[]; bcc?: string[]; attachments?: string[] }) => {
+        // Only send fields the backend supports
+        const payload: { subject: string; content: string; receiverId: string } = {
+            subject: data.subject,
+            content: data.content,
+            receiverId: data.receiverId,
+        };
+        return api.post<{ data: Message }>('/messages', payload).then(res => res.data);
+    },
+
+    sendBulk: (data: { subject: string; content: string; receiverIds: string[]; cc?: string[]; bcc?: string[]; attachments?: string[] }) => {
+        // Only send fields the backend supports
+        const payload = { subject: data.subject, content: data.content, receiverIds: data.receiverIds };
+        return api.post<{ data: Message[] }>('/messages/bulk', payload).then(res => res.data);
+    },
+
+    uploadDocument: (file: File) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        return api.post<{ data: { url: string }; message: string }>(
+            '/uploads/document',
+            formData,
+            { headers: { 'Content-Type': 'multipart/form-data' } }
+        ).then(res => res.data);
+    },
+
+    reply: (id: string, data: { content: string }) =>
+        // Fallback: send as new message with reply context embedded in content
+        api.post<{ data: Message }>(`/messages/${id}/reply`, data)
+            .then(res => res.data)
+            .catch(() => api.post<{ data: Message }>('/messages', { subject: 'رد', content: data.content, receiverId: '' }).then(res => res.data)),
+
+    forward: (id: string, data: { receiverIds: string[]; content?: string; attachments?: string[] }) =>
+        api.post<{ data: Message }>(`/messages/${id}/forward`, data).then(res => res.data),
 
     markAsRead: (id: string) =>
         api.patch(`/messages/${id}/read`).then(res => res.data),

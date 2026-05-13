@@ -110,7 +110,8 @@ const navGroups: NavGroup[] = [
         items: [
             { path: 'messages', icon: Mail, label: 'الرسائل الداخلية', moduleKey: 'messages' },
             { path: 'chat', icon: MessageSquare, label: 'الدردشة الداخلية', moduleKey: 'messages' },
-            { path: 'whatsapp', icon: Share2, label: 'التواصل الاجتماعي', moduleKey: 'whatsapp', roles: ['OWNER', 'ADMIN'] },
+            { path: 'social-inbox', icon: Share2, label: 'صندوق الوارد الموحد' },
+            { path: 'whatsapp', icon: Share2, label: 'سجل الواتساب', moduleKey: 'whatsapp', roles: ['OWNER', 'ADMIN'] },
             { path: 'calls', icon: PhoneCall, label: 'مركز الاتصالات', moduleKey: 'call_center', roles: ['OWNER', 'ADMIN'] },
         ],
     },
