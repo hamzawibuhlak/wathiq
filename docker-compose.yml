@@ -3,7 +3,7 @@
 # For local development with hot-reload
 # ═══════════════════════════════════════════════════════════════════
 
-version: '3.8'
+# version removed — obsolete in Compose v2+
 
 services:
   # ═══════════════════════════════════════════════════════════════════
@@ -18,7 +18,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-watheeq}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-watheeq_secret}
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -91,7 +91,7 @@ services:
     restart: unless-stopped
     environment:
       VITE_API_URL: http://localhost:3000/api
-      VITE_APP_NAME: Watheeq
+      VITE_APP_NAME: وسم الثقة
     ports:
       - "5173:5173"
     volumes:

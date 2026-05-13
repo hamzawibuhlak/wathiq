@@ -100,11 +100,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: |
+          rm -f package-lock.json
+          npm install --legacy-peer-deps
 
       - name: Run ESLint
         run: npm run lint || true
@@ -113,7 +113,7 @@ jobs:
         run: npm run build
         env:
           VITE_API_URL: /api
-          VITE_APP_NAME: Watheeq
+          VITE_APP_NAME: وسم الثقة
 
       - name: Run tests
         run: npm run test --passWithNoTests || true

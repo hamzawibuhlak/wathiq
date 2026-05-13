@@ -1295,6 +1295,7 @@ model GroupChat {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([createdById])
   @@map("group_chats")
 }
 
@@ -1472,6 +1473,10 @@ model JournalEntry {
   poster   User?              @relation("JournalEntryPoster", fields: [postedBy], references: [id])
   approver User?              @relation("JournalEntryApprover", fields: [approvedBy], references: [id])
 
+  @@index([date])
+  @@index([status])
+  @@index([type])
+  @@index([createdBy])
   @@map("journal_entries")
 }
 
@@ -1553,6 +1558,8 @@ model Vendor {
   bills    AccountsPayable[]
   expenses Expense[]
 
+  @@index([name])
+  @@index([isActive])
   @@map("vendors")
 }
 
@@ -1640,6 +1647,10 @@ model Expense {
   submitter       User            @relation("ExpenseSubmitter", fields: [submittedBy], references: [id])
   approver        User?           @relation("ExpenseApprover", fields: [approvedBy], references: [id])
 
+  @@index([status])
+  @@index([date])
+  @@index([submittedBy])
+  @@index([expenseCategoryId])
   @@map("expenses")
 }
 
@@ -2240,6 +2251,9 @@ model Announcement {
   createdBy   String
   createdAt   DateTime         @default(now())
 
+  @@index([isActive])
+  @@index([startDate, endDate])
+  @@index([type])
   @@map("announcements")
 }
 
@@ -2281,6 +2295,9 @@ model ChatConversation {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([createdBy])
+  @@index([type])
+  @@index([isActive])
   @@map("chat_conversations")
 }
 
@@ -3241,6 +3258,7 @@ model LegalAIUsage {
 
   user   User   @relation(fields: [userId], references: [id])
 
+  @@index([userId])
   @@map("legal_ai_usage")
 }
 

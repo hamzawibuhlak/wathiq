@@ -1,3 +1,27 @@
+/**
+ * ⚠️  RISK NOTICE — Baileys (Unofficial WhatsApp API)
+ *
+ * This service uses @whiskeysockets/baileys which is a reverse-engineered,
+ * UNOFFICIAL WhatsApp client. Using it carries real risks:
+ *
+ * 1. ACCOUNT BAN — WhatsApp actively detects and bans unofficial clients.
+ *    Use a dedicated phone number (NOT the main office number).
+ * 2. BREAKAGE — WhatsApp can change its protocol at any time without notice,
+ *    breaking this integration without warning.
+ * 3. TOS VIOLATION — Using an unofficial API violates WhatsApp's Terms of Service.
+ * 4. NO SLA — No official support exists if something stops working.
+ *
+ * RECOMMENDED MIGRATION PATH:
+ *   → WhatsApp Business API (Meta Cloud API or BSP partner)
+ *   → Meta's official API: https://developers.facebook.com/docs/whatsapp
+ *   → The official `WhatsAppService` (whatsapp.service.ts) in this module
+ *     already supports the official Graph API — use it when a WA Business account
+ *     is available.
+ *
+ * CURRENT STATUS: Baileys is loaded dynamically (try/catch) so the app starts
+ * normally even if the package is absent. The feature is disabled by default
+ * until explicitly initialized via POST /api/whatsapp-baileys/init.
+ */
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { WebSocketGatewayService } from '../websocket/websocket.gateway';
