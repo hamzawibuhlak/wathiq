@@ -177,10 +177,10 @@ export interface UpdateFirmData {
 
 export const firmApi = {
     get: () =>
-        api.get<ApiResponse<FirmSettings>>('/tenants/current').then((res) => res.data),
+        api.get<ApiResponse<FirmSettings>>('/company-settings').then((res) => res.data),
 
     update: (data: UpdateFirmData) =>
-        api.put<ApiResponse<FirmSettings>>('/tenants/current', data).then((res) => res.data),
+        api.patch<ApiResponse<FirmSettings>>('/company-settings', data).then((res) => res.data),
 
     uploadLogo: (file: File) => {
         const formData = new FormData();
@@ -252,13 +252,13 @@ export interface TestEmailData {
 
 export const smtpApi = {
     get: () =>
-        api.get<ApiResponse<SmtpSettings>>('/tenants/smtp-settings').then((res) => res.data),
+        api.get<ApiResponse<SmtpSettings>>('/company-settings/smtp').then((res) => res.data),
 
     update: (data: UpdateSmtpSettingsData) =>
-        api.put<ApiResponse<SmtpSettings>>('/tenants/smtp-settings', data).then((res) => res.data),
+        api.put<ApiResponse<SmtpSettings>>('/company-settings/smtp', data).then((res) => res.data),
 
     test: (data: TestEmailData) =>
-        api.post<{ success: boolean; message: string }>('/tenants/smtp-settings/test', data).then((res) => res.data),
+        api.post<{ success: boolean; message: string }>('/company-settings/smtp/test', data).then((res) => res.data),
 };
 
 export default {
