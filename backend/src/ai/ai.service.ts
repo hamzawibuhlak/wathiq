@@ -209,7 +209,7 @@ export class AiService {
             messages: [
                 {
                     role: 'system',
-                    content: `أنت مساعد قانوني ذكي لنظام وثيق (Watheeq). 
+                    content: `أنت مساعد قانوني ذكي لنظام وسم الثقة (Wasm Altheeqa). 
 ساعد المحامين في:
 - الإجابة عن الأسئلة القانونية
 - شرح الإجراءات القانونية السعودية

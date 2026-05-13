@@ -47,7 +47,7 @@ export default function PortalLayout() {
                             </div>
                             <div>
                                 <span className="font-bold text-lg">بوابة العملاء</span>
-                                <p className="text-xs text-muted-foreground">نظام وثيق</p>
+                                <p className="text-xs text-muted-foreground">وسم الثقة</p>
                             </div>
                         </Link>
 
@@ -108,7 +108,7 @@ export default function PortalLayout() {
             {/* Footer */}
             <footer className="border-t bg-white py-4 mt-auto">
                 <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-                    نظام وثيق لإدارة المكاتب القانونية © {new Date().getFullYear()}
+                    وسم الثقة لإدارة المكاتب القانونية © {new Date().getFullYear()}
                 </div>
             </footer>
         </div>

@@ -24,8 +24,8 @@ export class TwoFactorService {
         }
 
         const secret = speakeasy.generateSecret({
-            name: `Watheeq - ${user.email}`,
-            issuer: 'Watheeq',
+            name: `Wasm Altheeqa - ${user.email}`,
+            issuer: 'Wasm Altheeqa',
             length: 20,
         });
 

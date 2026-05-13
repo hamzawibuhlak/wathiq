@@ -23,7 +23,7 @@ export class ExportsService {
     });
 
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'Watheeq';
+    workbook.creator = 'Wasm Altheeqa';
     workbook.created = new Date();
 
     const worksheet = workbook.addWorksheet('القضايا', {
@@ -115,7 +115,7 @@ export class ExportsService {
     });
 
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'Watheeq';
+    workbook.creator = 'Wasm Altheeqa';
     workbook.created = new Date();
 
     const worksheet = workbook.addWorksheet('الفواتير', {
@@ -195,7 +195,7 @@ export class ExportsService {
     });
 
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'Watheeq';
+    workbook.creator = 'Wasm Altheeqa';
     workbook.created = new Date();
 
     const worksheet = workbook.addWorksheet('العملاء', {
@@ -257,7 +257,7 @@ export class ExportsService {
     });
 
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'Watheeq';
+    workbook.creator = 'Wasm Altheeqa';
     workbook.created = new Date();
 
     const worksheet = workbook.addWorksheet('الجلسات', {
@@ -338,7 +338,7 @@ export class ExportsService {
     });
 
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'Watheeq';
+    workbook.creator = 'Wasm Altheeqa';
     workbook.created = new Date();
 
     const worksheet = workbook.addWorksheet('التقرير المالي', {
@@ -458,7 +458,7 @@ export class ExportsService {
     });
 
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'Watheeq';
+    workbook.creator = 'Wasm Altheeqa';
     workbook.created = new Date();
 
     const worksheet = workbook.addWorksheet('المستندات', {
@@ -551,7 +551,7 @@ export class ExportsService {
     });
 
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'Watheeq';
+    workbook.creator = 'Wasm Altheeqa';
     workbook.created = new Date();
 
     const worksheet = workbook.addWorksheet('المهام', {
@@ -657,7 +657,7 @@ export class ExportsService {
     const fs = await import('fs/promises');
     
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'Watheeq';
+    workbook.creator = 'Wasm Altheeqa';
     workbook.created = new Date();
 
     const worksheet = workbook.addWorksheet(data.title || 'التقرير', {
@@ -1012,7 +1012,7 @@ export class ExportsService {
     <div class="header">
       <div class="logo">و</div>
       <h1>${data.title}</h1>
-      <p class="subtitle">نظام وثيق لإدارة مكاتب المحاماة</p>
+      <p class="subtitle">نظام وسم الثقة لإدارة مكاتب المحاماة</p>
       <div class="date">تاريخ التقرير: ${new Date(data.generatedAt).toLocaleDateString('ar-SA', { 
         weekday: 'long', 
         year: 'numeric', 
@@ -1034,7 +1034,7 @@ export class ExportsService {
     
     <div class="footer">
       <div class="record-count">إجمالي السجلات: ${data.data.length}</div>
-      <p>تم إنشاء هذا التقرير بواسطة <span class="brand">نظام وثيق</span></p>
+      <p>تم إنشاء هذا التقرير بواسطة <span class="brand">نظام وسم الثقة</span></p>
       <p style="margin-top: 5px;">© ${new Date().getFullYear()} جميع الحقوق محفوظة</p>
     </div>
   </div>

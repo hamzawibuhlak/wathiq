@@ -57,7 +57,7 @@ export default function ForgotPasswordPage() {
                         <Input
                             id="email"
                             type="email"
-                            placeholder="example@watheeq.sa"
+                            placeholder="example@wasmaltheeqa.sa"
                             className="pr-10"
                             error={errors.email?.message}
                             {...register('email')}

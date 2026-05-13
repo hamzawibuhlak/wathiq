@@ -64,5 +64,5 @@ export const COMMON_PASSWORDS = [
     'baseball1',
     'مرحبا123',
     'محامي123',
-    'وثيق123',
+    'وسم الثقة123',
 ];

@@ -17,7 +17,7 @@ export function AuthLayout() {
                         <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
                             <Scale className="w-6 h-6 text-primary-foreground" />
                         </div>
-                        <span className="text-2xl font-bold text-primary">وثيق</span>
+                        <span className="text-2xl font-bold text-primary">وسم الثقة</span>
                     </div>
 
                     {/* Title */}
@@ -60,7 +60,7 @@ export function AuthLayout() {
                     <div className="relative h-full flex flex-col items-center justify-center p-12 text-white">
                         <Scale className="w-20 h-20 mb-8" />
                         <h1 className="text-4xl font-bold text-center mb-4">
-                            نظام وثيق
+                            وسم الثقة
                         </h1>
                         <p className="text-xl text-center text-white/80 max-w-md">
                             نظام متكامل لإدارة المكاتب القانونية

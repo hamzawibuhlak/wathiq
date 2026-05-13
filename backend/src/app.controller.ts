@@ -12,7 +12,7 @@ export class AppController {
   getRoot() {
     return {
       status: 'ok',
-      message: 'Watheeq API is running',
+      message: 'Wasm Altheeqa API is running',
       version: '1.0.0',
       timestamp: new Date().toISOString(),
     };
@@ -43,9 +43,9 @@ export class AppController {
   getApiInfo() {
     return {
       status: 'ok',
-      name: 'Watheeq API',
+      name: 'Wasm Altheeqa API',
       version: '1.0.0',
-      description: 'نظام وثيق لإدارة المكاتب القانونية',
+      description: 'نظام وسم الثقة لإدارة المكاتب القانونية',
     };
   }
 

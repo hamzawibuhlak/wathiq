@@ -240,12 +240,12 @@ export class CallsService {
     generateIVRTwiML(language: 'ar' | 'en' = 'ar'): string {
         const messages = {
             ar: {
-                welcome: 'مرحباً بك في وثيق، نظام إدارة مكاتب المحاماة',
+                welcome: 'مرحباً بك في وسم الثقة، نظام إدارة مكاتب المحاماة',
                 menu: 'للتحدث مع قسم الاستشارات اضغط 1، للتحدث مع قسم القضايا اضغط 2، للتحدث مع المحاسبة اضغط 3',
                 invalidOption: 'الخيار غير صحيح، يرجى المحاولة مرة أخرى',
             },
             en: {
-                welcome: 'Welcome to Watheeq, Law Firm Management System',
+                welcome: 'Welcome to Wasm Altheeqa, Law Firm Management System',
                 menu: 'Press 1 for Consultations, Press 2 for Cases, Press 3 for Accounting',
                 invalidOption: 'Invalid option, please try again',
             },

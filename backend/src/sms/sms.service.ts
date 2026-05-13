@@ -17,7 +17,7 @@ export class SmsService {
         // Using UNIFONIC as example - can be changed to MSEGAT or others
         this.apiUrl = this.configService.get('SMS_API_URL', 'https://api.unifonic.com/rest/SMS/messages');
         this.apiKey = this.configService.get('SMS_API_KEY', '');
-        this.senderId = this.configService.get('SMS_SENDER_ID', 'Watheeq');
+        this.senderId = this.configService.get('SMS_SENDER_ID', 'Wasm Altheeqa');
     }
 
     async sendSMS(data: {

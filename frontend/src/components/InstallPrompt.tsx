@@ -98,7 +98,7 @@ export function InstallPrompt() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                     <p className="text-sm text-muted-foreground">
-                        ثبّت Watheeq على جهازك للوصول السريع والعمل دون اتصال
+                        ثبّت وسم الثقة على جهازك للوصول السريع والعمل دون اتصال
                     </p>
                     <div className="flex gap-2">
                         <Button onClick={handleInstall} className="flex-1">

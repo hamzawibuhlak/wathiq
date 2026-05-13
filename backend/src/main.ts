@@ -58,11 +58,11 @@ async function bootstrap() {
 
     // Swagger setup with enhanced UI
     const config = new DocumentBuilder()
-        .setTitle('Watheeq API')
+        .setTitle('Wasm Altheeqa API')
         .setDescription(`
-# 📚 Watheeq - Law Office Management System API
+# 📚 Wasm Altheeqa - Law Office Management System API
 
-نظام **وثيق** لإدارة المكاتب القانونية
+نظام **وسم الثقة** لإدارة المكاتب القانونية
 
 ## 🔐 Authentication
 جميع الـ endpoints (ما عدا /auth/register و /auth/login) تتطلب JWT token.
@@ -96,7 +96,7 @@ Authorization: Bearer <your-jwt-token>
 \`\`\`
     `)
         .setVersion('1.0.0')
-        .setContact('Watheeq Team', '', 'support@watheeq.sa')
+        .setContact('Wasm Altheeqa Team', '', 'support@wasmaltheeqa.sa')
         .setLicense('Proprietary', '')
         .addServer('http://localhost:3000', 'Development Server')
         .addBearerAuth(
@@ -123,7 +123,7 @@ Authorization: Bearer <your-jwt-token>
     const document = SwaggerModule.createDocument(app, config);
 
     SwaggerModule.setup('api/docs', app, document, {
-        customSiteTitle: 'Watheeq API Docs',
+        customSiteTitle: 'Wasm Altheeqa API Docs',
         customfavIcon: '/favicon.ico',
         customCss: `
       .swagger-ui .topbar { display: none }

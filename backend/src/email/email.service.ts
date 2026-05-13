@@ -73,7 +73,7 @@ export class EmailService {
     private async getFromAddress(): Promise<string> {
         const company = await this.prisma.companySettings.findFirst();
         if (company?.smtpEnabled && (company.smtpFrom || company.smtpUser)) {
-            const fromName = company.smtpFromName || company.name || 'وثيق';
+            const fromName = company.smtpFromName || company.name || 'وسم الثقة';
             const fromEmail = company.smtpFrom || company.smtpUser;
             return `"${fromName}" <${fromEmail}>`;
         }
@@ -81,12 +81,12 @@ export class EmailService {
         // Check SystemConfig
         const sysSmtp = await this.getSystemSmtpConfig();
         if (sysSmtp['SMTP_FROM'] || sysSmtp['SMTP_USER']) {
-            const fromName = sysSmtp['SMTP_FROM_NAME'] || 'وثيق';
+            const fromName = sysSmtp['SMTP_FROM_NAME'] || 'وسم الثقة';
             const fromEmail = sysSmtp['SMTP_FROM'] || sysSmtp['SMTP_USER'];
             return `"${fromName}" <${fromEmail}>`;
         }
 
-        return this.configService.get('SMTP_FROM', 'noreply@watheeq.sa');
+        return this.configService.get('SMTP_FROM', 'noreply@wasmaltheeqa.sa');
     }
 
     /**
@@ -139,7 +139,7 @@ export class EmailService {
 
             // Company branding
             let logoHtml = '';
-            let firmName = 'وثيق';
+            let firmName = 'وسم الثقة';
             const company = await this.prisma.companySettings.findFirst();
             if (company?.name) firmName = company.name;
             if (company?.logo) {
@@ -213,7 +213,7 @@ ${logoHtml}
 <tr>
 <td style="background:#f9fafb;text-align:center;padding:20px;border-top:1px solid #e5e7eb;">
 <div style="font-size:18px;font-weight:700;color:#2563eb;margin-bottom:8px;">${firmName}</div>
-<p style="margin:0;color:#6b7280;font-size:13px;">نظام وثيق لإدارة مكاتب المحاماة</p>
+<p style="margin:0;color:#6b7280;font-size:13px;">نظام وسم الثقة لإدارة مكاتب المحاماة</p>
 </td>
 </tr>
 </table>
@@ -349,7 +349,7 @@ ${formattedAmount} ر.س
 <tr>
 <td style="background:#f9fafb;text-align:center;padding:20px;border-top:1px solid #e5e7eb;">
 <div style="font-size:18px;font-weight:700;color:#10b981;margin-bottom:8px;">${firmName}</div>
-<p style="margin:0;color:#6b7280;font-size:12px;">نظام وثيق لإدارة مكاتب المحاماة</p>
+<p style="margin:0;color:#6b7280;font-size:12px;">نظام وسم الثقة لإدارة مكاتب المحاماة</p>
 </td>
 </tr>
 </table>
@@ -403,7 +403,7 @@ ${formattedAmount} ر.س
             const mailOptions = {
                 from,
                 to: data.to,
-                subject: 'إعادة تعيين كلمة المرور - وثيق',
+                subject: 'إعادة تعيين كلمة المرور - وسم الثقة',
                 html: htmlContent };
 
             await transporter.sendMail(mailOptions);
@@ -443,7 +443,7 @@ ${formattedAmount} ر.س
             <div dir="rtl" style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb;">
                 <!-- Header -->
                 <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); padding: 32px; text-align: center;">
-                    <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700;">وثيق</h1>
+                    <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700;">وسم الثقة</h1>
                     <p style="color: #bfdbfe; margin: 8px 0 0 0; font-size: 14px;">منصة إدارة المكاتب القانونية</p>
                 </div>
 
@@ -454,7 +454,7 @@ ${formattedAmount} ر.س
                     <p style="color: #4b5563; font-size: 16px; line-height: 1.8; margin: 0 0 16px 0;">
                         تمت دعوتك من قبل <strong style="color: #1f2937;">${data.inviterName}</strong> 
                         للانضمام إلى <strong style="color: #1e40af;">${data.tenantName}</strong> 
-                        كـ<strong style="color: #1f2937;">${roleLabel}</strong> على منصة وثيق.
+                        كـ<strong style="color: #1f2937;">${roleLabel}</strong> على منصة وسم الثقة.
                     </p>
 
                     <p style="color: #4b5563; font-size: 16px; line-height: 1.8; margin: 0 0 24px 0;">
@@ -483,7 +483,7 @@ ${formattedAmount} ر.س
                 <!-- Footer -->
                 <div style="background-color: #f8fafc; padding: 20px 32px; text-align: center; border-top: 1px solid #e5e7eb;">
                     <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-                        © ${new Date().getFullYear()} وثيق - جميع الحقوق محفوظة
+                        © ${new Date().getFullYear()} وسم الثقة - جميع الحقوق محفوظة
                     </p>
                 </div>
             </div>
@@ -492,7 +492,7 @@ ${formattedAmount} ر.س
             const mailOptions = {
                 from,
                 to: data.to,
-                subject: `دعوة للانضمام إلى ${data.tenantName} على منصة وثيق`,
+                subject: `دعوة للانضمام إلى ${data.tenantName} على منصة وسم الثقة`,
                 html: htmlContent };
 
             await transporter.sendMail(mailOptions);

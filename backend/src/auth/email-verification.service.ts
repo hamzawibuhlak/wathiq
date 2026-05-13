@@ -42,7 +42,7 @@ export class EmailVerificationService {
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); padding:32px; text-align:center;">
-              <h1 style="color:#ffffff; margin:0; font-size:28px; font-weight:800;">وثيق</h1>
+              <h1 style="color:#ffffff; margin:0; font-size:28px; font-weight:800;">وسم الثقة</h1>
               <p style="color:#e0e7ff; margin:8px 0 0; font-size:14px;">نظام إدارة المكاتب القانونية</p>
             </td>
           </tr>
@@ -51,7 +51,7 @@ export class EmailVerificationService {
             <td style="padding:40px 32px;">
               <h2 style="color:#1e293b; margin:0 0 8px; font-size:20px; text-align:center;">تحقق من بريدك الإلكتروني</h2>
               <p style="color:#64748b; margin:0 0 32px; font-size:14px; text-align:center; line-height:1.6;">
-                استخدم الرمز التالي لإكمال تسجيل حسابك في وثيق
+                استخدم الرمز التالي لإكمال تسجيل حسابك في وسم الثقة
               </p>
               
               <!-- OTP Box -->
@@ -68,7 +68,7 @@ export class EmailVerificationService {
               <!-- Warning -->
               <div style="background:#fef3c7; border:1px solid #fbbf24; border-radius:8px; padding:12px 16px; margin:24px 0 0;">
                 <p style="color:#92400e; margin:0; font-size:12px; line-height:1.5;">
-                  ⚠️ لا تشارك هذا الرمز مع أي شخص. فريق وثيق لن يطلب منك هذا الرمز أبداً.
+                  ⚠️ لا تشارك هذا الرمز مع أي شخص. فريق وسم الثقة لن يطلب منك هذا الرمز أبداً.
                 </p>
               </div>
             </td>
@@ -77,7 +77,7 @@ export class EmailVerificationService {
           <tr>
             <td style="background:#f8fafc; padding:20px 32px; border-top:1px solid #e2e8f0;">
               <p style="color:#94a3b8; margin:0; font-size:11px; text-align:center;">
-                © ${new Date().getFullYear()} وثيق — Wathiq. جميع الحقوق محفوظة.
+                © ${new Date().getFullYear()} وسم الثقة — Wasm Altheeqa. جميع الحقوق محفوظة.
               </p>
             </td>
           </tr>
@@ -116,7 +116,7 @@ export class EmailVerificationService {
         const html = this.getOTPEmailHtml(otpCode);
         const result = await this.emailService.sendEmail({
             to: email,
-            subject: 'رمز التحقق من وثيق — Wathiq Verification Code',
+            subject: 'رمز التحقق من وسم الثقة — Wasm Altheeqa Verification Code',
             body: html });
 
         if (!result.success) {

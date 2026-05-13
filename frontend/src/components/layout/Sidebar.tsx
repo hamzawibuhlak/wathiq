@@ -287,7 +287,7 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                     </div>
                     {!isCollapsed && (
                         <span className="text-xl font-bold bg-gradient-to-l from-primary to-[hsl(var(--gold))] bg-clip-text text-transparent">
-                            وثيق
+                            وسم الثقة
                         </span>
                     )}
                 </Link>
@@ -469,7 +469,7 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
             {!isCollapsed && (
                 <div className="p-4 border-t">
                     <p className="text-[10px] text-muted-foreground/50 text-center">
-                        وثيق © 2026
+                        وسم الثقة © 2026
                     </p>
                     <a
                         href="/privacy"

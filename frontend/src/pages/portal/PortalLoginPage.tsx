@@ -111,7 +111,7 @@ export default function PortalLoginPage() {
 
                 {/* Footer */}
                 <p className="text-center text-sm text-muted-foreground mt-6">
-                    بوابة العملاء - نظام وثيق لإدارة المكاتب القانونية
+                    بوابة العملاء - وسم الثقة لإدارة المكاتب القانونية
                 </p>
             </div>
         </div>

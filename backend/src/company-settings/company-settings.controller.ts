@@ -71,7 +71,7 @@ export class CompanySettingsController {
     async testSmtp(@Body() body: { testEmail: string }) {
         return this.emailService.sendEmail({
             to: body.testEmail,
-            subject: 'اختبار إعدادات SMTP - وثيق',
+            subject: 'اختبار إعدادات SMTP - وسم الثقة',
             body: '<p>إذا وصلتك هذه الرسالة فإن إعدادات SMTP تعمل بنجاح.</p>',
         });
     }
