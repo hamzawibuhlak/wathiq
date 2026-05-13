@@ -8,7 +8,7 @@ export class SearchService {
     /**
      * Global search across all entities
      */
-    async globalSearch(query: string, type: string, limit: number, tenantId: string) {
+    async globalSearch(query: string, type: string, limit: number) {
         if (!query || query.length < 2) {
             return { data: { cases: [], clients: [], hearings: [], documents: [], invoices: [], total: 0 } };
         }
@@ -31,7 +31,6 @@ export class SearchService {
         if (type === 'all' || type === 'cases') {
             results.cases = await this.prisma.case.findMany({
                 where: {
-                    tenantId,
                     OR: [
                         { caseNumber: { contains: query, mode: 'insensitive' } },
                         { title: { contains: query, mode: 'insensitive' } },
@@ -57,7 +56,6 @@ export class SearchService {
         if (type === 'all' || type === 'clients') {
             results.clients = await this.prisma.client.findMany({
                 where: {
-                    tenantId,
                     OR: [
                         { name: { contains: query, mode: 'insensitive' } },
                         { email: { contains: query, mode: 'insensitive' } },
@@ -82,7 +80,6 @@ export class SearchService {
         if (type === 'all' || type === 'hearings') {
             results.hearings = await this.prisma.hearing.findMany({
                 where: {
-                    tenantId,
                     OR: [
                         { courtName: { contains: query, mode: 'insensitive' } },
                         { notes: { contains: query, mode: 'insensitive' } },
@@ -106,7 +103,6 @@ export class SearchService {
         if (type === 'all' || type === 'documents') {
             results.documents = await this.prisma.document.findMany({
                 where: {
-                    tenantId,
                     OR: [
                         { title: { contains: query, mode: 'insensitive' } },
                         { fileName: { contains: query, mode: 'insensitive' } },
@@ -131,7 +127,6 @@ export class SearchService {
         if (type === 'all' || type === 'invoices') {
             results.invoices = await this.prisma.invoice.findMany({
                 where: {
-                    tenantId,
                     OR: [
                         { invoiceNumber: { contains: query, mode: 'insensitive' } },
                         { description: { contains: query, mode: 'insensitive' } },
@@ -164,7 +159,7 @@ export class SearchService {
     /**
      * Get search suggestions for autocomplete
      */
-    async getSearchSuggestions(query: string, tenantId: string) {
+    async getSearchSuggestions(query: string) {
         if (!query || query.length < 2) {
             return { data: [] };
         }
@@ -172,7 +167,6 @@ export class SearchService {
         const [caseSuggestions, clientSuggestions] = await Promise.all([
             this.prisma.case.findMany({
                 where: {
-                    tenantId,
                     OR: [
                         { title: { contains: query, mode: 'insensitive' } },
                         { caseNumber: { contains: query, mode: 'insensitive' } },
@@ -183,7 +177,6 @@ export class SearchService {
             }),
             this.prisma.client.findMany({
                 where: {
-                    tenantId,
                     name: { contains: query, mode: 'insensitive' },
                 },
                 take: 5,
@@ -202,7 +195,7 @@ export class SearchService {
     /**
      * Search mentionables for @mention in comments (users, cases, clients, hearings, documents, invoices)
      */
-    async searchMentionables(q: string, tenantId: string) {
+    async searchMentionables(q: string) {
         const search = q?.trim() || '';
         const limit = 5;
         const results: { type: string; id: string; name: string }[] = [];
@@ -210,7 +203,6 @@ export class SearchService {
         const [users, cases, clients, hearings, documents, invoices] = await Promise.all([
             this.prisma.user.findMany({
                 where: {
-                    tenantId,
                     ...(search ? { name: { contains: search, mode: 'insensitive' } } : {}),
                 },
                 select: { id: true, name: true },
@@ -218,7 +210,6 @@ export class SearchService {
             }),
             this.prisma.case.findMany({
                 where: {
-                    tenantId,
                     ...(search ? {
                         OR: [
                             { title: { contains: search, mode: 'insensitive' } },
@@ -231,7 +222,6 @@ export class SearchService {
             }),
             this.prisma.client.findMany({
                 where: {
-                    tenantId,
                     ...(search ? { name: { contains: search, mode: 'insensitive' } } : {}),
                 },
                 select: { id: true, name: true },
@@ -239,7 +229,7 @@ export class SearchService {
             }),
             this.prisma.hearing.findMany({
                 where: {
-                    case: { tenantId },
+                    case: {},
                     ...(search ? {
                         OR: [
                             { courtName: { contains: search, mode: 'insensitive' } },
@@ -252,7 +242,6 @@ export class SearchService {
             }).catch(() => [] as any[]),
             this.prisma.document.findMany({
                 where: {
-                    tenantId,
                     ...(search ? { title: { contains: search, mode: 'insensitive' } } : {}),
                 },
                 select: { id: true, title: true },
@@ -260,7 +249,6 @@ export class SearchService {
             }).catch(() => [] as any[]),
             this.prisma.invoice.findMany({
                 where: {
-                    tenantId,
                     ...(search ? { invoiceNumber: { contains: search, mode: 'insensitive' } } : {}),
                 },
                 select: { id: true, invoiceNumber: true },

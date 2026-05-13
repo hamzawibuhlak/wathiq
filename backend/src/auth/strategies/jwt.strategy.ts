@@ -7,8 +7,6 @@ import { AuthService } from '../auth.service';
 interface JwtPayload {
     sub: string;
     email: string;
-    tenantId: string;
-    tenantSlug: string | null;
     role: string;
 }
 
@@ -37,15 +35,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
             throw new UnauthorizedException('Invalid token');
         }
 
-        // Return user data to be attached to request.user
         return {
             id: user.id,
             email: user.email,
             name: user.name,
             role: user.role,
-            tenantId: user.tenantId,
-            tenantSlug: (user.tenant as any)?.slug || payload.tenantSlug,
-            tenant: user.tenant,
         };
     }
 }

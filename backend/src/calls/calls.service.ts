@@ -46,7 +46,6 @@ export class CallsService {
      */
     async initiateCall(
         userId: string,
-        tenantId: string,
         options: CallOptions,
     ) {
         try {
@@ -82,7 +81,7 @@ export class CallsService {
                     to: options.to,
                     status: callStatus as any,
                     userId,
-                    tenantId,
+
                 },
             });
 
@@ -106,7 +105,6 @@ export class CallsService {
         // Find user by phone number
         const user = await this.prisma.user.findFirst({
             where: { phone: from },
-            include: { tenant: true },
         });
 
         // Create call record
@@ -118,7 +116,7 @@ export class CallsService {
                 to,
                 status: 'RINGING',
                 userId: user?.id,
-                tenantId: user?.tenantId || '',
+
             },
         });
 
@@ -161,9 +159,7 @@ export class CallsService {
     /**
      * Get call history
      */
-    async getCallHistory(
-        tenantId: string,
-        filters?: {
+    async getCallHistory(filters?: {
             userId?: string;
             direction?: 'INBOUND' | 'OUTBOUND';
             startDate?: Date;
@@ -171,7 +167,7 @@ export class CallsService {
             limit?: number;
         },
     ) {
-        const where: any = { tenantId };
+        const where: any = {};
 
         if (filters?.userId) where.userId = filters.userId;
         if (filters?.direction) where.direction = filters.direction;
@@ -244,12 +240,12 @@ export class CallsService {
     generateIVRTwiML(language: 'ar' | 'en' = 'ar'): string {
         const messages = {
             ar: {
-                welcome: 'مرحباً بك في وثيق، نظام إدارة مكاتب المحاماة',
+                welcome: 'مرحباً بك في وسم الثقة، نظام إدارة مكاتب المحاماة',
                 menu: 'للتحدث مع قسم الاستشارات اضغط 1، للتحدث مع قسم القضايا اضغط 2، للتحدث مع المحاسبة اضغط 3',
                 invalidOption: 'الخيار غير صحيح، يرجى المحاولة مرة أخرى',
             },
             en: {
-                welcome: 'Welcome to Watheeq, Law Firm Management System',
+                welcome: 'Welcome to Wasm Altheeqa, Law Firm Management System',
                 menu: 'Press 1 for Consultations, Press 2 for Cases, Press 3 for Accounting',
                 invalidOption: 'Invalid option, please try again',
             },
@@ -294,7 +290,7 @@ export class CallsService {
     /**
      * Get call analytics
      */
-    async getCallAnalytics(tenantId: string, period: 'day' | 'week' | 'month') {
+    async getCallAnalytics(period: 'day' | 'week' | 'month') {
         const now = new Date();
         const startDate = new Date();
 
@@ -319,22 +315,22 @@ export class CallsService {
             avgDuration,
         ] = await Promise.all([
             this.prisma.call.count({
-                where: { tenantId, createdAt: { gte: startDate } },
+                where: { createdAt: { gte: startDate } },
             }),
             this.prisma.call.count({
-                where: { tenantId, direction: 'INBOUND', createdAt: { gte: startDate } },
+                where: { direction: 'INBOUND', createdAt: { gte: startDate } },
             }),
             this.prisma.call.count({
-                where: { tenantId, direction: 'OUTBOUND', createdAt: { gte: startDate } },
+                where: { direction: 'OUTBOUND', createdAt: { gte: startDate } },
             }),
             this.prisma.call.count({
-                where: { tenantId, status: 'COMPLETED', createdAt: { gte: startDate } },
+                where: { status: 'COMPLETED', createdAt: { gte: startDate } },
             }),
             this.prisma.call.count({
-                where: { tenantId, status: 'NO_ANSWER', createdAt: { gte: startDate } },
+                where: { status: 'NO_ANSWER', createdAt: { gte: startDate } },
             }),
             this.prisma.call.aggregate({
-                where: { tenantId, status: 'COMPLETED', createdAt: { gte: startDate } },
+                where: { status: 'COMPLETED', createdAt: { gte: startDate } },
                 _avg: { duration: true },
             }),
         ]);

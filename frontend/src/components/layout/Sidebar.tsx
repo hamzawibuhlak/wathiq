@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation, useParams } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth.store';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useModuleStore } from '@/hooks/useModules';
+import { useFirmSettings } from '@/hooks/use-settings';
 import {
     LayoutDashboard,
     Calendar,
@@ -25,7 +26,6 @@ import {
     Clock,
     FileEdit,
     Megaphone,
-    Building2,
     Bell,
     User,
     Share2,
@@ -59,7 +59,7 @@ interface NavItem {
     icon: typeof LayoutDashboard;
     label: string;
     moduleKey?: string;
-    roles?: ('SUPER_ADMIN' | 'OWNER' | 'ADMIN' | 'LAWYER' | 'SECRETARY' | 'ACCOUNTANT')[];
+    roles?: ('OWNER' | 'ADMIN' | 'LAWYER' | 'SECRETARY' | 'ACCOUNTANT')[];
     permission?: { resource: string; action: string };
 }
 
@@ -70,7 +70,7 @@ interface NavGroup {
     items: NavItem[];
     collapsible: boolean;
     moduleKey?: string;
-    roles?: ('SUPER_ADMIN' | 'OWNER' | 'ADMIN' | 'LAWYER' | 'SECRETARY' | 'ACCOUNTANT')[];
+    roles?: ('OWNER' | 'ADMIN' | 'LAWYER' | 'SECRETARY' | 'ACCOUNTANT')[];
     permission?: { resource: string; action: string };
 }
 
@@ -175,30 +175,29 @@ const navGroups: NavGroup[] = [
         ],
     },
     {
-        id: 'settings',
+        id: 'preferences',
         title: 'الإعدادات',
         icon: Settings,
         collapsible: true,
         items: [
-            { path: 'settings/profile', icon: User, label: 'الملف الشخصي' },
-            { path: 'settings/notifications', icon: Bell, label: 'الإشعارات' },
+            { path: 'account/profile', icon: User, label: 'الملف الشخصي' },
+            { path: 'account/notifications', icon: Bell, label: 'الإشعارات' },
         ],
     },
 ];
 
 export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
     const location = useLocation();
-    const { slug } = useParams<{ slug: string }>();
     const user = useAuthStore((state) => state.user);
     const userRole = user?.role;
     const { can } = usePermissions();
     const { isModuleEnabled, fetchModules } = useModuleStore();
+    const { data: firmData } = useFirmSettings();
+    const firm = firmData?.data;
 
-    // Fetch modules on mount
     useEffect(() => { fetchModules(); }, [fetchModules]);
 
-    // Build slug prefix for all paths
-    const slugPrefix = slug ? `/${slug}` : '';
+    const slugPrefix = '';
 
     // Track expanded groups — default expand the group that contains the active path
     const getInitialExpanded = (): Set<string> => {
@@ -261,9 +260,6 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         return location.pathname === fullPath || location.pathname.startsWith(fullPath + '/');
     };
 
-    // Can see Owner dashboard
-    const canSeeOwnerDashboard = userRole === 'OWNER' || userRole === 'ADMIN';
-
     // Get role display info
     const getRoleInfo = () => {
         switch (userRole) {
@@ -287,13 +283,17 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         >
             {/* Logo */}
             <div className="h-16 flex items-center justify-between px-4 border-b bg-gradient-to-l from-primary/5 to-transparent">
-                <Link to={`${slugPrefix}/dashboard`} className="flex items-center gap-3">
-                    <div className="w-9 h-9 bg-gradient-to-br from-primary to-[hsl(var(--gold))] rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm">
-                        <Scale className="w-5 h-5 text-primary-foreground" />
+                <Link to={`${slugPrefix}/dashboard`} className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 bg-gradient-to-br from-primary to-[hsl(var(--gold))] rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm overflow-hidden">
+                        {firm?.logo ? (
+                            <img src={firm.logo} alt={firm.name || 'logo'} className="w-full h-full object-contain" />
+                        ) : (
+                            <Scale className="w-5 h-5 text-primary-foreground" />
+                        )}
                     </div>
                     {!isCollapsed && (
-                        <span className="text-xl font-bold bg-gradient-to-l from-primary to-[hsl(var(--gold))] bg-clip-text text-transparent">
-                            وثيق
+                        <span className="text-xl font-bold bg-gradient-to-l from-primary to-[hsl(var(--gold))] bg-clip-text text-transparent truncate">
+                            {firm?.name || 'وسم الثقة'}
                         </span>
                     )}
                 </Link>
@@ -440,29 +440,6 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                 })}
             </nav>
 
-            {/* Owner Dashboard Button (bottom) */}
-            {canSeeOwnerDashboard && (
-                <div className={cn('px-3 pb-2', isCollapsed && 'px-2')}>
-                    <Link
-                        to={`${slugPrefix}/owner`}
-                        className={cn(
-                            'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200',
-                            'bg-gradient-to-l from-emerald-500/10 to-teal-500/10 border border-emerald-500/20',
-                            'hover:from-emerald-500/20 hover:to-teal-500/20',
-                            isActive('owner')
-                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm shadow-emerald-500/25'
-                                : 'text-emerald-700 dark:text-emerald-400',
-                            isCollapsed && 'justify-center px-2'
-                        )}
-                        title={isCollapsed ? 'صفحة الشركة' : undefined}
-                    >
-                        <Building2 className="w-5 h-5 flex-shrink-0" />
-                        {!isCollapsed && (
-                            <span className="text-sm font-semibold">صفحة الشركة</span>
-                        )}
-                    </Link>
-                </div>
-            )}
 
             {/* Toggle Button */}
             <button
@@ -476,11 +453,29 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                 )}
             </button>
 
+            {/* إدارة المكتب — Special Button */}
+            <div className="px-3 pb-2 pt-2 border-t">
+                <Link
+                    to={`${slugPrefix}/settings`}
+                    className={cn(
+                        'flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 shadow-sm',
+                        'bg-gradient-to-l from-primary to-[hsl(var(--gold))] text-primary-foreground hover:opacity-90',
+                        isCollapsed && 'justify-center px-2'
+                    )}
+                    title={isCollapsed ? 'إدارة المكتب' : undefined}
+                >
+                    <Briefcase className="w-5 h-5 flex-shrink-0" />
+                    {!isCollapsed && (
+                        <span className="text-sm font-semibold">إدارة المكتب</span>
+                    )}
+                </Link>
+            </div>
+
             {/* Footer */}
             {!isCollapsed && (
                 <div className="p-4 border-t">
                     <p className="text-[10px] text-muted-foreground/50 text-center">
-                        وثيق © 2026
+                        وسم الثقة © 2026
                     </p>
                     <a
                         href="/privacy"

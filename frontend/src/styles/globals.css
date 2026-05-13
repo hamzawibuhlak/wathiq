@@ -21,52 +21,56 @@
 
 @layer base {
   :root {
+    /* Brand: Wasm Altheeqa
+       Primary  #c49353  ≈ hsl(30 48% 55%)
+       Secondary #423e3f ≈ hsl(315 3% 25%)
+       Tertiary #e1ded9  ≈ hsl(38 12% 87%) */
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --foreground: 315 3% 25%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 315 3% 25%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 213 59% 45%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --popover-foreground: 315 3% 25%;
+    --primary: 30 48% 55%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 38 12% 87%;
+    --secondary-foreground: 315 3% 25%;
+    --muted: 38 12% 92%;
+    --muted-foreground: 315 3% 40%;
+    --accent: 38 12% 87%;
+    --accent-foreground: 315 3% 25%;
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 213 59% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 38 12% 82%;
+    --input: 38 12% 82%;
+    --ring: 30 48% 55%;
     --radius: 0.5rem;
-    --gold: 43 66% 52%;
+    --gold: 30 48% 55%;
     --gold-foreground: 0 0% 100%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 213 59% 55%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --background: 315 3% 14%;
+    --foreground: 38 12% 92%;
+    --card: 315 3% 18%;
+    --card-foreground: 38 12% 92%;
+    --popover: 315 3% 18%;
+    --popover-foreground: 38 12% 92%;
+    --primary: 30 48% 60%;
+    --primary-foreground: 315 3% 14%;
+    --secondary: 315 3% 25%;
+    --secondary-foreground: 38 12% 92%;
+    --muted: 315 3% 22%;
+    --muted-foreground: 38 12% 70%;
+    --accent: 315 3% 25%;
+    --accent-foreground: 38 12% 92%;
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 213 59% 55%;
-    --gold: 43 66% 52%;
-    --gold-foreground: 0 0% 100%;
+    --destructive-foreground: 38 12% 92%;
+    --border: 315 3% 28%;
+    --input: 315 3% 28%;
+    --ring: 30 48% 60%;
+    --gold: 30 48% 60%;
+    --gold-foreground: 315 3% 14%;
   }
 }
 
@@ -77,7 +81,7 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'Cairo', 'Tajawal', system-ui, sans-serif;
+    font-family: 'Almarai', system-ui, sans-serif;
   }
 
   /* RTL Support */

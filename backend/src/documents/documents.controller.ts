@@ -1,28 +1,6 @@
-import {
-    Controller,
-    Get,
-    Post,
-    Patch,
-    Delete,
-    Param,
-    Query,
-    Res,
-    UseGuards,
-    UseInterceptors,
-    UploadedFile,
-    Body,
-    ParseUUIDPipe,
-    BadRequestException,
-} from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Query, Res, UseGuards, UseInterceptors, UploadedFile, Body, ParseUUIDPipe, BadRequestException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import {
-    ApiTags,
-    ApiOperation,
-    ApiBearerAuth,
-    ApiConsumes,
-    ApiResponse,
-    ApiBody,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { Response } from 'express';
 import { extname } from 'path';
 import { UserRole } from '@prisma/client';
@@ -32,7 +10,7 @@ import { CreateDocumentDto, UpdateDocumentDto, FilterDocumentsDto, BulkDeleteDto
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
-import { TenantId } from '../common/decorators/tenant-id.decorator';
+
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 
 // Allowed file types
@@ -68,19 +46,19 @@ export class DocumentsController {
     @ApiOperation({ summary: 'الحصول على جميع المستندات' })
     @ApiResponse({ status: 200, description: 'قائمة المستندات' })
     async findAll(
-        @TenantId() tenantId: string,
+
         @CurrentUser('id') userId: string,
         @CurrentUser('role') userRole: string,
         @Query() filters: FilterDocumentsDto,
     ) {
-        return this.documentsService.findAll(tenantId, filters, userId, userRole);
+        return this.documentsService.findAll(filters, userId, userRole);
     }
 
     @Get('stats')
     @UseGuards(JwtAuthGuard, RolesGuard)
     @ApiOperation({ summary: 'إحصائيات المستندات' })
-    async getStats(@TenantId() tenantId: string) {
-        return this.documentsService.getStats(tenantId);
+    async getStats() {
+        return this.documentsService.getStats();
     }
 
     @Get(':id')
@@ -90,9 +68,9 @@ export class DocumentsController {
     @ApiResponse({ status: 404, description: 'المستند غير موجود' })
     async findOne(
         @Param('id', ParseUUIDPipe) id: string,
-        @TenantId() tenantId: string,
+
     ) {
-        const document = await this.documentsService.findOne(id, tenantId);
+        const document = await this.documentsService.findOne(id);
         return { data: document };
     }
 
@@ -103,10 +81,10 @@ export class DocumentsController {
     @ApiResponse({ status: 404, description: 'المستند غير موجود' })
     async download(
         @Param('id', ParseUUIDPipe) id: string,
-        @TenantId() tenantId: string,
+
         @Res() res: Response,
     ) {
-        return this.documentsService.serveFile(id, tenantId, res, 'attachment');
+        return this.documentsService.serveFile(id, res, 'attachment');
     }
 
     // ========== PUBLIC ENDPOINT FOR PREVIEW ==========
@@ -135,11 +113,8 @@ export class DocumentsController {
                 description: { type: 'string', description: 'وصف المستند (اختياري)' },
                 documentType: { type: 'string', description: 'نوع المستند' },
                 caseId: { type: 'string', description: 'معرف القضية' },
-                tags: { type: 'string', description: 'الوسوم (JSON array أو comma-separated)' },
-            },
-            required: ['file'],
-        },
-    })
+                tags: { type: 'string', description: 'الوسوم (JSON array أو comma-separated)' } },
+            required: ['file'] } })
     @ApiResponse({ status: 201, description: 'تم رفع المستند بنجاح' })
     @ApiResponse({ status: 400, description: 'نوع الملف غير مدعوم' })
     @UseInterceptors(
@@ -160,19 +135,18 @@ export class DocumentsController {
                     );
                 }
                 callback(null, true);
-            },
-        }),
+            } }),
     )
     async upload(
         @UploadedFile() file: Express.Multer.File,
         @Body() createDocumentDto: CreateDocumentDto,
-        @TenantId() tenantId: string,
+
         @CurrentUser('id') userId: string,
     ) {
         if (!file) {
             throw new BadRequestException('الملف مطلوب');
         }
-        return this.documentsService.upload(file, createDocumentDto, tenantId, userId);
+        return this.documentsService.upload(file, createDocumentDto, userId);
     }
 
     @Patch(':id')
@@ -182,9 +156,9 @@ export class DocumentsController {
     async update(
         @Param('id', ParseUUIDPipe) id: string,
         @Body() updateDocumentDto: UpdateDocumentDto,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.documentsService.update(id, updateDocumentDto, tenantId);
+        return this.documentsService.update(id, updateDocumentDto);
     }
 
     @Delete(':id')
@@ -195,9 +169,9 @@ export class DocumentsController {
     @ApiResponse({ status: 404, description: 'المستند غير موجود' })
     async remove(
         @Param('id', ParseUUIDPipe) id: string,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.documentsService.remove(id, tenantId);
+        return this.documentsService.remove(id);
     }
 
     @Delete()
@@ -206,9 +180,9 @@ export class DocumentsController {
     @ApiOperation({ summary: 'حذف مستندات متعددة' })
     async bulkDelete(
         @Body() dto: BulkDeleteDto,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.documentsService.bulkDelete(dto.ids, tenantId);
+        return this.documentsService.bulkDelete(dto.ids);
     }
 
     // ========== VERSION ENDPOINTS ==========
@@ -230,19 +204,18 @@ export class DocumentsController {
                     );
                 }
                 callback(null, true);
-            },
-        }),
+            } }),
     )
     async createNewVersion(
         @Param('id', ParseUUIDPipe) id: string,
         @UploadedFile() file: Express.Multer.File,
-        @TenantId() tenantId: string,
+
         @CurrentUser('id') userId: string,
     ) {
         if (!file) {
             throw new BadRequestException('الملف مطلوب');
         }
-        return this.documentsService.createNewVersion(id, file, tenantId, userId);
+        return this.documentsService.createNewVersion(id, file, userId);
     }
 
     @Get(':id/versions')
@@ -250,9 +223,9 @@ export class DocumentsController {
     @ApiOperation({ summary: 'الحصول على سجل إصدارات المستند' })
     async getVersionHistory(
         @Param('id', ParseUUIDPipe) id: string,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.documentsService.getVersionHistory(id, tenantId);
+        return this.documentsService.getVersionHistory(id);
     }
 
     @Post(':id/restore')
@@ -261,9 +234,9 @@ export class DocumentsController {
     @ApiOperation({ summary: 'استعادة إصدار سابق' })
     async restoreVersion(
         @Param('id', ParseUUIDPipe) id: string,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.documentsService.restoreVersion(id, tenantId);
+        return this.documentsService.restoreVersion(id);
     }
 
     // ========== TEMPLATE ENDPOINTS ==========
@@ -272,10 +245,10 @@ export class DocumentsController {
     @UseGuards(JwtAuthGuard, RolesGuard)
     @ApiOperation({ summary: 'الحصول على قوالب المستندات' })
     async getTemplates(
-        @TenantId() tenantId: string,
+
         @Query('category') category?: string,
     ) {
-        return this.templatesService.findAll(tenantId, category as any);
+        return this.templatesService.findAll(category as any);
     }
 
     @Post('templates')
@@ -285,18 +258,17 @@ export class DocumentsController {
     @ApiConsumes('multipart/form-data')
     @UseInterceptors(
         FileInterceptor('file', {
-            limits: { fileSize: 10 * 1024 * 1024 },
-        }),
+            limits: { fileSize: 10 * 1024 * 1024 } }),
     )
     async createTemplate(
         @UploadedFile() file: Express.Multer.File,
         @Body() dto: CreateTemplateDto,
-        @TenantId() tenantId: string,
+
     ) {
         if (!file) {
             throw new BadRequestException('الملف مطلوب');
         }
-        return this.templatesService.create(file, dto, tenantId);
+        return this.templatesService.create(file, dto);
     }
 
     @Get('templates/:id/download')
@@ -304,10 +276,10 @@ export class DocumentsController {
     @ApiOperation({ summary: 'تحميل قالب' })
     async downloadTemplate(
         @Param('id', ParseUUIDPipe) id: string,
-        @TenantId() tenantId: string,
+
         @Res() res: Response,
     ) {
-        return this.templatesService.getFile(id, tenantId, res);
+        return this.templatesService.getFile(id, res);
     }
 
     @Post('templates/:id/create-document')
@@ -317,10 +289,10 @@ export class DocumentsController {
     async createDocumentFromTemplate(
         @Param('id', ParseUUIDPipe) id: string,
         @Body() body: { caseId?: string },
-        @TenantId() tenantId: string,
+
         @CurrentUser('id') userId: string,
     ) {
-        return this.templatesService.createDocumentFromTemplate(id, body.caseId, tenantId, userId);
+        return this.templatesService.createDocumentFromTemplate(id, body.caseId, userId);
     }
 
     @Delete('templates/:id')
@@ -329,8 +301,8 @@ export class DocumentsController {
     @ApiOperation({ summary: 'حذف قالب' })
     async deleteTemplate(
         @Param('id', ParseUUIDPipe) id: string,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.templatesService.delete(id, tenantId);
+        return this.templatesService.delete(id);
     }
 }

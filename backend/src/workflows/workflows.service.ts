@@ -18,14 +18,12 @@ export class WorkflowsService {
     /**
      * Get all workflows for a tenant
      */
-    async findAll(tenantId: string) {
+    async findAll() {
         const workflows = await this.prisma.workflow.findMany({
-            where: { tenantId },
+            where: {},
             include: {
-                _count: { select: { executions: true } },
-            },
-            orderBy: { createdAt: 'desc' },
-        });
+                _count: { select: { executions: true } } },
+            orderBy: { createdAt: 'desc' } });
 
         return { data: workflows };
     }
@@ -33,16 +31,13 @@ export class WorkflowsService {
     /**
      * Get workflow by ID
      */
-    async findOne(id: string, tenantId: string) {
+    async findOne(id: string) {
         const workflow = await this.prisma.workflow.findFirst({
-            where: { id, tenantId },
+            where: { id },
             include: {
                 executions: {
                     orderBy: { startedAt: 'desc' },
-                    take: 20,
-                },
-            },
-        });
+                    take: 20 } } });
 
         if (!workflow) {
             throw new NotFoundException('سير العمل غير موجود');
@@ -54,7 +49,7 @@ export class WorkflowsService {
     /**
      * Create new workflow
      */
-    async create(dto: CreateWorkflowDto, tenantId: string) {
+    async create(dto: CreateWorkflowDto) {
         const workflow = await this.prisma.workflow.create({
             data: {
                 name: dto.name,
@@ -62,24 +57,19 @@ export class WorkflowsService {
                 triggerType: dto.triggerType,
                 triggerConfig: (dto.triggerConfig || {}) as Prisma.InputJsonValue,
                 actions: dto.actions as unknown as Prisma.InputJsonValue,
-                isActive: dto.isActive ?? true,
-                tenant: { connect: { id: tenantId } },
-            },
-        });
+                isActive: dto.isActive ?? true } });
 
         return {
             data: workflow,
-            message: 'تم إنشاء سير العمل بنجاح',
-        };
+            message: 'تم إنشاء سير العمل بنجاح' };
     }
 
     /**
      * Update workflow
      */
-    async update(id: string, dto: UpdateWorkflowDto, tenantId: string) {
+    async update(id: string, dto: UpdateWorkflowDto) {
         const existing = await this.prisma.workflow.findFirst({
-            where: { id, tenantId },
-        });
+            where: { id } });
 
         if (!existing) {
             throw new NotFoundException('سير العمل غير موجود');
@@ -93,23 +83,19 @@ export class WorkflowsService {
                 triggerType: dto.triggerType,
                 triggerConfig: dto.triggerConfig as Prisma.InputJsonValue,
                 actions: dto.actions as unknown as Prisma.InputJsonValue,
-                isActive: dto.isActive,
-            },
-        });
+                isActive: dto.isActive } });
 
         return {
             data: workflow,
-            message: 'تم تحديث سير العمل بنجاح',
-        };
+            message: 'تم تحديث سير العمل بنجاح' };
     }
 
     /**
      * Delete workflow
      */
-    async remove(id: string, tenantId: string) {
+    async remove(id: string) {
         const existing = await this.prisma.workflow.findFirst({
-            where: { id, tenantId },
-        });
+            where: { id } });
 
         if (!existing) {
             throw new NotFoundException('سير العمل غير موجود');
@@ -123,10 +109,9 @@ export class WorkflowsService {
     /**
      * Toggle workflow active state
      */
-    async toggleActive(id: string, tenantId: string) {
+    async toggleActive(id: string) {
         const existing = await this.prisma.workflow.findFirst({
-            where: { id, tenantId },
-        });
+            where: { id } });
 
         if (!existing) {
             throw new NotFoundException('سير العمل غير موجود');
@@ -134,13 +119,11 @@ export class WorkflowsService {
 
         const workflow = await this.prisma.workflow.update({
             where: { id },
-            data: { isActive: !existing.isActive },
-        });
+            data: { isActive: !existing.isActive } });
 
         return {
             data: workflow,
-            message: workflow.isActive ? 'تم تفعيل سير العمل' : 'تم إيقاف سير العمل',
-        };
+            message: workflow.isActive ? 'تم تفعيل سير العمل' : 'تم إيقاف سير العمل' };
     }
 
     /**
@@ -148,17 +131,13 @@ export class WorkflowsService {
      */
     async triggerWorkflows(
         triggerType: WorkflowTrigger,
-        tenantId: string,
         triggerData: Record<string, any>,
     ) {
         // Find all active workflows for this trigger
         const workflows = await this.prisma.workflow.findMany({
             where: {
-                tenantId,
                 triggerType,
-                isActive: true,
-            },
-        });
+                isActive: true } });
 
         for (const workflow of workflows) {
             await this.executeWorkflow(workflow.id, triggerData);
@@ -172,8 +151,7 @@ export class WorkflowsService {
      */
     async executeWorkflow(workflowId: string, triggerData: Record<string, any>) {
         const workflow = await this.prisma.workflow.findUnique({
-            where: { id: workflowId },
-        });
+            where: { id: workflowId } });
 
         if (!workflow) {
             this.logger.error(`Workflow ${workflowId} not found`);
@@ -185,16 +163,14 @@ export class WorkflowsService {
             data: {
                 workflow: { connect: { id: workflowId } },
                 status: ExecutionStatus.RUNNING,
-                triggerData: triggerData as Prisma.InputJsonValue,
-            },
-        });
+                triggerData: triggerData as Prisma.InputJsonValue } });
 
         try {
             const actions = workflow.actions as unknown as WorkflowAction[];
             const results: any[] = [];
 
             for (const action of actions) {
-                const result = await this.executeAction(action, triggerData, workflow.tenantId);
+                const result = await this.executeAction(action, triggerData);
                 results.push(result);
             }
 
@@ -204,9 +180,7 @@ export class WorkflowsService {
                 data: {
                     status: ExecutionStatus.COMPLETED,
                     result: results as unknown as Prisma.InputJsonValue,
-                    completedAt: new Date(),
-                },
-            });
+                    completedAt: new Date() } });
 
             this.logger.log(`Workflow ${workflowId} executed successfully`);
         } catch (error) {
@@ -216,9 +190,7 @@ export class WorkflowsService {
                 data: {
                     status: ExecutionStatus.FAILED,
                     error: error.message,
-                    completedAt: new Date(),
-                },
-            });
+                    completedAt: new Date() } });
 
             this.logger.error(`Workflow ${workflowId} failed: ${error.message}`);
         }
@@ -230,19 +202,18 @@ export class WorkflowsService {
     private async executeAction(
         action: WorkflowAction,
         triggerData: Record<string, any>,
-        tenantId: string,
     ): Promise<any> {
         switch (action.type) {
             case 'CREATE_TASK':
-                return this.executeCreateTask(action.config, triggerData, tenantId);
+                return this.executeCreateTask(action.config, triggerData);
             case 'SEND_NOTIFICATION':
-                return this.executeSendNotification(action.config, triggerData, tenantId);
+                return this.executeSendNotification(action.config, triggerData);
             case 'SEND_EMAIL':
-                return this.executeSendEmail(action.config, triggerData, tenantId);
+                return this.executeSendEmail(action.config, triggerData);
             case 'SEND_WHATSAPP':
-                return this.executeSendWhatsApp(action.config, triggerData, tenantId);
+                return this.executeSendWhatsApp(action.config, triggerData);
             case 'UPDATE_STATUS':
-                return this.executeUpdateStatus(action.config, triggerData, tenantId);
+                return this.executeUpdateStatus(action.config, triggerData);
             default:
                 this.logger.warn(`Unknown action type: ${action.type}`);
                 return { success: false, message: 'Unknown action type' };
@@ -252,7 +223,6 @@ export class WorkflowsService {
     private async executeCreateTask(
         config: Record<string, any>,
         triggerData: Record<string, any>,
-        tenantId: string,
     ) {
         const task = await this.prisma.task.create({
             data: {
@@ -260,13 +230,11 @@ export class WorkflowsService {
                 description: this.interpolate(config.description, triggerData),
                 priority: config.priority || 'MEDIUM',
                 dueDate: config.dueDays ? new Date(Date.now() + config.dueDays * 24 * 60 * 60 * 1000) : undefined,
-                tenant: { connect: { id: tenantId } },
+
                 assignedTo: { connect: { id: config.assignedToId || triggerData.userId } },
                 createdBy: { connect: { id: triggerData.userId || config.assignedToId } },
                 case: triggerData.caseId ? { connect: { id: triggerData.caseId } } : undefined,
-                hearing: triggerData.hearingId ? { connect: { id: triggerData.hearingId } } : undefined,
-            },
-        });
+                hearing: triggerData.hearingId ? { connect: { id: triggerData.hearingId } } : undefined } });
 
         return { success: true, taskId: task.id };
     }
@@ -274,7 +242,6 @@ export class WorkflowsService {
     private async executeSendNotification(
         config: Record<string, any>,
         triggerData: Record<string, any>,
-        tenantId: string,
     ) {
         const notification = await this.prisma.notification.create({
             data: {
@@ -282,10 +249,7 @@ export class WorkflowsService {
                 message: this.interpolate(config.message, triggerData),
                 type: config.type || 'INFO',
                 link: config.link,
-                user: { connect: { id: config.userId || triggerData.userId } },
-                tenant: { connect: { id: tenantId } },
-            },
-        });
+                user: { connect: { id: config.userId || triggerData.userId } } } });
 
         return { success: true, notificationId: notification.id };
     }
@@ -293,7 +257,6 @@ export class WorkflowsService {
     private async executeSendEmail(
         config: Record<string, any>,
         triggerData: Record<string, any>,
-        tenantId: string,
     ) {
         // Email sending would be implemented here using the email service
         this.logger.log(`Would send email to ${config.to} with subject: ${config.subject}`);
@@ -303,7 +266,6 @@ export class WorkflowsService {
     private async executeSendWhatsApp(
         config: Record<string, any>,
         triggerData: Record<string, any>,
-        tenantId: string,
     ) {
         // WhatsApp sending would be implemented here using the WhatsApp service
         this.logger.log(`Would send WhatsApp to ${config.to} with message: ${config.message}`);
@@ -313,7 +275,6 @@ export class WorkflowsService {
     private async executeUpdateStatus(
         config: Record<string, any>,
         triggerData: Record<string, any>,
-        tenantId: string,
     ) {
         const { entityType, entityId, newStatus } = config;
 
@@ -321,14 +282,12 @@ export class WorkflowsService {
             case 'Case':
                 await this.prisma.case.update({
                     where: { id: entityId || triggerData.caseId },
-                    data: { status: newStatus },
-                });
+                    data: { status: newStatus } });
                 break;
             case 'Task':
                 await this.prisma.task.update({
                     where: { id: entityId || triggerData.taskId },
-                    data: { status: newStatus },
-                });
+                    data: { status: newStatus } });
                 break;
         }
 
@@ -346,10 +305,9 @@ export class WorkflowsService {
     /**
      * Get execution history for a workflow
      */
-    async getExecutionHistory(workflowId: string, tenantId: string) {
+    async getExecutionHistory(workflowId: string) {
         const workflow = await this.prisma.workflow.findFirst({
-            where: { id: workflowId, tenantId },
-        });
+            where: { id: workflowId } });
 
         if (!workflow) {
             throw new NotFoundException('سير العمل غير موجود');
@@ -358,8 +316,7 @@ export class WorkflowsService {
         const executions = await this.prisma.workflowExecution.findMany({
             where: { workflowId },
             orderBy: { startedAt: 'desc' },
-            take: 50,
-        });
+            take: 50 });
 
         return { data: executions };
     }
@@ -380,8 +337,7 @@ export class WorkflowsService {
                 { type: 'INVOICE_OVERDUE', label: 'عند تأخر الفاتورة', icon: 'alert' },
                 { type: 'CLIENT_CREATED', label: 'عند إضافة عميل جديد', icon: 'user' },
                 { type: 'MANUAL', label: 'تشغيل يدوي', icon: 'play' },
-            ],
-        };
+            ] };
     }
 
     /**
@@ -394,43 +350,36 @@ export class WorkflowsService {
                     type: 'CREATE_TASK',
                     label: 'إنشاء مهمة',
                     icon: 'check-square',
-                    config: ['title', 'description', 'priority', 'assignedToId', 'dueDays'],
-                },
+                    config: ['title', 'description', 'priority', 'assignedToId', 'dueDays'] },
                 {
                     type: 'SEND_NOTIFICATION',
                     label: 'إرسال إشعار',
                     icon: 'bell',
-                    config: ['title', 'message', 'type', 'userId'],
-                },
+                    config: ['title', 'message', 'type', 'userId'] },
                 {
                     type: 'SEND_EMAIL',
                     label: 'إرسال بريد إلكتروني',
                     icon: 'mail',
-                    config: ['to', 'subject', 'body', 'templateId'],
-                },
+                    config: ['to', 'subject', 'body', 'templateId'] },
                 {
                     type: 'SEND_WHATSAPP',
                     label: 'إرسال واتساب',
                     icon: 'message-circle',
-                    config: ['to', 'message', 'templateId'],
-                },
+                    config: ['to', 'message', 'templateId'] },
                 {
                     type: 'UPDATE_STATUS',
                     label: 'تحديث الحالة',
                     icon: 'refresh',
-                    config: ['entityType', 'newStatus'],
-                },
-            ],
-        };
+                    config: ['entityType', 'newStatus'] },
+            ] };
     }
 
     /**
      * Manually trigger a workflow
      */
-    async manualTrigger(workflowId: string, tenantId: string, triggerData: Record<string, any>) {
+    async manualTrigger(workflowId: string, triggerData: Record<string, any>) {
         const workflow = await this.prisma.workflow.findFirst({
-            where: { id: workflowId, tenantId },
-        });
+            where: { id: workflowId } });
 
         if (!workflow) {
             throw new NotFoundException('سير العمل غير موجود');

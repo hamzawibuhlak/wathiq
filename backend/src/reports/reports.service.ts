@@ -15,102 +15,85 @@ export class ReportsService {
 
     // ========== CRUD Operations ==========
 
-    async create(dto: CreateReportDto, userId: string, tenantId: string) {
+    async create(dto: CreateReportDto, userId: string) {
         return this.prisma.report.create({
             data: {
                 name: dto.name,
                 description: dto.description,
                 reportType: dto.reportType as any,
                 config: dto.config,
-                createdById: userId,
-                tenantId,
-            },
+                createdById: userId },
             include: {
-                creator: { select: { id: true, name: true, email: true } },
-            },
-        });
+                creator: { select: { id: true, name: true, email: true } } } });
     }
 
-    async findAllReports(tenantId: string) {
+    async findAllReports() {
         return this.prisma.report.findMany({
-            where: { tenantId },
+            where: {},
             include: {
                 creator: { select: { id: true, name: true, email: true } },
-                _count: { select: { executions: true } },
-            },
-            orderBy: { createdAt: 'desc' },
-        });
+                _count: { select: { executions: true } } },
+            orderBy: { createdAt: 'desc' } });
     }
 
-    async findOneReport(id: string, tenantId: string) {
+    async findOneReport(id: string) {
         const report = await this.prisma.report.findFirst({
-            where: { id, tenantId },
+            where: { id },
             include: {
                 creator: { select: { id: true, name: true, email: true } },
                 executions: {
                     take: 10,
                     orderBy: { startedAt: 'desc' },
-                    include: { executor: { select: { id: true, name: true } } },
-                },
-            },
-        });
+                    include: { executor: { select: { id: true, name: true } } } } } });
 
         if (!report) throw new NotFoundException('التقرير غير موجود');
         return report;
     }
 
-    async updateReport(id: string, dto: UpdateReportDto, tenantId: string) {
-        await this.findOneReport(id, tenantId);
+    async updateReport(id: string, dto: UpdateReportDto) {
+        await this.findOneReport(id);
         return this.prisma.report.update({
             where: { id },
             data: {
                 name: dto.name,
                 description: dto.description,
                 reportType: dto.reportType as any,
-                config: dto.config,
-            },
-        });
+                config: dto.config } });
     }
 
-    async removeReport(id: string, tenantId: string) {
-        await this.findOneReport(id, tenantId);
+    async removeReport(id: string) {
+        await this.findOneReport(id);
         return this.prisma.report.delete({ where: { id } });
     }
 
     // ========== Execute Report ==========
 
-    async execute(reportId: string, dto: ExecuteReportDto, userId: string, tenantId: string) {
-        const report = await this.findOneReport(reportId, tenantId);
+    async execute(reportId: string, dto: ExecuteReportDto, userId: string) {
+        const report = await this.findOneReport(reportId);
 
         const execution = await this.prisma.reportExecution.create({
             data: {
                 reportId,
                 format: dto.format as any,
                 status: 'PROCESSING',
-                executedById: userId,
-                tenantId,
-            },
-        });
+                executedById: userId } });
 
         this.processReportExecution(execution.id, report, dto).catch(async error => {
             this.logger.error(`Report execution failed: ${error.message}`, error.stack);
             await this.prisma.reportExecution.update({
                 where: { id: execution.id },
-                data: { status: 'FAILED', error: error.message, completedAt: new Date() },
-            });
+                data: { status: 'FAILED', error: error.message, completedAt: new Date() } });
         });
 
         return execution;
     }
 
-    async getExecution(executionId: string, tenantId: string) {
+    async getExecution(executionId: string) {
         const execution = await this.prisma.reportExecution.findFirst({
-            where: { id: executionId, tenantId },
+            where: { id: executionId },
             include: {
                 report: { select: { name: true, reportType: true } },
-                executor: { select: { name: true } },
-            },
-        });
+                executor: { select: { name: true } } } });
 
         if (!execution) throw new NotFoundException('تنفيذ التقرير غير موجود');
         return execution;
@@ -118,7 +101,7 @@ export class ReportsService {
 
     // ========== Dashboard Stats ==========
 
-    async getDashboardStats(tenantId: string) {
+    async getDashboardStats() {
         const now = new Date();
         const startOfWeek = new Date(now);
         startOfWeek.setDate(now.getDate() - now.getDay());
@@ -134,46 +117,38 @@ export class ReportsService {
             totalRevenue, pendingRevenue, casesByStatus, casesByType,
             monthlyRevenue, recentCases, recentHearings,
         ] = await Promise.all([
-            this.prisma.case.count({ where: { tenantId } }),
-            this.prisma.case.count({ where: { tenantId, status: { in: ['OPEN', 'IN_PROGRESS'] } } }),
-            this.prisma.case.count({ where: { tenantId, status: 'CLOSED' } }),
-            this.prisma.client.count({ where: { tenantId } }),
-            this.prisma.client.count({ where: { tenantId, isActive: true } }),
-            this.prisma.hearing.count({ where: { tenantId } }),
+            this.prisma.case.count({ where: {} }),
+            this.prisma.case.count({ where: { status: { in: ['OPEN', 'IN_PROGRESS'] } } }),
+            this.prisma.case.count({ where: { status: 'CLOSED' } }),
+            this.prisma.client.count({ where: {} }),
+            this.prisma.client.count({ where: { isActive: true } }),
+            this.prisma.hearing.count({ where: {} }),
             this.prisma.hearing.count({
-                where: { tenantId, hearingDate: { gte: now }, status: { in: [HearingStatus.SCHEDULED, HearingStatus.POSTPONED] } },
-            }),
+                where: { hearingDate: { gte: now }, status: { in: [HearingStatus.SCHEDULED, HearingStatus.POSTPONED] } } }),
             this.prisma.hearing.count({
-                where: { tenantId, hearingDate: { gte: startOfWeek, lt: endOfWeek }, status: { not: HearingStatus.CANCELLED } },
-            }),
+                where: { hearingDate: { gte: startOfWeek, lt: endOfWeek }, status: { not: HearingStatus.CANCELLED } } }),
             this.prisma.hearing.count({
                 where: {
-                    tenantId,
                     hearingDate: {
                         gte: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
-                        lt: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1),
-                    },
-                    status: { not: HearingStatus.CANCELLED },
-                },
-            }),
-            this.prisma.invoice.count({ where: { tenantId } }),
-            this.prisma.invoice.count({ where: { tenantId, status: InvoiceStatus.PAID } }),
-            this.prisma.invoice.count({ where: { tenantId, status: InvoiceStatus.PENDING } }),
-            this.prisma.invoice.count({ where: { tenantId, status: InvoiceStatus.OVERDUE } }),
-            this.prisma.invoice.aggregate({ where: { tenantId, status: InvoiceStatus.PAID }, _sum: { totalAmount: true } }),
-            this.prisma.invoice.aggregate({ where: { tenantId, status: { in: [InvoiceStatus.PENDING, InvoiceStatus.OVERDUE] } }, _sum: { totalAmount: true } }),
-            this.prisma.case.groupBy({ by: ['status'], where: { tenantId }, _count: true }),
-            this.prisma.case.groupBy({ by: ['caseType'], where: { tenantId }, _count: true }),
-            this.getMonthlyRevenue(tenantId, 6),
+                        lt: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1) },
+                    status: { not: HearingStatus.CANCELLED } } }),
+            this.prisma.invoice.count({ where: {} }),
+            this.prisma.invoice.count({ where: { status: InvoiceStatus.PAID } }),
+            this.prisma.invoice.count({ where: { status: InvoiceStatus.PENDING } }),
+            this.prisma.invoice.count({ where: { status: InvoiceStatus.OVERDUE } }),
+            this.prisma.invoice.aggregate({ where: { status: InvoiceStatus.PAID }, _sum: { totalAmount: true } }),
+            this.prisma.invoice.aggregate({ where: { status: { in: [InvoiceStatus.PENDING, InvoiceStatus.OVERDUE] } }, _sum: { totalAmount: true } }),
+            this.prisma.case.groupBy({ by: ['status'], where: {}, _count: true }),
+            this.prisma.case.groupBy({ by: ['caseType'], where: {}, _count: true }),
+            this.getMonthlyRevenue(6),
             this.prisma.case.findMany({
-                where: { tenantId }, take: 5, orderBy: { createdAt: 'desc' },
-                select: { id: true, caseNumber: true, title: true, status: true, createdAt: true, client: { select: { name: true } } },
-            }),
+                where: {}, take: 5, orderBy: { createdAt: 'desc' },
+                select: { id: true, caseNumber: true, title: true, status: true, createdAt: true, client: { select: { name: true } } } }),
             this.prisma.hearing.findMany({
-                where: { tenantId, hearingDate: { gte: now }, status: { not: HearingStatus.CANCELLED } },
+                where: { hearingDate: { gte: now }, status: { not: HearingStatus.CANCELLED } },
                 take: 5, orderBy: { hearingDate: 'asc' },
-                select: { id: true, hearingDate: true, courtName: true, status: true, case: { select: { id: true, title: true, caseNumber: true } } },
-            }),
+                select: { id: true, hearingDate: true, courtName: true, status: true, case: { select: { id: true, title: true, caseNumber: true } } } }),
         ]);
 
         return {
@@ -185,17 +160,13 @@ export class ReportsService {
                     invoices: {
                         total: totalInvoices, paid: paidInvoices, pending: pendingInvoices, overdue: overdueInvoices,
                         totalRevenue: Number(totalRevenue._sum.totalAmount || 0),
-                        pendingRevenue: Number(pendingRevenue._sum.totalAmount || 0),
-                    },
-                },
+                        pendingRevenue: Number(pendingRevenue._sum.totalAmount || 0) } },
                 casesByStatus: casesByStatus.map(item => ({ status: item.status, count: item._count })),
                 casesByType: casesByType.map(item => ({ type: item.caseType, count: item._count })),
-                monthlyRevenue, recentCases, recentHearings,
-            },
-        };
+                monthlyRevenue, recentCases, recentHearings } };
     }
 
-    private async getMonthlyRevenue(tenantId: string, months: number) {
+    private async getMonthlyRevenue(months: number) {
         const result = [];
         const now = new Date();
 
@@ -204,36 +175,33 @@ export class ReportsService {
             const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
 
             const revenue = await this.prisma.invoice.aggregate({
-                where: { tenantId, status: InvoiceStatus.PAID, paidAt: { gte: start, lte: end } },
-                _sum: { totalAmount: true }, _count: true,
-            });
+                where: { status: InvoiceStatus.PAID, paidAt: { gte: start, lte: end } },
+                _sum: { totalAmount: true }, _count: true });
 
             result.push({
                 month: start.toISOString(),
                 monthName: start.toLocaleDateString('ar-SA', { month: 'short', year: 'numeric' }),
                 total: Number(revenue._sum.totalAmount || 0),
-                count: revenue._count,
-            });
+                count: revenue._count });
         }
         return result;
     }
 
-    async getFinancialReport(tenantId: string, startDate?: string, endDate?: string) {
+    async getFinancialReport(startDate?: string, endDate?: string) {
         const now = new Date();
         const start = startDate ? new Date(startDate) : new Date(now.getFullYear(), now.getMonth(), 1);
         const end = endDate ? new Date(endDate) : new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
         const [totalStats, paidStats, pendingStats, overdueStats] = await Promise.all([
-            this.prisma.invoice.aggregate({ where: { tenantId, createdAt: { gte: start, lte: end } }, _sum: { totalAmount: true }, _count: true }),
-            this.prisma.invoice.aggregate({ where: { tenantId, status: InvoiceStatus.PAID, createdAt: { gte: start, lte: end } }, _sum: { totalAmount: true }, _count: true }),
-            this.prisma.invoice.aggregate({ where: { tenantId, status: InvoiceStatus.PENDING, createdAt: { gte: start, lte: end } }, _sum: { totalAmount: true }, _count: true }),
-            this.prisma.invoice.aggregate({ where: { tenantId, status: InvoiceStatus.OVERDUE, createdAt: { gte: start, lte: end } }, _sum: { totalAmount: true }, _count: true }),
+            this.prisma.invoice.aggregate({ where: { createdAt: { gte: start, lte: end } }, _sum: { totalAmount: true }, _count: true }),
+            this.prisma.invoice.aggregate({ where: { status: InvoiceStatus.PAID, createdAt: { gte: start, lte: end } }, _sum: { totalAmount: true }, _count: true }),
+            this.prisma.invoice.aggregate({ where: { status: InvoiceStatus.PENDING, createdAt: { gte: start, lte: end } }, _sum: { totalAmount: true }, _count: true }),
+            this.prisma.invoice.aggregate({ where: { status: InvoiceStatus.OVERDUE, createdAt: { gte: start, lte: end } }, _sum: { totalAmount: true }, _count: true }),
         ]);
 
         const topClients = await this.prisma.invoice.groupBy({
-            by: ['clientId'], where: { tenantId, status: InvoiceStatus.PAID, createdAt: { gte: start, lte: end } },
-            _sum: { totalAmount: true }, _count: true, orderBy: { _sum: { totalAmount: 'desc' } }, take: 10,
-        });
+            by: ['clientId'], where: { status: InvoiceStatus.PAID, createdAt: { gte: start, lte: end } },
+            _sum: { totalAmount: true }, _count: true, orderBy: { _sum: { totalAmount: 'desc' } }, take: 10 });
 
         const clientIds = topClients.map(c => c.clientId);
         const clients = await this.prisma.client.findMany({ where: { id: { in: clientIds } }, select: { id: true, name: true } });
@@ -245,19 +213,15 @@ export class ReportsService {
                     total: Number(totalStats._sum.totalAmount || 0), totalCount: totalStats._count,
                     paid: Number(paidStats._sum.totalAmount || 0), paidCount: paidStats._count,
                     pending: Number(pendingStats._sum.totalAmount || 0), pendingCount: pendingStats._count,
-                    overdue: Number(overdueStats._sum.totalAmount || 0), overdueCount: overdueStats._count,
-                },
+                    overdue: Number(overdueStats._sum.totalAmount || 0), overdueCount: overdueStats._count },
                 topClients: topClients.map(tc => ({
                     clientId: tc.clientId,
                     clientName: clients.find(c => c.id === tc.clientId)?.name || 'غير معروف',
                     revenue: Number(tc._sum.totalAmount || 0),
-                    invoiceCount: tc._count,
-                })),
-            },
-        };
+                    invoiceCount: tc._count })) } };
     }
 
-    async getCasesReport(tenantId: string, period: string = 'month') {
+    async getCasesReport(period: string = 'month') {
         const now = new Date();
         let startDate: Date;
 
@@ -269,10 +233,10 @@ export class ReportsService {
         }
 
         const [newCases, closedCases, casesByLawyer, casesByType] = await Promise.all([
-            this.prisma.case.count({ where: { tenantId, createdAt: { gte: startDate } } }),
-            this.prisma.case.count({ where: { tenantId, status: 'CLOSED', updatedAt: { gte: startDate } } }),
-            this.prisma.case.groupBy({ by: ['assignedToId'], where: { tenantId, createdAt: { gte: startDate } }, _count: true }),
-            this.prisma.case.groupBy({ by: ['caseType'], where: { tenantId, createdAt: { gte: startDate } }, _count: true }),
+            this.prisma.case.count({ where: { createdAt: { gte: startDate } } }),
+            this.prisma.case.count({ where: { status: 'CLOSED', updatedAt: { gte: startDate } } }),
+            this.prisma.case.groupBy({ by: ['assignedToId'], where: { createdAt: { gte: startDate } }, _count: true }),
+            this.prisma.case.groupBy({ by: ['caseType'], where: { createdAt: { gte: startDate } }, _count: true }),
         ]);
 
         const lawyerIds = casesByLawyer.map(c => c.assignedToId).filter(Boolean) as string[];
@@ -285,36 +249,30 @@ export class ReportsService {
                 casesByLawyer: casesByLawyer.map(cl => ({
                     lawyerId: cl.assignedToId,
                     lawyerName: lawyers.find(l => l.id === cl.assignedToId)?.name || 'غير مسند',
-                    count: cl._count,
-                })),
-                casesByType: casesByType.map(ct => ({ type: ct.caseType, count: ct._count })),
-            },
-        };
+                    count: cl._count })),
+                casesByType: casesByType.map(ct => ({ type: ct.caseType, count: ct._count })) } };
     }
 
-    async getPerformanceReport(tenantId: string) {
+    async getPerformanceReport() {
         const lawyers = await this.prisma.user.findMany({
-            where: { tenantId, role: { in: ['LAWYER', 'ADMIN', 'OWNER'] }, isActive: true },
-            select: { id: true, name: true, email: true, role: true },
-        });
+            where: { role: { in: ['LAWYER', 'ADMIN', 'OWNER'] }, isActive: true },
+            select: { id: true, name: true, email: true, role: true } });
 
         const performance = await Promise.all(
             lawyers.map(async (lawyer) => {
                 const [totalCases, activeCases, closedCases, totalHearings, completedHearings] = await Promise.all([
-                    this.prisma.case.count({ where: { tenantId, assignedToId: lawyer.id } }),
-                    this.prisma.case.count({ where: { tenantId, assignedToId: lawyer.id, status: { in: ['OPEN', 'IN_PROGRESS'] } } }),
-                    this.prisma.case.count({ where: { tenantId, assignedToId: lawyer.id, status: 'CLOSED' } }),
-                    this.prisma.hearing.count({ where: { tenantId, case: { assignedToId: lawyer.id } } }),
-                    this.prisma.hearing.count({ where: { tenantId, case: { assignedToId: lawyer.id }, status: HearingStatus.COMPLETED } }),
+                    this.prisma.case.count({ where: { assignedToId: lawyer.id } }),
+                    this.prisma.case.count({ where: { assignedToId: lawyer.id, status: { in: ['OPEN', 'IN_PROGRESS'] } } }),
+                    this.prisma.case.count({ where: { assignedToId: lawyer.id, status: 'CLOSED' } }),
+                    this.prisma.hearing.count({ where: { case: { assignedToId: lawyer.id } } }),
+                    this.prisma.hearing.count({ where: { case: { assignedToId: lawyer.id }, status: HearingStatus.COMPLETED } }),
                 ]);
 
                 return {
                     lawyer: { id: lawyer.id, name: lawyer.name, email: lawyer.email, role: lawyer.role },
                     stats: {
                         totalCases, activeCases, closedCases, totalHearings, completedHearings,
-                        successRate: totalCases > 0 ? ((closedCases / totalCases) * 100).toFixed(1) : '0',
-                    },
-                };
+                        successRate: totalCases > 0 ? ((closedCases / totalCases) * 100).toFixed(1) : '0' } };
             }),
         );
 
@@ -330,8 +288,7 @@ export class ReportsService {
 
             await this.prisma.reportExecution.update({
                 where: { id: executionId },
-                data: { status: 'COMPLETED', filePath, fileSize, completedAt: new Date() },
-            });
+                data: { status: 'COMPLETED', filePath, fileSize, completedAt: new Date() } });
 
             this.logger.log(`Report execution completed: ${executionId}`);
         } catch (error) {
@@ -341,22 +298,21 @@ export class ReportsService {
 
     private async generateReportData(report: any) {
         const config = report.config as any;
-        const tenantId = report.tenantId;
 
         switch (report.reportType) {
-            case 'CASES_SUMMARY': return this.generateCasesSummaryData(tenantId, config);
-            case 'CASES_DETAILED': return this.generateCasesSummaryData(tenantId, config);
-            case 'HEARINGS_SCHEDULE': return this.generateHearingsScheduleData(tenantId, config);
-            case 'FINANCIAL_SUMMARY': return this.generateFinancialSummaryData(tenantId, config);
-            case 'CLIENT_ACTIVITY': return this.generateClientActivityData(tenantId, config);
-            case 'LAWYER_PERFORMANCE': return this.generateLawyerPerformanceData(tenantId, config);
-            case 'INVOICES_AGING': return this.generateInvoicesAgingData(tenantId, config);
+            case 'CASES_SUMMARY': return this.generateCasesSummaryData(config);
+            case 'CASES_DETAILED': return this.generateCasesSummaryData(config);
+            case 'HEARINGS_SCHEDULE': return this.generateHearingsScheduleData(config);
+            case 'FINANCIAL_SUMMARY': return this.generateFinancialSummaryData(config);
+            case 'CLIENT_ACTIVITY': return this.generateClientActivityData(config);
+            case 'LAWYER_PERFORMANCE': return this.generateLawyerPerformanceData(config);
+            case 'INVOICES_AGING': return this.generateInvoicesAgingData(config);
             default: throw new Error('نوع التقرير غير معروف');
         }
     }
 
-    private async generateCasesSummaryData(tenantId: string, config: any) {
-        const where: any = { tenantId };
+    private async generateCasesSummaryData(config: any) {
+        const where: any = {};
         if (config.dateFrom) where.createdAt = { ...where.createdAt, gte: new Date(config.dateFrom) };
         if (config.dateTo) where.createdAt = { ...where.createdAt, lte: new Date(config.dateTo) };
         if (config.status) where.status = config.status;
@@ -364,8 +320,7 @@ export class ReportsService {
         const cases = await this.prisma.case.findMany({
             where,
             include: { client: { select: { name: true } }, assignedTo: { select: { name: true } } },
-            orderBy: { createdAt: 'desc' },
-        });
+            orderBy: { createdAt: 'desc' } });
 
         return {
             title: 'ملخص القضايا', generatedAt: new Date(),
@@ -381,21 +336,18 @@ export class ReportsService {
                 caseNumber: c.caseNumber, title: c.title, client: c.client.name,
                 lawyer: c.assignedTo?.name || 'غير محدد',
                 status: this.translateStatus(c.status),
-                createdAt: new Date(c.createdAt).toLocaleDateString('ar-SA'),
-            })),
-        };
+                createdAt: new Date(c.createdAt).toLocaleDateString('ar-SA') })) };
     }
 
-    private async generateHearingsScheduleData(tenantId: string, config: any) {
-        const where: any = { tenantId };
+    private async generateHearingsScheduleData(config: any) {
+        const where: any = {};
         if (config.dateFrom) where.hearingDate = { ...where.hearingDate, gte: new Date(config.dateFrom) };
         if (config.dateTo) where.hearingDate = { ...where.hearingDate, lte: new Date(config.dateTo) };
 
         const hearings = await this.prisma.hearing.findMany({
             where,
             include: { case: { select: { title: true } }, client: { select: { name: true } }, assignedTo: { select: { name: true } } },
-            orderBy: { hearingDate: 'asc' },
-        });
+            orderBy: { hearingDate: 'asc' } });
 
         return {
             title: 'جدول الجلسات', generatedAt: new Date(),
@@ -410,21 +362,18 @@ export class ReportsService {
                 case: h.case?.title || 'غير محدد', client: h.client?.name || 'غير محدد',
                 date: new Date(h.hearingDate).toLocaleString('ar-SA'),
                 court: h.courtName || 'غير محدد',
-                status: this.translateHearingStatus(h.status),
-            })),
-        };
+                status: this.translateHearingStatus(h.status) })) };
     }
 
-    private async generateFinancialSummaryData(tenantId: string, config: any) {
-        const where: any = { tenantId };
+    private async generateFinancialSummaryData(config: any) {
+        const where: any = {};
         if (config.dateFrom) where.createdAt = { ...where.createdAt, gte: new Date(config.dateFrom) };
         if (config.dateTo) where.createdAt = { ...where.createdAt, lte: new Date(config.dateTo) };
 
         const invoices = await this.prisma.invoice.findMany({
             where,
             include: { client: { select: { name: true } }, case: { select: { title: true } } },
-            orderBy: { createdAt: 'desc' },
-        });
+            orderBy: { createdAt: 'desc' } });
 
         return {
             title: 'الملخص المالي', generatedAt: new Date(),
@@ -439,17 +388,14 @@ export class ReportsService {
                 invoiceNumber: inv.invoiceNumber, client: inv.client.name,
                 amount: `${Number(inv.totalAmount).toLocaleString('ar-SA')} ر.س`,
                 status: this.translateInvoiceStatus(inv.status),
-                createdAt: new Date(inv.createdAt).toLocaleDateString('ar-SA'),
-            })),
-        };
+                createdAt: new Date(inv.createdAt).toLocaleDateString('ar-SA') })) };
     }
 
-    private async generateClientActivityData(tenantId: string, _config: any) {
+    private async generateClientActivityData(_config: any) {
         const clients = await this.prisma.client.findMany({
-            where: { tenantId },
+            where: {},
             include: { _count: { select: { cases: true, invoices: true } } },
-            orderBy: { createdAt: 'desc' },
-        });
+            orderBy: { createdAt: 'desc' } });
 
         return {
             title: 'نشاط العملاء', generatedAt: new Date(),
@@ -461,13 +407,11 @@ export class ReportsService {
             ],
             data: clients.map(c => ({
                 name: c.name, phone: c.phone, casesCount: c._count.cases,
-                createdAt: new Date(c.createdAt).toLocaleDateString('ar-SA'),
-            })),
-        };
+                createdAt: new Date(c.createdAt).toLocaleDateString('ar-SA') })) };
     }
 
-    private async generateLawyerPerformanceData(tenantId: string, _config: any) {
-        const result = await this.getPerformanceReport(tenantId);
+    private async generateLawyerPerformanceData(_config: any) {
+        const result = await this.getPerformanceReport();
         return {
             title: 'أداء المحامين', generatedAt: new Date(),
             columns: [
@@ -478,18 +422,15 @@ export class ReportsService {
             ],
             data: result.data.map(p => ({
                 name: p.lawyer.name, totalCases: p.stats.totalCases,
-                closedCases: p.stats.closedCases, successRate: `${p.stats.successRate}%`,
-            })),
-        };
+                closedCases: p.stats.closedCases, successRate: `${p.stats.successRate}%` })) };
     }
 
-    private async generateInvoicesAgingData(tenantId: string, _config: any) {
+    private async generateInvoicesAgingData(_config: any) {
         const now = new Date();
         const invoices = await this.prisma.invoice.findMany({
-            where: { tenantId, status: { in: [InvoiceStatus.PENDING, InvoiceStatus.OVERDUE] } },
+            where: { status: { in: [InvoiceStatus.PENDING, InvoiceStatus.OVERDUE] } },
             include: { client: { select: { name: true } } },
-            orderBy: { dueDate: 'asc' },
-        });
+            orderBy: { dueDate: 'asc' } });
 
         return {
             title: 'أعمار الفواتير المستحقة', generatedAt: new Date(),
@@ -504,10 +445,8 @@ export class ReportsService {
                 return {
                     invoiceNumber: inv.invoiceNumber, client: inv.client.name,
                     amount: `${Number(inv.totalAmount).toLocaleString('ar-SA')} ر.س`,
-                    daysOverdue,
-                };
-            }),
-        };
+                    daysOverdue };
+            }) };
     }
 
     private async exportReport(data: any, format: string, name: string) {

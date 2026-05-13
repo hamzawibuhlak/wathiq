@@ -1,12 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Delete,
-  Body,
-  Param,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -26,7 +18,7 @@ export class PermissionsController {
   async getMyPermissions(@CurrentUser() user: any) {
     const permissions = await this.permissionsService.getUserPermissions(
       user.userId,
-      user.tenantId,
+
     );
     return { data: permissions };
   }
@@ -48,7 +40,7 @@ export class PermissionsController {
   ) {
     const permissions = await this.permissionsService.getRolePermissions(
       role,
-      user.tenantId,
+
     );
     return { data: permissions };
   }
@@ -71,7 +63,7 @@ export class PermissionsController {
     await this.permissionsService.assignPermission(
       body.role,
       body.permission,
-      user.tenantId,
+
     );
     return { message: 'تم منح الصلاحية بنجاح' };
   }
@@ -86,7 +78,7 @@ export class PermissionsController {
     await this.permissionsService.revokePermission(
       body.role,
       body.permission,
-      user.tenantId,
+
     );
     return { message: 'تم إلغاء الصلاحية بنجاح' };
   }

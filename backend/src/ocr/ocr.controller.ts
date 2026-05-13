@@ -1,12 +1,4 @@
-import {
-  Controller,
-  Post,
-  Get,
-  Param,
-  Query,
-  UseGuards,
-  Body,
-} from '@nestjs/common';
+import { Controller, Post, Get, Param, Query, UseGuards, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -29,7 +21,7 @@ export class OcrController {
     @Param('documentId') documentId: string,
     @CurrentUser() user: any,
   ) {
-    const result = await this.ocrService.processDocument(documentId, user.tenantId);
+    const result = await this.ocrService.processDocument(documentId);
     return { message: 'OCR processing completed', data: result };
   }
 
@@ -41,7 +33,7 @@ export class OcrController {
     @Body() body: { documentIds: string[] },
     @CurrentUser() user: any,
   ) {
-    const results = await this.ocrService.batchProcess(body.documentIds, user.tenantId);
+    const results = await this.ocrService.batchProcess(body.documentIds);
     return { message: 'Batch processing completed', data: results };
   }
 
@@ -50,14 +42,14 @@ export class OcrController {
   @Roles('OWNER', 'ADMIN')
   @ApiOperation({ summary: 'Retry all failed OCR documents' })
   async retryFailed(@CurrentUser() user: any) {
-    const results = await this.ocrService.retryFailed(user.tenantId);
+    const results = await this.ocrService.retryFailed();
     return { message: 'Retry processing completed', data: results };
   }
 
   @Get('stats')
   @ApiOperation({ summary: 'Get OCR statistics' })
   async getStats(@CurrentUser() user: any) {
-    const stats = await this.ocrService.getStats(user.tenantId);
+    const stats = await this.ocrService.getStats();
     return { data: stats };
   }
 
@@ -70,7 +62,7 @@ export class OcrController {
   ) {
     const results = await this.ocrService.searchInOcrText(
       query,
-      user.tenantId,
+
       limit || 20,
     );
     return { data: results };

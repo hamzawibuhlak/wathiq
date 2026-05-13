@@ -21,7 +21,7 @@ export class AnalyticsService {
   /**
    * Get comprehensive analytics overview
    */
-  async getOverview(tenantId: string, filters: AnalyticsFilters = {}) {
+  async getOverview(filters: AnalyticsFilters = {}) {
     const dateRange = filters.dateRange || this.getDefaultDateRange();
 
     const [
@@ -31,37 +31,34 @@ export class AnalyticsService {
       performanceAnalytics,
       trendsAnalytics,
     ] = await Promise.all([
-      this.getCasesAnalytics(tenantId, filters),
-      this.getFinancialAnalytics(tenantId, filters),
-      this.getClientAnalytics(tenantId, filters),
-      this.getPerformanceAnalytics(tenantId, filters),
-      this.getTrendsAnalytics(tenantId, filters),
+      this.getCasesAnalytics(filters),
+      this.getFinancialAnalytics(filters),
+      this.getClientAnalytics(filters),
+      this.getPerformanceAnalytics(filters),
+      this.getTrendsAnalytics(filters),
     ]);
 
     return {
       period: {
         start: dateRange.start,
-        end: dateRange.end,
-      },
+        end: dateRange.end },
       cases: casesAnalytics,
       financial: financialAnalytics,
       clients: clientAnalytics,
       performance: performanceAnalytics,
-      trends: trendsAnalytics,
-    };
+      trends: trendsAnalytics };
   }
 
   /**
    * Cases Analytics
    */
-  private async getCasesAnalytics(tenantId: string, filters: AnalyticsFilters) {
-    const where: any = { tenantId };
+  private async getCasesAnalytics(filters: AnalyticsFilters) {
+    const where: any = {};
 
     if (filters.dateRange) {
       where.createdAt = {
         gte: filters.dateRange.start,
-        lte: filters.dateRange.end,
-      };
+        lte: filters.dateRange.end };
     }
 
     if (filters.caseType) where.caseType = filters.caseType;
@@ -80,20 +77,17 @@ export class AnalyticsService {
       this.prisma.case.groupBy({
         by: ['status'],
         where,
-        _count: true,
-      }),
+        _count: true }),
       this.prisma.case.groupBy({
         by: ['caseType'],
         where,
-        _count: true,
-      }),
+        _count: true }),
       this.prisma.case.groupBy({
         by: ['priority'],
         where,
-        _count: true,
-      }),
-      this.calculateAverageCaseDuration(tenantId, filters),
-      this.calculateClosureRate(tenantId, filters),
+        _count: true }),
+      this.calculateAverageCaseDuration(filters),
+      this.calculateClosureRate(filters),
     ]);
 
     return {
@@ -102,21 +96,19 @@ export class AnalyticsService {
       byType: this.formatGroupByResult(byType, 'caseType'),
       byPriority: this.formatGroupByResult(byPriority, 'priority'),
       averageDuration: avgDuration,
-      closureRate,
-    };
+      closureRate };
   }
 
   /**
    * Financial Analytics
    */
-  private async getFinancialAnalytics(tenantId: string, filters: AnalyticsFilters) {
-    const where: any = { tenantId };
+  private async getFinancialAnalytics(filters: AnalyticsFilters) {
+    const where: any = {};
 
     if (filters.dateRange) {
       where.issueDate = {
         gte: filters.dateRange.start,
-        lte: filters.dateRange.end,
-      };
+        lte: filters.dateRange.end };
     }
 
     const [
@@ -132,62 +124,52 @@ export class AnalyticsService {
       this.prisma.invoice.aggregate({
         where,
         _sum: { totalAmount: true },
-        _count: true,
-      }),
+        _count: true }),
       this.prisma.invoice.aggregate({
         where: { ...where, status: 'PAID' },
         _sum: { totalAmount: true },
-        _count: true,
-      }),
+        _count: true }),
       this.prisma.invoice.aggregate({
         where: { ...where, status: 'PENDING' },
         _sum: { totalAmount: true },
-        _count: true,
-      }),
+        _count: true }),
       this.prisma.invoice.aggregate({
         where: {
           ...where,
           status: 'PENDING',
-          dueDate: { lt: new Date() },
-        },
+          dueDate: { lt: new Date() } },
         _sum: { totalAmount: true },
-        _count: true,
-      }),
-      this.getRevenueByMonth(tenantId, filters),
-      this.getTopPayingClients(tenantId, filters, 10),
-      this.calculateAverageInvoiceValue(tenantId),
-      this.calculatePaymentSuccessRate(tenantId),
+        _count: true }),
+      this.getRevenueByMonth(filters),
+      this.getTopPayingClients(filters, 10),
+      this.calculateAverageInvoiceValue(),
+      this.calculatePaymentSuccessRate(),
     ]);
 
     return {
       total: {
         amount: totalRevenue._sum.totalAmount || 0,
-        count: totalRevenue._count,
-      },
+        count: totalRevenue._count },
       paid: {
         amount: paidRevenue._sum.totalAmount || 0,
-        count: paidRevenue._count,
-      },
+        count: paidRevenue._count },
       pending: {
         amount: pendingRevenue._sum.totalAmount || 0,
-        count: pendingRevenue._count,
-      },
+        count: pendingRevenue._count },
       overdue: {
         amount: overdueRevenue._sum.totalAmount || 0,
-        count: overdueRevenue._count,
-      },
+        count: overdueRevenue._count },
       revenueByMonth,
       topClients,
       averageInvoiceValue,
-      paymentSuccessRate,
-    };
+      paymentSuccessRate };
   }
 
   /**
    * Client Analytics
    */
-  private async getClientAnalytics(tenantId: string, filters: AnalyticsFilters) {
-    const where: any = { tenantId };
+  private async getClientAnalytics(filters: AnalyticsFilters) {
+    const where: any = {};
 
     const [
       totalClients,
@@ -199,22 +181,18 @@ export class AnalyticsService {
       averageRevenuePerClient,
     ] = await Promise.all([
       this.prisma.client.count({ where }),
-      this.getActiveClientsCount(tenantId),
+      this.getActiveClientsCount(),
       this.prisma.client.count({
         where: {
           ...where,
           ...(filters.dateRange && {
             createdAt: {
               gte: filters.dateRange.start,
-              lte: filters.dateRange.end,
-            },
-          }),
-        },
-      }),
-      this.getTopClientsByCases(tenantId, 10),
-      this.calculateClientRetentionRate(tenantId),
-      this.calculateAverageCasesPerClient(tenantId),
-      this.calculateAverageRevenuePerClient(tenantId),
+              lte: filters.dateRange.end } }) } }),
+      this.getTopClientsByCases(10),
+      this.calculateClientRetentionRate(),
+      this.calculateAverageCasesPerClient(),
+      this.calculateAverageRevenuePerClient(),
     ]);
 
     return {
@@ -225,27 +203,22 @@ export class AnalyticsService {
       topClients,
       retentionRate: clientRetentionRate,
       averageCasesPerClient,
-      averageRevenuePerClient,
-    };
+      averageRevenuePerClient };
   }
 
   /**
    * Performance Analytics (Team & Lawyer)
    */
-  private async getPerformanceAnalytics(tenantId: string, filters: AnalyticsFilters) {
+  private async getPerformanceAnalytics(filters: AnalyticsFilters) {
     const lawyers = await this.prisma.user.findMany({
       where: {
-        tenantId,
         role: 'LAWYER',
-        isActive: true,
-      },
+        isActive: true },
       select: {
         id: true,
         name: true,
         email: true,
-        avatar: true,
-      },
-    });
+        avatar: true } });
 
     const lawyerPerformance = await Promise.all(
       lawyers.map(async (lawyer) => {
@@ -258,20 +231,16 @@ export class AnalyticsService {
           revenue,
         ] = await Promise.all([
           this.prisma.case.count({
-            where: { tenantId, assignedToId: lawyer.id },
-          }),
+            where: { assignedToId: lawyer.id } }),
           this.prisma.case.count({
-            where: { tenantId, assignedToId: lawyer.id, status: 'OPEN' },
-          }),
+            where: { assignedToId: lawyer.id, status: 'OPEN' } }),
           this.prisma.case.count({
-            where: { tenantId, assignedToId: lawyer.id, status: 'CLOSED' },
-          }),
-          this.calculateAverageCaseDuration(tenantId, {
+            where: { assignedToId: lawyer.id, status: 'CLOSED' } }),
+          this.calculateAverageCaseDuration({
             ...filters,
-            lawyer: lawyer.id,
-          }),
-          this.calculateLawyerSuccessRate(tenantId, lawyer.id),
-          this.calculateLawyerRevenue(tenantId, lawyer.id),
+            lawyer: lawyer.id }),
+          this.calculateLawyerSuccessRate(lawyer.id),
+          this.calculateLawyerRevenue(lawyer.id),
         ]);
 
         return {
@@ -279,17 +248,14 @@ export class AnalyticsService {
             id: lawyer.id,
             name: lawyer.name,
             email: lawyer.email,
-            avatar: lawyer.avatar,
-          },
+            avatar: lawyer.avatar },
           metrics: {
             totalCases,
             activeCases,
             closedCases,
             avgCaseDuration,
             successRate,
-            revenue,
-          },
-        };
+            revenue } };
       })
     );
 
@@ -311,28 +277,25 @@ export class AnalyticsService {
       averages: {
         casesPerLawyer: avgCasesPerLawyer,
         successRate: avgSuccessRate,
-        revenuePerLawyer: avgRevenuePerLawyer,
-      },
-    };
+        revenuePerLawyer: avgRevenuePerLawyer } };
   }
 
   /**
    * Trends Analytics
    */
-  private async getTrendsAnalytics(tenantId: string, filters: AnalyticsFilters) {
+  private async getTrendsAnalytics(filters: AnalyticsFilters) {
     const months = 12;
 
     const [casesGrowth, revenueGrowth, clientsGrowth] = await Promise.all([
-      this.getCasesGrowthTrend(tenantId, months),
-      this.getRevenueGrowthTrend(tenantId, months),
-      this.getClientsGrowthTrend(tenantId, months),
+      this.getCasesGrowthTrend(months),
+      this.getRevenueGrowthTrend(months),
+      this.getClientsGrowthTrend(months),
     ]);
 
     return {
       cases: casesGrowth,
       revenue: revenueGrowth,
-      clients: clientsGrowth,
-    };
+      clients: clientsGrowth };
   }
 
   // ============================================
@@ -349,22 +312,17 @@ export class AnalyticsService {
   private formatGroupByResult(data: any[], key: string) {
     return data.map(item => ({
       [key]: item[key],
-      count: item._count,
-    }));
+      count: item._count }));
   }
 
-  private async calculateAverageCaseDuration(tenantId: string, filters: AnalyticsFilters): Promise<number> {
+  private async calculateAverageCaseDuration(filters: AnalyticsFilters): Promise<number> {
     const closedCases = await this.prisma.case.findMany({
       where: {
-        tenantId,
         status: 'CLOSED',
-        ...(filters.lawyer && { assignedToId: filters.lawyer }),
-      },
+        ...(filters.lawyer && { assignedToId: filters.lawyer }) },
       select: {
         createdAt: true,
-        updatedAt: true,
-      },
-    });
+        updatedAt: true } });
 
     if (closedCases.length === 0) return 0;
 
@@ -376,13 +334,12 @@ export class AnalyticsService {
     return Math.round(totalDays / closedCases.length);
   }
 
-  private async calculateClosureRate(tenantId: string, filters: AnalyticsFilters): Promise<number> {
-    const where: any = { tenantId };
+  private async calculateClosureRate(filters: AnalyticsFilters): Promise<number> {
+    const where: any = {};
     if (filters.dateRange) {
       where.createdAt = {
         gte: filters.dateRange.start,
-        lte: filters.dateRange.end,
-      };
+        lte: filters.dateRange.end };
     }
 
     const [total, closed] = await Promise.all([
@@ -393,7 +350,7 @@ export class AnalyticsService {
     return total > 0 ? Math.round((closed / total) * 100) : 0;
   }
 
-  private async getRevenueByMonth(tenantId: string, filters: AnalyticsFilters) {
+  private async getRevenueByMonth(filters: AnalyticsFilters) {
     const months = 12;
     const now = new Date();
     const data = [];
@@ -404,33 +361,26 @@ export class AnalyticsService {
 
       const result = await this.prisma.invoice.aggregate({
         where: {
-          tenantId,
           status: 'PAID',
           paidAt: {
             gte: monthStart,
-            lte: monthEnd,
-          },
-        },
+            lte: monthEnd } },
         _sum: { totalAmount: true },
-        _count: true,
-      });
+        _count: true });
 
       data.push({
         month: monthStart.toLocaleDateString('ar-SA', { month: 'short', year: 'numeric' }),
         revenue: Number(result._sum.totalAmount) || 0,
-        count: result._count,
-      });
+        count: result._count });
     }
 
     return data;
   }
 
-  private async getTopPayingClients(tenantId: string, filters: AnalyticsFilters, limit: number) {
+  private async getTopPayingClients(filters: AnalyticsFilters, limit: number) {
     const invoices = await this.prisma.invoice.findMany({
       where: {
-        tenantId,
-        status: 'PAID',
-      },
+        status: 'PAID' },
       select: {
         clientId: true,
         totalAmount: true,
@@ -438,11 +388,7 @@ export class AnalyticsService {
           select: {
             id: true,
             name: true,
-            email: true,
-          },
-        },
-      },
-    });
+            email: true } } } });
 
     const clientRevenue = new Map<string, { client: any; revenue: number; count: number }>();
 
@@ -455,8 +401,7 @@ export class AnalyticsService {
         clientRevenue.set(inv.clientId, {
           client: inv.client,
           revenue: Number(inv.totalAmount),
-          count: 1,
-        });
+          count: 1 });
       }
     });
 
@@ -465,137 +410,115 @@ export class AnalyticsService {
       .slice(0, limit);
   }
 
-  private async calculateAverageInvoiceValue(tenantId: string): Promise<number> {
+  private async calculateAverageInvoiceValue(): Promise<number> {
     const result = await this.prisma.invoice.aggregate({
-      where: { tenantId },
-      _avg: { totalAmount: true },
-    });
+      where: {},
+      _avg: { totalAmount: true } });
 
     return Math.round(Number(result._avg.totalAmount) || 0);
   }
 
-  private async calculatePaymentSuccessRate(tenantId: string): Promise<number> {
+  private async calculatePaymentSuccessRate(): Promise<number> {
     const [total, paid] = await Promise.all([
-      this.prisma.invoice.count({ where: { tenantId } }),
-      this.prisma.invoice.count({ where: { tenantId, status: 'PAID' } }),
+      this.prisma.invoice.count({ where: {} }),
+      this.prisma.invoice.count({ where: { status: 'PAID' } }),
     ]);
 
     return total > 0 ? Math.round((paid / total) * 100) : 0;
   }
 
-  private async getActiveClientsCount(tenantId: string): Promise<number> {
+  private async getActiveClientsCount(): Promise<number> {
     const result = await this.prisma.case.findMany({
       where: {
-        tenantId,
-        status: 'OPEN',
-      },
+        status: 'OPEN' },
       select: {
-        clientId: true,
-      },
-      distinct: ['clientId'],
-    });
+        clientId: true },
+      distinct: ['clientId'] });
 
     return result.length;
   }
 
-  private async getTopClientsByCases(tenantId: string, limit: number) {
+  private async getTopClientsByCases(limit: number) {
     const clients = await this.prisma.client.findMany({
-      where: { tenantId },
+      where: {},
       select: {
         id: true,
         name: true,
         email: true,
         _count: {
-          select: { cases: true },
-        },
-      },
+          select: { cases: true } } },
       orderBy: {
-        cases: { _count: 'desc' },
-      },
-      take: limit,
-    });
+        cases: { _count: 'desc' } },
+      take: limit });
 
     return clients.map(c => ({
       client: {
         id: c.id,
         name: c.name,
-        email: c.email,
-      },
-      casesCount: c._count.cases,
-    }));
+        email: c.email },
+      casesCount: c._count.cases }));
   }
 
-  private async calculateClientRetentionRate(tenantId: string): Promise<number> {
+  private async calculateClientRetentionRate(): Promise<number> {
     const lastYear = new Date();
     lastYear.setMonth(lastYear.getMonth() - 12);
 
     const clientsLastYear = await this.prisma.client.count({
       where: {
-        tenantId,
-        createdAt: { lt: lastYear },
-      },
-    });
+        createdAt: { lt: lastYear } } });
 
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
     const activeClients = await this.prisma.case.findMany({
       where: {
-        tenantId,
         createdAt: { gte: sixMonthsAgo },
         client: {
-          createdAt: { lt: lastYear },
-        },
-      },
+          createdAt: { lt: lastYear } } },
       select: { clientId: true },
-      distinct: ['clientId'],
-    });
+      distinct: ['clientId'] });
 
     return clientsLastYear > 0
       ? Math.round((activeClients.length / clientsLastYear) * 100)
       : 0;
   }
 
-  private async calculateAverageCasesPerClient(tenantId: string): Promise<number> {
+  private async calculateAverageCasesPerClient(): Promise<number> {
     const [totalCases, totalClients] = await Promise.all([
-      this.prisma.case.count({ where: { tenantId } }),
-      this.prisma.client.count({ where: { tenantId } }),
+      this.prisma.case.count({ where: {} }),
+      this.prisma.client.count({ where: {} }),
     ]);
 
     return totalClients > 0 ? Math.round((totalCases / totalClients) * 10) / 10 : 0;
   }
 
-  private async calculateAverageRevenuePerClient(tenantId: string): Promise<number> {
+  private async calculateAverageRevenuePerClient(): Promise<number> {
     const [totalRevenue, totalClients] = await Promise.all([
       this.prisma.invoice.aggregate({
-        where: { tenantId, status: 'PAID' },
-        _sum: { totalAmount: true },
-      }),
-      this.prisma.client.count({ where: { tenantId } }),
+        where: { status: 'PAID' },
+        _sum: { totalAmount: true } }),
+      this.prisma.client.count({ where: {} }),
     ]);
 
     const revenue = Number(totalRevenue._sum.totalAmount) || 0;
     return totalClients > 0 ? Math.round(revenue / totalClients) : 0;
   }
 
-  private async calculateLawyerSuccessRate(tenantId: string, lawyerId: string): Promise<number> {
+  private async calculateLawyerSuccessRate(lawyerId: string): Promise<number> {
     const [total, closed] = await Promise.all([
       this.prisma.case.count({
-        where: { tenantId, assignedToId: lawyerId },
-      }),
+        where: { assignedToId: lawyerId } }),
       this.prisma.case.count({
-        where: { tenantId, assignedToId: lawyerId, status: 'CLOSED' },
-      }),
+        where: { assignedToId: lawyerId, status: 'CLOSED' } }),
     ]);
 
     return total > 0 ? Math.round((closed / total) * 100) : 0;
   }
 
-  private async calculateLawyerRevenue(tenantId: string, lawyerId: string): Promise<number> {
+  private async calculateLawyerRevenue(lawyerId: string): Promise<number> {
     const cases = await this.prisma.case.findMany({
-      where: { tenantId, assignedToId: lawyerId },
-      select: { id: true },
-    });
+      where: { assignedToId: lawyerId },
+      select: { id: true } });
 
     const caseIds = cases.map(c => c.id);
 
@@ -603,17 +526,14 @@ export class AnalyticsService {
 
     const result = await this.prisma.invoice.aggregate({
       where: {
-        tenantId,
         caseId: { in: caseIds },
-        status: 'PAID',
-      },
-      _sum: { totalAmount: true },
-    });
+        status: 'PAID' },
+      _sum: { totalAmount: true } });
 
     return Math.round(Number(result._sum.totalAmount) || 0);
   }
 
-  private async getCasesGrowthTrend(tenantId: string, months: number) {
+  private async getCasesGrowthTrend(months: number) {
     const now = new Date();
     const data = [];
 
@@ -623,24 +543,19 @@ export class AnalyticsService {
 
       const count = await this.prisma.case.count({
         where: {
-          tenantId,
           createdAt: {
             gte: monthStart,
-            lte: monthEnd,
-          },
-        },
-      });
+            lte: monthEnd } } });
 
       data.push({
         month: monthStart.toLocaleDateString('ar-SA', { month: 'short', year: 'numeric' }),
-        count,
-      });
+        count });
     }
 
     return data;
   }
 
-  private async getRevenueGrowthTrend(tenantId: string, months: number) {
+  private async getRevenueGrowthTrend(months: number) {
     const now = new Date();
     const data = [];
 
@@ -650,26 +565,21 @@ export class AnalyticsService {
 
       const result = await this.prisma.invoice.aggregate({
         where: {
-          tenantId,
           status: 'PAID',
           paidAt: {
             gte: monthStart,
-            lte: monthEnd,
-          },
-        },
-        _sum: { totalAmount: true },
-      });
+            lte: monthEnd } },
+        _sum: { totalAmount: true } });
 
       data.push({
         month: monthStart.toLocaleDateString('ar-SA', { month: 'short', year: 'numeric' }),
-        revenue: Number(result._sum.totalAmount) || 0,
-      });
+        revenue: Number(result._sum.totalAmount) || 0 });
     }
 
     return data;
   }
 
-  private async getClientsGrowthTrend(tenantId: string, months: number) {
+  private async getClientsGrowthTrend(months: number) {
     const now = new Date();
     const data = [];
 
@@ -679,18 +589,13 @@ export class AnalyticsService {
 
       const count = await this.prisma.client.count({
         where: {
-          tenantId,
           createdAt: {
             gte: monthStart,
-            lte: monthEnd,
-          },
-        },
-      });
+            lte: monthEnd } } });
 
       data.push({
         month: monthStart.toLocaleDateString('ar-SA', { month: 'short', year: 'numeric' }),
-        count,
-      });
+        count });
     }
 
     return data;

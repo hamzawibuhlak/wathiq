@@ -41,12 +41,10 @@ export class LegalLibraryService {
                     description: true,
                     tags: true,
                     viewCount: true,
-                    _count: { select: { articles: true } },
-                },
+                    _count: { select: { articles: true } } },
                 orderBy: { viewCount: 'desc' },
                 skip: (page - 1) * limit,
-                take: limit,
-            }),
+                take: limit }),
             this.prisma.legalRegulation.count({ where }),
         ]);
 
@@ -58,17 +56,13 @@ export class LegalLibraryService {
             where: { id },
             include: {
                 articles: {
-                    orderBy: { number: 'asc' },
-                },
-            },
-        });
+                    orderBy: { number: 'asc' } } } });
 
         if (!regulation) throw new NotFoundException('النظام غير موجود');
 
         await this.prisma.legalRegulation.update({
             where: { id },
-            data: { viewCount: { increment: 1 } },
-        });
+            data: { viewCount: { increment: 1 } } });
 
         return regulation;
     }
@@ -102,10 +96,8 @@ export class LegalLibraryService {
                 tags: regData.tags || [],
                 articles: articles?.length
                     ? { create: articles }
-                    : undefined,
-            },
-            include: { articles: true },
-        });
+                    : undefined },
+            include: { articles: true } });
         return regulation;
     }
 
@@ -138,8 +130,7 @@ export class LegalLibraryService {
             ...metadata,
             category: metadata.category || 'SYSTEM',
             content: extractedText,
-            source: 'PDF Upload',
-        });
+            source: 'PDF Upload' });
     }
 
     async deleteRegulation(id: string) {
@@ -161,8 +152,7 @@ export class LegalLibraryService {
         return this.prisma.legalRegulation.update({
             where: { id },
             data: regData,
-            include: { articles: true },
-        });
+            include: { articles: true } });
     }
 
     // ─── PRECEDENTS ───────────────────────────────
@@ -212,12 +202,10 @@ export class LegalLibraryService {
                     outcome: true,
                     keywords: true,
                     viewCount: true,
-                    isVerified: true,
-                },
+                    isVerified: true },
                 orderBy: { viewCount: 'desc' },
                 skip: (page - 1) * limit,
-                take: limit,
-            }),
+                take: limit }),
             this.prisma.legalPrecedent.count({ where }),
         ]);
 
@@ -226,15 +214,13 @@ export class LegalLibraryService {
 
     async getPrecedentById(id: string) {
         const precedent = await this.prisma.legalPrecedent.findUnique({
-            where: { id },
-        });
+            where: { id } });
 
         if (!precedent) throw new NotFoundException('الحكم غير موجود');
 
         await this.prisma.legalPrecedent.update({
             where: { id },
-            data: { viewCount: { increment: 1 } },
-        });
+            data: { viewCount: { increment: 1 } } });
 
         return precedent;
     }
@@ -258,9 +244,7 @@ export class LegalLibraryService {
                 courtType: data.courtType as any,
                 outcome: data.outcome as any,
                 judgmentDate: data.judgmentDate ? new Date(data.judgmentDate) : undefined,
-                keywords: data.keywords || [],
-            },
-        });
+                keywords: data.keywords || [] } });
     }
 
     async updatePrecedent(id: string, data: any) {
@@ -300,8 +284,7 @@ export class LegalLibraryService {
 
         return this.prisma.legalTerm.findMany({
             where,
-            orderBy: { termAr: 'asc' },
-        });
+            orderBy: { termAr: 'asc' } });
     }
 
     async getTermById(id: string) {
@@ -310,14 +293,12 @@ export class LegalLibraryService {
 
         await this.prisma.legalTerm.update({
             where: { id },
-            data: { viewCount: { increment: 1 } },
-        });
+            data: { viewCount: { increment: 1 } } });
 
         if (term.relatedTerms?.length) {
             const related = await this.prisma.legalTerm.findMany({
                 where: { termAr: { in: term.relatedTerms } },
-                select: { id: true, termAr: true, termEn: true },
-            });
+                select: { id: true, termAr: true, termEn: true } });
             return { ...term, relatedTermsData: related };
         }
 
@@ -336,9 +317,7 @@ export class LegalLibraryService {
         return this.prisma.legalTerm.create({
             data: {
                 ...data,
-                relatedTerms: data.relatedTerms || [],
-            },
-        });
+                relatedTerms: data.relatedTerms || [] } });
     }
 
     async updateTerm(id: string, data: any) {
@@ -362,32 +341,26 @@ export class LegalLibraryService {
                     OR: [
                         { title: { contains: query, mode: 'insensitive' } },
                         { contentText: { contains: query, mode: 'insensitive' } },
-                    ],
-                },
+                    ] },
                 select: { id: true, title: true, category: true, status: true },
-                take: 5,
-            }),
+                take: 5 }),
             this.prisma.legalPrecedent.findMany({
                 where: {
                     OR: [
                         { summary: { contains: query, mode: 'insensitive' } },
                         { legalPrinciple: { contains: query, mode: 'insensitive' } },
                         { keywords: { has: query } },
-                    ],
-                },
+                    ] },
                 select: { id: true, court: true, caseType: true, summary: true, judgmentDate: true },
-                take: 5,
-            }),
+                take: 5 }),
             this.prisma.legalTerm.findMany({
                 where: {
                     OR: [
                         { termAr: { contains: query, mode: 'insensitive' } },
                         { termEn: { contains: query, mode: 'insensitive' } },
-                    ],
-                },
+                    ] },
                 select: { id: true, termAr: true, termEn: true, definition: true },
-                take: 5,
-            }),
+                take: 5 }),
         ]);
 
         return { regulations, precedents, terms };
@@ -396,7 +369,7 @@ export class LegalLibraryService {
     // ─── AI SMART SEARCH ──────────────────────────
     // NOTE: AI search is now handled by LegalAIService.askAI()
     // This method is kept for backward compatibility
-    async aiSearch(query: string, tenantId: string, userId: string) {
+    async aiSearch(query: string, userId: string) {
         // 1. Regular search first
         const searchResults = await this.globalSearch(query);
 
@@ -411,18 +384,16 @@ export class LegalLibraryService {
             data: {
                 query,
                 results: { aiAnswer, sources: searchResults } as any,
-                tenantId,
+
                 createdBy: userId,
-                queryType: 'KEYWORD',
-            },
-        });
+                queryType: 'KEYWORD' } });
 
         return { aiAnswer, sources: searchResults };
     }
 
     // ─── BOOKMARKS ────────────────────────────────
-    async getBookmarks(tenantId: string, userId: string, folderId?: string, tag?: string) {
-        const where: any = { tenantId, createdBy: userId };
+    async getBookmarks(userId: string, folderId?: string, tag?: string) {
+        const where: any = { createdBy: userId };
         if (folderId) where.folderId = folderId;
         if (tag) where.tags = { has: tag };
 
@@ -431,19 +402,14 @@ export class LegalLibraryService {
             include: {
                 regulation: { select: { id: true, title: true, category: true, issuedBy: true, issuedDate: true, number: true } },
                 article: {
-                    include: { regulation: { select: { id: true, title: true, number: true, issuedBy: true } } },
-                },
+                    include: { regulation: { select: { id: true, title: true, number: true, issuedBy: true } } } },
                 precedent: { select: { id: true, court: true, caseType: true, summary: true, judgmentDate: true, legalPrinciple: true } },
                 folder: { select: { id: true, name: true, color: true, isPublic: true } },
-                case: { select: { id: true, title: true, caseNumber: true } },
-            },
-            orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
-        });
+                case: { select: { id: true, title: true, caseNumber: true } } },
+            orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }] });
     }
 
-    async addBookmark(
-        tenantId: string,
-        userId: string,
+    async addBookmark(userId: string,
         data: {
             type: string;
             regulationId?: string;
@@ -469,66 +435,58 @@ export class LegalLibraryService {
                 tags: data.tags || [],
                 caseId: data.caseId,
                 folderId: data.folderId,
-                tenantId,
-                createdBy: userId,
-            },
-        });
+
+                createdBy: userId } });
     }
 
     async updateBookmark(
         id: string,
-        tenantId: string,
         userId: string,
         data: { notes?: string; tags?: string[]; folderId?: string | null; caseId?: string | null; sortOrder?: number },
     ) {
         const bookmark = await this.prisma.legalBookmark.findUnique({ where: { id } });
-        if (!bookmark || bookmark.tenantId !== tenantId || bookmark.createdBy !== userId) {
+        if (!bookmark || bookmark.createdBy !== userId) {
             throw new NotFoundException('المفضلة غير موجودة');
         }
         return this.prisma.legalBookmark.update({ where: { id }, data });
     }
 
-    async removeBookmark(id: string, tenantId: string, userId: string) {
+    async removeBookmark(id: string, userId: string) {
         const bookmark = await this.prisma.legalBookmark.findUnique({ where: { id } });
-        if (!bookmark || bookmark.tenantId !== tenantId || bookmark.createdBy !== userId) {
+        if (!bookmark || bookmark.createdBy !== userId) {
             throw new NotFoundException('المفضلة غير موجودة');
         }
         return this.prisma.legalBookmark.delete({ where: { id } });
     }
 
     // ─── BOOKMARK FOLDERS ─────────────────────────
-    async getFolders(tenantId: string, userId: string) {
+    async getFolders(userId: string) {
         // Return user's private folders + all public folders in the tenant
         return this.prisma.bookmarkFolder.findMany({
             where: {
-                tenantId,
-                OR: [{ createdBy: userId }, { isPublic: true }],
-            },
+                OR: [{ createdBy: userId }, { isPublic: true }] },
             include: {
                 _count: { select: { bookmarks: true, comments: true } },
-                user: { select: { id: true, name: true } },
-            },
-            orderBy: [{ isPublic: 'desc' }, { createdAt: 'asc' }],
-        });
+                user: { select: { id: true, name: true } } },
+            orderBy: [{ isPublic: 'desc' }, { createdAt: 'asc' }] });
     }
 
-    async createFolder(tenantId: string, userId: string, data: { name: string; color?: string; isPublic?: boolean; description?: string; icon?: string }) {
+    async createFolder(userId: string, data: { name: string; color?: string; isPublic?: boolean; description?: string; icon?: string }) {
         return this.prisma.bookmarkFolder.create({
-            data: { name: data.name, color: data.color, isPublic: data.isPublic || false, description: data.description, icon: data.icon, tenantId, createdBy: userId },
-        });
+            data: { name: data.name, color: data.color, isPublic: data.isPublic || false, description: data.description, icon: data.icon, createdBy: userId } });
     }
 
-    async updateFolder(id: string, tenantId: string, userId: string, data: { name?: string; color?: string; isPublic?: boolean; description?: string; icon?: string }) {
+    async updateFolder(id: string, userId: string, data: { name?: string; color?: string; isPublic?: boolean; description?: string; icon?: string }) {
         const folder = await this.prisma.bookmarkFolder.findUnique({ where: { id } });
-        if (!folder || folder.tenantId !== tenantId || folder.createdBy !== userId) {
+        if (!folder || folder.createdBy !== userId) {
             throw new NotFoundException('المجلد غير موجود');
         }
         return this.prisma.bookmarkFolder.update({ where: { id }, data });
     }
 
-    async deleteFolder(id: string, tenantId: string, userId: string) {
+    async deleteFolder(id: string, userId: string) {
         const folder = await this.prisma.bookmarkFolder.findUnique({ where: { id } });
-        if (!folder || folder.tenantId !== tenantId || folder.createdBy !== userId) {
+        if (!folder || folder.createdBy !== userId) {
             throw new NotFoundException('المجلد غير موجود');
         }
         // Move bookmarks to no-folder first
@@ -537,27 +495,25 @@ export class LegalLibraryService {
     }
 
     // ─── FOLDER COMMENTS ──────────────────────────
-    async getFolderComments(folderId: string, tenantId: string) {
+    async getFolderComments(folderId: string) {
         return this.prisma.folderComment.findMany({
-            where: { folderId, tenantId },
+            where: { folderId },
             include: { author: { select: { id: true, name: true, avatar: true } } },
-            orderBy: { createdAt: 'asc' },
-        });
+            orderBy: { createdAt: 'asc' } });
     }
 
-    async addFolderComment(folderId: string, tenantId: string, authorId: string, content: string) {
+    async addFolderComment(folderId: string, authorId: string, content: string) {
         // Verify folder exists and is accessible
-        const folder = await this.prisma.bookmarkFolder.findFirst({ where: { id: folderId, tenantId } });
+        const folder = await this.prisma.bookmarkFolder.findFirst({ where: { id: folderId } });
         if (!folder) throw new NotFoundException('المجلد غير موجود');
         return this.prisma.folderComment.create({
-            data: { folderId, content, tenantId, authorId },
-            include: { author: { select: { id: true, name: true, avatar: true } } },
-        });
+            data: { folderId, content, authorId },
+            include: { author: { select: { id: true, name: true, avatar: true } } } });
     }
 
-    async deleteFolderComment(id: string, tenantId: string, authorId: string) {
+    async deleteFolderComment(id: string, authorId: string) {
         const comment = await this.prisma.folderComment.findUnique({ where: { id } });
-        if (!comment || comment.tenantId !== tenantId || comment.authorId !== authorId) {
+        if (!comment || comment.authorId !== authorId) {
             throw new NotFoundException('التعليق غير موجود');
         }
         return this.prisma.folderComment.delete({ where: { id } });
@@ -566,7 +522,6 @@ export class LegalLibraryService {
     // ─── LINK TO CASE ─────────────────────────────
     async linkToCase(
         caseId: string,
-        tenantId: string,
         userId: string,
         data: {
             type: string;
@@ -586,20 +541,15 @@ export class LegalLibraryService {
                 precedentId: data.precedentId,
                 termId: data.termId,
                 notes: data.notes,
-                addedBy: userId,
-                tenantId,
-            },
-        });
+                addedBy: userId } });
     }
 
-    async getCaseReferences(caseId: string, tenantId: string) {
+    async getCaseReferences(caseId: string) {
         return this.prisma.caseLegalReference.findMany({
-            where: { caseId, tenantId },
+            where: { caseId },
             include: {
-                user: { select: { name: true } },
-            },
-            orderBy: { createdAt: 'desc' },
-        });
+                user: { select: { name: true } } },
+            orderBy: { createdAt: 'desc' } });
     }
 
     // ─── STATS ────────────────────────────────────
@@ -613,8 +563,7 @@ export class LegalLibraryService {
         const popular = await this.prisma.legalRegulation.findMany({
             orderBy: { viewCount: 'desc' },
             take: 5,
-            select: { id: true, title: true, category: true, viewCount: true },
-        });
+            select: { id: true, title: true, category: true, viewCount: true } });
 
         return { regulations, precedents, terms, popular };
     }

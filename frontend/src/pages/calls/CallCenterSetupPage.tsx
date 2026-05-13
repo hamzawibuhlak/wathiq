@@ -25,7 +25,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { callCenterApi, type SipExtension, type AssignExtensionDto } from '@/api/callCenter';
-import { ownerApi } from '@/api/owner.api';
+import { usersApi } from '@/api/users';
 import toast from 'react-hot-toast';
 import { Link, useParams } from 'react-router-dom';
 
@@ -63,10 +63,11 @@ export default function CallCenterSetupPage() {
     const extensions: SipExtension[] = (extensionsResult as any)?.data || extensionsResult || [];
 
     // Fetch team members for assignment
-    const { data: users = [] } = useQuery({
-        queryKey: ['owner-users'],
-        queryFn: ownerApi.getUsers,
+    const { data: usersData } = useQuery({
+        queryKey: ['users'],
+        queryFn: () => usersApi.getAll(),
     });
+    const users: any[] = (usersData as any)?.data?.data || [];
 
     // Assign extension mutation
     const assignMutation = useMutation({

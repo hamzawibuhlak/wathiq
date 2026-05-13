@@ -497,7 +497,7 @@ function AIAnswerCard({ data, onCopy, copiedId, pathBuilder }: {
                     }}>
                         <Brain size={16} color="white" />
                     </div>
-                    <span style={{ color: '#c7d2fe', fontWeight: '600', fontSize: '0.9rem' }}>إجابة وثيق AI</span>
+                    <span style={{ color: '#c7d2fe', fontWeight: '600', fontSize: '0.9rem' }}>إجابة وسم الثقة AI</span>
                     {!data.aiEnabled && (
                         <span style={{ background: 'rgba(245,158,11,0.15)', color: '#fbbf24', padding: '2px 8px', borderRadius: '6px', fontSize: '0.7rem' }}>
                             بحث بدون AI

@@ -1,6 +1,6 @@
 // =====================================================
 // Watheeq MVP - Prisma Schema
-// Multi-tenant Law Office Management System
+// Single-tenant Law Office Management System
 // =====================================================
 
 generator client {
@@ -80,42 +80,6 @@ enum DocumentType {
 // TENANT (Law Office)
 // =====================================================
 
-model Tenant {
-  id          String   @id @default(uuid())
-  name        String   // اسم المكتب
-  nameEn      String?  // English name (optional)
-  email       String   @unique
-  phone       String?
-  address     String?
-  city        String?
-  licenseNumber String? // رقم الترخيص
-  taxNumber   String?  // الرقم الضريبي
-  commercialReg String? // السجل التجاري
-  website     String?  // الموقع الإلكتروني
-  logo        String?
-  isActive    Boolean  @default(true)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-
-  // Relations
-  users          User[]
-  clients        Client[]
-  cases          Case[]
-  hearings       Hearing[]
-  documents      Document[]
-  invoices       Invoice[]
-  emailTemplates EmailTemplate[]
-  emailLogs      EmailLog[]
-  smsLogs        SmsLog[]
-  notifications  Notification[]
-  rolePermissions RolePermission[]
-  activityLogs   ActivityLog[]
-
-  @@map("tenants")
-}
-
 // =====================================================
 // USER
 // =====================================================
@@ -135,8 +99,6 @@ model User {
   updatedAt   DateTime @updatedAt
 
   // Multi-tenancy
-  tenantId    String
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   // Relations
   assignedCases Case[]    @relation("AssignedLawyer")
@@ -149,7 +111,6 @@ model User {
   notifications Notification[]
   activityLogs  ActivityLog[]
 
-  @@index([tenantId])
   @@index([email])
   @@map("users")
 }
@@ -175,8 +136,6 @@ model Client {
   updatedAt       DateTime @updatedAt
 
   // Multi-tenancy
-  tenantId        String
-  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   // Relations
   cases       Case[]
@@ -184,7 +143,6 @@ model Client {
   invoices    Invoice[]
   visibleToUsers User[] @relation("ClientVisibility") // المستخدمين الذين يمكنهم رؤية هذا العميل
 
-  @@index([tenantId])
   @@index([phone])
   @@index([nationalId])
   @@map("clients")
@@ -213,8 +171,6 @@ model Case {
   updatedAt       DateTime    @updatedAt
 
   // Multi-tenancy
-  tenantId        String
-  tenant          Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   // Relations
   clientId        String
@@ -230,8 +186,6 @@ model Case {
   documents       Document[]
   invoices        Invoice[]
 
-  @@unique([tenantId, caseNumber])
-  @@index([tenantId])
   @@index([status])
   @@index([clientId])
   @@index([assignedToId])
@@ -264,14 +218,10 @@ model Hearing {
   courtroom   String?
   status      HearingStatus @default(SCHEDULED)
   notes       String?
-  
-  tenantId    String
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
-  @@index([tenantId])
+
   @@index([caseId])
   @@index([clientId])
   @@index([assignedToId])
@@ -297,8 +247,6 @@ model Document {
   updatedAt       DateTime     @updatedAt
 
   // Multi-tenancy
-  tenantId        String
-  tenant          Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   // Relations
   caseId          String?
@@ -307,7 +255,6 @@ model Document {
   uploadedById    String
   uploadedBy      User         @relation(fields: [uploadedById], references: [id])
 
-  @@index([tenantId])
   @@index([caseId])
   @@index([documentType])
   @@map("documents")
@@ -335,8 +282,6 @@ model Invoice {
   updatedAt       DateTime      @updatedAt
 
   // Multi-tenancy
-  tenantId        String
-  tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   // Relations
   clientId        String
@@ -350,8 +295,6 @@ model Invoice {
   
   items           InvoiceItem[] // بنود الفاتورة
 
-  @@unique([tenantId, invoiceNumber])
-  @@index([tenantId])
   @@index([clientId])
   @@index([status])
   @@map("invoices")
@@ -395,10 +338,7 @@ model EmailTemplate {
   updatedAt   DateTime @updatedAt
   
   // Multi-tenancy
-  tenantId    String
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  @@index([tenantId])
   @@index([name])
   @@map("email_templates")
 }
@@ -419,10 +359,7 @@ model EmailLog {
   createdAt   DateTime  @default(now())
   
   // Multi-tenancy
-  tenantId    String
-  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  @@index([tenantId])
   @@index([status])
   @@map("email_logs")
 }
@@ -443,10 +380,7 @@ model SmsLog {
   createdAt DateTime  @default(now())
   
   // Multi-tenancy
-  tenantId  String
-  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  @@index([tenantId])
   @@index([status])
   @@map("sms_logs")
 }
@@ -470,11 +404,9 @@ model Notification {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   // Multi-tenancy
-  tenantId  String
-  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@index([tenantId])
+
   @@index([isRead])
   @@map("notifications")
 }
@@ -500,9 +432,7 @@ model NotificationSettings {
   userId              String   @unique
   
   // Multi-tenancy
-  tenantId            String
 
-  @@index([tenantId])
   @@map("notification_settings")
 }
 
@@ -533,12 +463,11 @@ model RolePermission {
   role         String     // OWNER, ADMIN, LAWYER, SECRETARY
   permissionId String
   permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
-  tenantId     String
-  tenant       Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   createdAt    DateTime   @default(now())
 
-  @@unique([role, permissionId, tenantId])
-  @@index([tenantId])
+  @@unique([role, permissionId])
+
   @@index([role])
   @@map("role_permissions")
 }
@@ -557,13 +486,54 @@ model ActivityLog {
   userAgent   String?  @db.Text
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenantId    String
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   createdAt   DateTime @default(now())
 
   @@index([userId])
-  @@index([tenantId])
+
   @@index([entity])
   @@index([createdAt])
   @@map("activity_logs")
+}
+
+// =====================================================
+// COMPANY SETTINGS (single row - law office configuration)
+// =====================================================
+
+model CompanySettings {
+  id            String  @id @default(uuid())
+  name          String  // اسم المكتب
+  nameEn        String?
+  email         String?
+  phone         String?
+  address       String?
+  city          String?
+  licenseNumber String?
+  taxNumber     String?
+  commercialReg String?
+  website       String?
+  logo          String?
+  letterheadUrl String?
+
+  // SMTP Email Settings
+  smtpHost     String?
+  smtpPort     Int?
+  smtpUser     String?
+  smtpPass     String?
+  smtpFrom     String?
+  smtpFromName String?
+  smtpSecure   Boolean @default(false)
+  smtpEnabled  Boolean @default(false)
+
+  // WhatsApp Settings
+  whatsappAccessToken   String?
+  whatsappPhoneNumberId String?
+  whatsappBusinessId    String?
+  whatsappWebhookToken  String?
+  whatsappEnabled       Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("company_settings")
 }

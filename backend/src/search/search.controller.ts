@@ -1,14 +1,7 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
-import {
-    ApiTags,
-    ApiOperation,
-    ApiBearerAuth,
-    ApiQuery,
-    ApiResponse,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { SearchService } from './search.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { TenantId } from '../common/decorators/tenant-id.decorator';
 
 @ApiTags('Search')
 @ApiBearerAuth('JWT-auth')
@@ -27,9 +20,9 @@ export class SearchController {
         @Query('q') query: string,
         @Query('type') type: string = 'all',
         @Query('limit') limit: string = '5',
-        @TenantId() tenantId: string,
+
     ) {
-        return this.searchService.globalSearch(query, type, parseInt(limit), tenantId);
+        return this.searchService.globalSearch(query, type, parseInt(limit));
     }
 
     @Get('suggestions')
@@ -38,9 +31,9 @@ export class SearchController {
     @ApiResponse({ status: 200, description: 'اقتراحات البحث' })
     async getSearchSuggestions(
         @Query('q') query: string,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.searchService.getSearchSuggestions(query, tenantId);
+        return this.searchService.getSearchSuggestions(query);
     }
 
     @Get('mentionables')
@@ -49,8 +42,8 @@ export class SearchController {
     @ApiResponse({ status: 200, description: 'قائمة العناصر القابلة للمنشن' })
     async searchMentionables(
         @Query('q') q: string = '',
-        @TenantId() tenantId: string,
+
     ) {
-        return this.searchService.searchMentionables(q, tenantId);
+        return this.searchService.searchMentionables(q);
     }
 }

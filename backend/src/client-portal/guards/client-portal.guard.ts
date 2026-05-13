@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  CanActivate,
-  ExecutionContext,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
@@ -33,7 +28,7 @@ export class ClientPortalGuard implements CanActivate {
       // Attach client info to request
       request.client = {
         clientId: payload.clientId,
-        tenantId: payload.tenantId,
+
       };
 
       return true;

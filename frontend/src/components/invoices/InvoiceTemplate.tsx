@@ -27,7 +27,7 @@ export const InvoiceTemplate = forwardRef<HTMLDivElement, InvoiceTemplateProps>(
             }).format(amount);
         };
 
-        const tenantName = company?.name || 'مكتب وثيق للمحاماة';
+        const tenantName = company?.name || 'شركة وسم الثقة للمحاماة';
 
         return (
             <div ref={ref} className="bg-white p-8 max-w-[800px] mx-auto print:p-4 print:max-w-none" dir="rtl" style={{ colorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' }}>

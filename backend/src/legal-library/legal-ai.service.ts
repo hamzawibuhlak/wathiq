@@ -40,8 +40,7 @@ export class LegalAIService {
         if (!openaiKey && !anthropicKey) {
             try {
                 const configs = await this.prisma.systemConfig.findMany({
-                    where: { category: 'ai' },
-                });
+                    where: { category: 'ai' } });
                 const map: Record<string, string> = {};
                 configs.forEach((c: any) => { map[c.key] = c.value; });
 
@@ -104,7 +103,6 @@ export class LegalAIService {
 
     async askAI(
         query: string,
-        tenantId: string,
         userId: string,
     ): Promise<{
         answer: string;
@@ -125,15 +123,14 @@ export class LegalAIService {
         const cached = await this.cacheService.get<any>(cacheKey);
 
         if (cached) {
-            await this.trackUsage(tenantId, userId, 0, true);
-            await this.logSearch(tenantId, userId, query, cached, Date.now() - startTime, true);
+            await this.trackUsage(userId, 0, true);
+            await this.logSearch(userId, query, cached, Date.now() - startTime, true);
             return {
                 ...cached,
                 cached: true,
                 responseTime: Date.now() - startTime,
                 aiEnabled: this.isAIEnabled,
-                provider: this.aiProvider,
-            };
+                provider: this.aiProvider };
         }
 
         // 2. Search for relevant articles & precedents
@@ -150,14 +147,13 @@ export class LegalAIService {
                 cached: false,
                 responseTime: Date.now() - startTime,
                 aiEnabled: false,
-                provider: null,
-            };
-            await this.logSearch(tenantId, userId, query, fallbackResponse, Date.now() - startTime, false);
+                provider: null };
+            await this.logSearch(userId, query, fallbackResponse, Date.now() - startTime, false);
             return fallbackResponse;
         }
 
         // 4. Check monthly quota
-        const hasQuota = await this.checkQuota(tenantId);
+        const hasQuota = await this.checkQuota();
         if (!hasQuota) {
             throw new BadRequestException('تم تجاوز حد الأسئلة الشهري. يرجى الترقية أو الانتظار حتى الشهر القادم.');
         }
@@ -180,25 +176,23 @@ export class LegalAIService {
                 citations,
                 sources: searchResults,
                 confidence,
-                tokensUsed,
-            };
+                tokensUsed };
 
             // 9. Cache the result (30 days)
             await this.cacheService.set(cacheKey, result, 30 * 24 * 60 * 60);
 
             // 10. Track usage
-            await this.trackUsage(tenantId, userId, tokensUsed, false);
+            await this.trackUsage(userId, tokensUsed, false);
 
             // 11. Log search
-            await this.logSearch(tenantId, userId, query, result, Date.now() - startTime, false);
+            await this.logSearch(userId, query, result, Date.now() - startTime, false);
 
             return {
                 ...result,
                 cached: false,
                 responseTime: Date.now() - startTime,
                 aiEnabled: true,
-                provider: this.aiProvider,
-            };
+                provider: this.aiProvider };
         } catch (error) {
             this.logger.error(`❌ ${this.aiProvider} API error:`, error);
             // Fallback to keyword results
@@ -212,9 +206,8 @@ export class LegalAIService {
                 cached: false,
                 responseTime: Date.now() - startTime,
                 aiEnabled: true,
-                provider: this.aiProvider,
-            };
-            await this.logSearch(tenantId, userId, query, fallbackResponse, Date.now() - startTime, false);
+                provider: this.aiProvider };
+            await this.logSearch(userId, query, fallbackResponse, Date.now() - startTime, false);
             return fallbackResponse;
         }
     }
@@ -231,18 +224,15 @@ export class LegalAIService {
                     OR: [
                         { title: { contains: query, mode: 'insensitive' } },
                         { contentText: { contains: query, mode: 'insensitive' } },
-                    ],
-                },
+                    ] },
                 select: {
                     id: true,
                     title: true,
                     category: true,
                     status: true,
                     number: true,
-                    issuedBy: true,
-                },
-                take: 5,
-            }),
+                    issuedBy: true },
+                take: 5 }),
 
             // Search articles
             this.prisma.regulationArticle.findMany({
@@ -250,8 +240,7 @@ export class LegalAIService {
                     OR: [
                         { content: { contains: query, mode: 'insensitive' } },
                         { title: { contains: query, mode: 'insensitive' } },
-                    ],
-                },
+                    ] },
                 select: {
                     id: true,
                     number: true,
@@ -263,12 +252,8 @@ export class LegalAIService {
                         select: {
                             id: true,
                             title: true,
-                            category: true,
-                        },
-                    },
-                },
-                take: 10,
-            }),
+                            category: true } } },
+                take: 10 }),
 
             // Search precedents
             this.prisma.legalPrecedent.findMany({
@@ -277,8 +262,7 @@ export class LegalAIService {
                         { summary: { contains: query, mode: 'insensitive' } },
                         { legalPrinciple: { contains: query, mode: 'insensitive' } },
                         { keywords: { has: query } },
-                    ],
-                },
+                    ] },
                 select: {
                     id: true,
                     court: true,
@@ -286,10 +270,8 @@ export class LegalAIService {
                     summary: true,
                     legalPrinciple: true,
                     judgmentDate: true,
-                    outcome: true,
-                },
-                take: 5,
-            }),
+                    outcome: true },
+                take: 5 }),
 
             // Search terms
             this.prisma.legalTerm.findMany({
@@ -298,11 +280,9 @@ export class LegalAIService {
                         { termAr: { contains: query, mode: 'insensitive' } },
                         { termEn: { contains: query, mode: 'insensitive' } },
                         { definition: { contains: query, mode: 'insensitive' } },
-                    ],
-                },
+                    ] },
                 select: { id: true, termAr: true, termEn: true, definition: true },
-                take: 5,
-            }),
+                take: 5 }),
         ]);
 
         return { regulations, articles, precedents, terms };
@@ -312,24 +292,22 @@ export class LegalAIService {
     // 📊 USAGE & QUOTA
     // ══════════════════════════════════════════════════════════
 
-    async getUsageStats(tenantId: string, userId?: string) {
+    async getUsageStats(userId?: string) {
         const currentMonth = this.getCurrentMonth();
 
-        const where: any = { tenantId, month: currentMonth };
+        const where: any = { month: currentMonth };
         if (userId) where.userId = userId;
 
         const usage = await this.prisma.legalAIUsage.findMany({
             where,
-            include: { user: { select: { name: true, email: true } } },
-        });
+            include: { user: { select: { name: true, email: true } } } });
 
         const totals = usage.reduce(
             (acc, u) => ({
                 questionsCount: acc.questionsCount + u.questionsCount,
                 tokensUsed: acc.tokensUsed + u.tokensUsed,
                 cacheHits: acc.cacheHits + u.cacheHits,
-                cacheMisses: acc.cacheMisses + u.cacheMisses,
-            }),
+                cacheMisses: acc.cacheMisses + u.cacheMisses }),
             { questionsCount: 0, tokensUsed: 0, cacheHits: 0, cacheMisses: 0 },
         );
 
@@ -340,19 +318,16 @@ export class LegalAIService {
             quota: {
                 monthly: 100, // monthly question limit
                 used: totals.questionsCount,
-                remaining: Math.max(0, 100 - totals.questionsCount),
-            },
-            aiEnabled: this.isAIEnabled,
-        };
+                remaining: Math.max(0, 100 - totals.questionsCount) },
+            aiEnabled: this.isAIEnabled };
     }
 
-    async checkQuota(tenantId: string): Promise<boolean> {
+    async checkQuota(): Promise<boolean> {
         const currentMonth = this.getCurrentMonth();
 
         const totalUsage = await this.prisma.legalAIUsage.aggregate({
-            where: { tenantId, month: currentMonth },
-            _sum: { questionsCount: true },
-        });
+            where: { month: currentMonth },
+            _sum: { questionsCount: true } });
 
         const MONTHLY_LIMIT = 100;
         return (totalUsage._sum.questionsCount || 0) < MONTHLY_LIMIT;
@@ -364,47 +339,39 @@ export class LegalAIService {
 
     async createNote(
         articleId: string,
-        tenantId: string,
         userId: string,
         data: { noteText: string; highlightStart?: number; highlightEnd?: number; isPrivate?: boolean },
     ) {
         return this.prisma.legalArticleNote.create({
             data: {
                 articleId,
-                tenantId,
+
                 createdBy: userId,
                 noteText: data.noteText,
                 highlightStart: data.highlightStart,
                 highlightEnd: data.highlightEnd,
-                isPrivate: data.isPrivate ?? true,
-            },
+                isPrivate: data.isPrivate ?? true },
             include: {
-                user: { select: { name: true } },
-            },
-        });
+                user: { select: { name: true } } } });
     }
 
-    async getNotes(articleId: string, tenantId: string, userId: string) {
+    async getNotes(articleId: string, userId: string) {
         return this.prisma.legalArticleNote.findMany({
             where: {
                 articleId,
-                tenantId,
+
                 OR: [
                     { createdBy: userId },
                     { isPrivate: false },
-                ],
-            },
+                ] },
             include: {
-                user: { select: { name: true } },
-            },
-            orderBy: { createdAt: 'desc' },
-        });
+                user: { select: { name: true } } },
+            orderBy: { createdAt: 'desc' } });
     }
 
-    async deleteNote(noteId: string, tenantId: string, userId: string) {
+    async deleteNote(noteId: string, userId: string) {
         const note = await this.prisma.legalArticleNote.findFirst({
-            where: { id: noteId, tenantId, createdBy: userId },
-        });
+            where: { id: noteId, createdBy: userId } });
         if (!note) throw new BadRequestException('الملاحظة غير موجودة');
 
         return this.prisma.legalArticleNote.delete({ where: { id: noteId } });
@@ -424,8 +391,7 @@ export class LegalAIService {
                 messages: [
                     { role: 'system', content: this.getSystemPrompt() },
                     { role: 'user', content: userMessage },
-                ],
-            });
+                ] });
 
             const answer = response.choices?.[0]?.message?.content || 'لم أتمكن من تحليل السؤال.';
             const tokensUsed = (response.usage?.prompt_tokens || 0) + (response.usage?.completion_tokens || 0);
@@ -439,8 +405,7 @@ export class LegalAIService {
             system: this.getSystemPrompt(),
             messages: [
                 { role: 'user', content: userMessage },
-            ],
-        });
+            ] });
 
         const answer = response.content[0]?.type === 'text'
             ? response.content[0].text
@@ -454,7 +419,7 @@ export class LegalAIService {
     // ══════════════════════════════════════════════════════════
 
     private getSystemPrompt(): string {
-        return `أنت مساعد قانوني متخصص في الأنظمة واللوائح السعودية. اسمك "وثيق AI".
+        return `أنت مساعد قانوني متخصص في الأنظمة واللوائح السعودية. اسمك "وسم الثقة AI".
 
 مهمتك:
 1. تحليل السؤال القانوني بدقة
@@ -569,8 +534,7 @@ export class LegalAIService {
                     articleNumber: article.number,
                     articleTitle: article.title,
                     regulationTitle: article.regulation?.title,
-                    regulationId: article.regulation?.id,
-                });
+                    regulationId: article.regulation?.id });
             }
         });
 
@@ -584,8 +548,7 @@ export class LegalAIService {
             articleNumber: a.number,
             articleTitle: a.title,
             regulationTitle: a.regulation?.title,
-            regulationId: a.regulation?.id,
-        }));
+            regulationId: a.regulation?.id }));
     }
 
     private calculateConfidence(searchResults: any): number {
@@ -600,38 +563,36 @@ export class LegalAIService {
         return Math.min(0.9, 0.6 + totalResults * 0.03);
     }
 
-    private async trackUsage(tenantId: string, userId: string, tokensUsed: number, cacheHit: boolean) {
+    private async trackUsage(userId: string, tokensUsed: number, cacheHit: boolean) {
         const currentMonth = this.getCurrentMonth();
 
         try {
-            await this.prisma.legalAIUsage.upsert({
-                where: {
-                    tenantId_userId_month: { tenantId, userId, month: currentMonth },
-                },
-                create: {
-                    tenantId,
-                    userId,
-                    month: currentMonth,
-                    questionsCount: 1,
-                    tokensUsed,
-                    cacheHits: cacheHit ? 1 : 0,
-                    cacheMisses: cacheHit ? 0 : 1,
-                },
-                update: {
-                    questionsCount: { increment: 1 },
-                    tokensUsed: { increment: tokensUsed },
-                    cacheHits: { increment: cacheHit ? 1 : 0 },
-                    cacheMisses: { increment: cacheHit ? 0 : 1 },
-                },
-            });
+            const existing = await this.prisma.legalAIUsage.findFirst({
+                where: { userId, month: currentMonth } });
+            if (existing) {
+                await this.prisma.legalAIUsage.update({
+                    where: { id: existing.id },
+                    data: {
+                        questionsCount: { increment: 1 },
+                        tokensUsed: { increment: tokensUsed },
+                        cacheHits: { increment: cacheHit ? 1 : 0 },
+                        cacheMisses: { increment: cacheHit ? 0 : 1 } } });
+            } else {
+                await this.prisma.legalAIUsage.create({
+                    data: {
+                        userId,
+                        month: currentMonth,
+                        questionsCount: 1,
+                        tokensUsed,
+                        cacheHits: cacheHit ? 1 : 0,
+                        cacheMisses: cacheHit ? 0 : 1 } });
+            }
         } catch (error) {
             this.logger.error('Failed to track AI usage:', error);
         }
     }
 
-    private async logSearch(
-        tenantId: string,
-        userId: string,
+    private async logSearch(userId: string,
         query: string,
         result: any,
         responseTime: number,
@@ -642,16 +603,14 @@ export class LegalAIService {
                 data: {
                     query,
                     results: result.sources || {},
-                    tenantId,
+
                     createdBy: userId,
                     queryType: 'AI_QUESTION',
                     aiResponse: result.answer,
                     aiCitations: result.citations,
                     aiTokensUsed: result.tokensUsed || 0,
                     responseTime,
-                    cached,
-                },
-            });
+                    cached } });
         } catch (error) {
             this.logger.error('Failed to log AI search:', error);
         }

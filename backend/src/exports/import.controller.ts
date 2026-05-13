@@ -1,28 +1,10 @@
-import {
-    Controller,
-    Post,
-    Get,
-    UseGuards,
-    UseInterceptors,
-    UploadedFile,
-    Res,
-    ParseFilePipe,
-    MaxFileSizeValidator,
-    FileTypeValidator,
-} from '@nestjs/common';
+import { Controller, Post, Get, UseGuards, UseInterceptors, UploadedFile, Res, ParseFilePipe, MaxFileSizeValidator, FileTypeValidator } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import {
-    ApiTags,
-    ApiOperation,
-    ApiResponse,
-    ApiBearerAuth,
-    ApiConsumes,
-    ApiBody,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { Response } from 'express';
 import { ImportService } from './import.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { TenantId } from '../common/decorators/tenant-id.decorator';
+
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 
 @ApiTags('Import')
@@ -61,12 +43,12 @@ export class ImportController {
             }),
         )
         file: Express.Multer.File,
-        @TenantId() tenantId: string,
+
         @CurrentUser('id') userId: string,
     ) {
         const result = await this.importService.importClients(
             file.buffer,
-            tenantId,
+
             userId,
         );
         return {
@@ -104,12 +86,12 @@ export class ImportController {
             }),
         )
         file: Express.Multer.File,
-        @TenantId() tenantId: string,
+
         @CurrentUser('id') userId: string,
     ) {
         const result = await this.importService.importCases(
             file.buffer,
-            tenantId,
+
             userId,
         );
         return {

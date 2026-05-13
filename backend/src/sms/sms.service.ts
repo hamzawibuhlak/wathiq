@@ -17,13 +17,13 @@ export class SmsService {
         // Using UNIFONIC as example - can be changed to MSEGAT or others
         this.apiUrl = this.configService.get('SMS_API_URL', 'https://api.unifonic.com/rest/SMS/messages');
         this.apiKey = this.configService.get('SMS_API_KEY', '');
-        this.senderId = this.configService.get('SMS_SENDER_ID', 'Watheeq');
+        this.senderId = this.configService.get('SMS_SENDER_ID', 'Wasm Altheeqa');
     }
 
     async sendSMS(data: {
         to: string;
         message: string;
-        tenantId: string;
+
     }) {
         try {
             // Clean phone number (remove spaces, dashes, etc.)
@@ -44,7 +44,7 @@ export class SmsService {
                         message: data.message,
                         status: 'PENDING',
                         error: 'SMS API key not configured',
-                        tenantId: data.tenantId,
+
                     },
                 });
                 return { success: false, error: 'SMS API key not configured' };
@@ -74,7 +74,7 @@ export class SmsService {
                     status: 'SENT',
                     sentAt: new Date(),
                     response: JSON.stringify(response.data),
-                    tenantId: data.tenantId,
+
                 },
             });
 
@@ -88,7 +88,7 @@ export class SmsService {
                     message: data.message,
                     status: 'FAILED',
                     error: error.message,
-                    tenantId: data.tenantId,
+
                 },
             });
 
@@ -100,11 +100,11 @@ export class SmsService {
     async sendBulkSMS(data: {
         recipients: string[];
         message: string;
-        tenantId: string;
+
     }) {
         const results = await Promise.all(
             data.recipients.map(to =>
-                this.sendSMS({ to, message: data.message, tenantId: data.tenantId }),
+                this.sendSMS({ to, message: data.message}),
             ),
         );
 
@@ -125,7 +125,7 @@ export class SmsService {
         hearingDate: Date;
         courtName: string;
         caseTitle: string;
-        tenantId: string;
+
     }) {
         const formattedDate = new Intl.DateTimeFormat('ar-SA', {
             dateStyle: 'short',
@@ -146,7 +146,7 @@ export class SmsService {
         return this.sendSMS({
             to: data.to,
             message,
-            tenantId: data.tenantId,
+
         });
     }
 }

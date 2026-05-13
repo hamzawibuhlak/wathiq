@@ -6,35 +6,31 @@ import { Prisma } from '@prisma/client';
 export class BankService {
     constructor(private prisma: PrismaService) { }
 
-    async createBankAccount(tenantId: string, dto: {
+    async createBankAccount(dto: {
         accountName: string; bankName: string; accountNumber: string; iban?: string;
         swiftCode?: string; currency?: string; balance: number; accountId: string;
     }) {
         return this.prisma.bankAccount.create({
-            data: { ...dto, balance: new Prisma.Decimal(dto.balance), currency: dto.currency || 'SAR', tenantId },
-        });
+            data: { ...dto, balance: new Prisma.Decimal(dto.balance), currency: dto.currency || 'SAR' } });
     }
 
-    async getBankAccounts(tenantId: string) {
+    async getBankAccounts() {
         return this.prisma.bankAccount.findMany({
-            where: { tenantId, isActive: true }, include: { account: true }, orderBy: { bankName: 'asc' },
-        });
+            where: { isActive: true }, include: { account: true }, orderBy: { bankName: 'asc' } });
     }
 
-    async addTransaction(tenantId: string, bankAccountId: string, dto: {
+    async addTransaction(bankAccountId: string, dto: {
         date: Date; description: string; reference?: string; debit?: number; credit?: number; balance: number;
     }) {
         return this.prisma.bankTransaction.create({
             data: {
                 bankAccountId, date: dto.date, description: dto.description, reference: dto.reference,
                 debit: new Prisma.Decimal(dto.debit || 0), credit: new Prisma.Decimal(dto.credit || 0),
-                balance: new Prisma.Decimal(dto.balance), tenantId,
-            },
-        });
+                balance: new Prisma.Decimal(dto.balance) } });
     }
 
-    async getTransactions(tenantId: string, bankAccountId: string, startDate?: Date, endDate?: Date) {
-        const where: any = { bankAccountId, tenant: { id: tenantId } };
+    async getTransactions(bankAccountId: string, startDate?: Date, endDate?: Date) {
+        const where: any = { bankAccountId };
         if (startDate || endDate) {
             where.date = {};
             if (startDate) where.date.gte = startDate;
@@ -43,11 +39,11 @@ export class BankService {
         return this.prisma.bankTransaction.findMany({ where, orderBy: { date: 'desc' } });
     }
 
-    async reconcile(tenantId: string, bankAccountId: string, dto: {
+    async reconcile(bankAccountId: string, dto: {
         statementDate: Date; statementBalance: number; userId: string; notes?: string;
     }) {
         // Get book balance (from journal entries)
-        const bank = await this.prisma.bankAccount.findFirst({ where: { id: bankAccountId, tenantId } });
+        const bank = await this.prisma.bankAccount.findFirst({ where: { id: bankAccountId } });
         if (!bank) throw new BadRequestException('الحساب البنكي غير موجود');
 
         const bookBalance = Number(bank.balance);
@@ -61,14 +57,11 @@ export class BankService {
                 difference: new Prisma.Decimal(diff),
                 status: Math.abs(diff) < 0.01 ? 'RECONCILED' : 'DISCREPANCY',
                 reconciledBy: dto.userId, reconciledAt: new Date(),
-                notes: dto.notes, tenantId,
-            },
-        });
+                notes: dto.notes } });
     }
 
-    async getReconciliations(tenantId: string, bankAccountId: string) {
+    async getReconciliations(bankAccountId: string) {
         return this.prisma.bankReconciliation.findMany({
-            where: { bankAccountId, tenant: { id: tenantId } }, orderBy: { statementDate: 'desc' },
-        });
+            where: { bankAccountId }, orderBy: { statementDate: 'desc' } });
     }
 }

@@ -1,10 +1,4 @@
-import {
-    Injectable,
-    NotFoundException,
-    ConflictException,
-    BadRequestException,
-    ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { UserRole, InvitationStatus } from '@prisma/client';
@@ -33,7 +27,7 @@ export class UserInvitationsService {
     /**
      * Create and send invitation
      */
-    async create(dto: CreateInvitationDto, tenantId: string, inviterId: string) {
+    async create(dto: CreateInvitationDto, inviterId: string) {
         const { email, role = UserRole.LAWYER } = dto;
 
         // Prevent inviting as OWNER
@@ -54,7 +48,7 @@ export class UserInvitationsService {
         const existingInvitation = await this.prisma.userInvitation.findFirst({
             where: {
                 email,
-                tenantId,
+
                 status: InvitationStatus.PENDING,
             },
         });
@@ -78,7 +72,7 @@ export class UserInvitationsService {
                 token,
                 expiresAt,
                 inviterId,
-                tenantId,
+
             },
             include: {
                 inviter: {
@@ -86,12 +80,6 @@ export class UserInvitationsService {
                         id: true,
                         name: true,
                         email: true,
-                    },
-                },
-                tenant: {
-                    select: {
-                        id: true,
-                        name: true,
                     },
                 },
             },
@@ -102,10 +90,10 @@ export class UserInvitationsService {
             await this.emailService.sendInvitation({
                 to: email,
                 inviterName: invitation.inviter.name,
-                tenantName: invitation.tenant.name,
+                tenantName: '',
                 role: invitation.role,
                 token,
-                tenantId,
+
             });
         } catch (error) {
             // Log but don't fail the invitation creation
@@ -121,8 +109,8 @@ export class UserInvitationsService {
     /**
      * Get all invitations for tenant
      */
-    async findAll(tenantId: string, status?: InvitationStatus) {
-        const where: any = { tenantId };
+    async findAll(status?: InvitationStatus) {
+        const where: any = {};
 
         if (status) {
             where.status = status;
@@ -159,13 +147,6 @@ export class UserInvitationsService {
         const invitation = await this.prisma.userInvitation.findUnique({
             where: { token },
             include: {
-                tenant: {
-                    select: {
-                        id: true,
-                        name: true,
-                        logo: true,
-                    },
-                },
                 inviter: {
                     select: {
                         id: true,
@@ -189,7 +170,11 @@ export class UserInvitationsService {
             invitation.status = InvitationStatus.EXPIRED;
         }
 
-        return { data: invitation };
+        const company = await this.prisma.companySettings.findFirst({
+            select: { name: true, logo: true },
+        });
+
+        return { data: { ...invitation, company: company ?? { name: '', logo: null } } };
     }
 
     /**
@@ -201,9 +186,6 @@ export class UserInvitationsService {
         // Find invitation
         const invitation = await this.prisma.userInvitation.findUnique({
             where: { token },
-            include: {
-                tenant: true,
-            },
         });
 
         if (!invitation) {
@@ -252,7 +234,6 @@ export class UserInvitationsService {
                     password: hashedPassword,
                     phone,
                     role: invitation.role,
-                    tenantId: invitation.tenantId,
                     isActive: true,
                     isVerified: true,
                     createdById: invitation.inviterId,
@@ -262,7 +243,6 @@ export class UserInvitationsService {
                     email: true,
                     name: true,
                     role: true,
-                    tenantId: true,
                 },
             });
 
@@ -288,9 +268,9 @@ export class UserInvitationsService {
     /**
      * Cancel invitation
      */
-    async cancel(id: string, tenantId: string) {
+    async cancel(id: string) {
         const invitation = await this.prisma.userInvitation.findFirst({
-            where: { id, tenantId },
+            where: { id },
         });
 
         if (!invitation) {
@@ -312,9 +292,9 @@ export class UserInvitationsService {
     /**
      * Resend invitation (generates new token and extends expiry)
      */
-    async resend(id: string, tenantId: string) {
+    async resend(id: string) {
         const invitation = await this.prisma.userInvitation.findFirst({
-            where: { id, tenantId },
+            where: { id },
         });
 
         if (!invitation) {
@@ -347,12 +327,6 @@ export class UserInvitationsService {
                         email: true,
                     },
                 },
-                tenant: {
-                    select: {
-                        id: true,
-                        name: true,
-                    },
-                },
             },
         });
 
@@ -361,10 +335,10 @@ export class UserInvitationsService {
             await this.emailService.sendInvitation({
                 to: updated.email,
                 inviterName: updated.inviter.name,
-                tenantName: updated.tenant.name,
+                tenantName: '',
                 role: updated.role,
                 token,
-                tenantId,
+
             });
         } catch (error) {
             console.error('Failed to resend invitation email:', error);
@@ -379,19 +353,19 @@ export class UserInvitationsService {
     /**
      * Get invitation stats for dashboard
      */
-    async getStats(tenantId: string) {
+    async getStats() {
         const [pending, accepted, expired, cancelled] = await Promise.all([
             this.prisma.userInvitation.count({
-                where: { tenantId, status: InvitationStatus.PENDING },
+                where: { status: InvitationStatus.PENDING },
             }),
             this.prisma.userInvitation.count({
-                where: { tenantId, status: InvitationStatus.ACCEPTED },
+                where: { status: InvitationStatus.ACCEPTED },
             }),
             this.prisma.userInvitation.count({
-                where: { tenantId, status: InvitationStatus.EXPIRED },
+                where: { status: InvitationStatus.EXPIRED },
             }),
             this.prisma.userInvitation.count({
-                where: { tenantId, status: InvitationStatus.CANCELLED },
+                where: { status: InvitationStatus.CANCELLED },
             }),
         ]);
 

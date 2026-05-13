@@ -20,13 +20,12 @@ export class PredictiveAnalyticsService {
     /**
      * Predict case duration based on historical data
      */
-    async predictCaseDuration(tenantId: string, caseData: {
+    async predictCaseDuration(caseData: {
         caseType: CaseType;
         priority: string;
     }): Promise<{ predictedDays: number; confidence: number }> {
         const historicalCases = await this.prisma.case.findMany({
             where: {
-                tenantId,
                 status: 'CLOSED',
                 caseType: caseData.caseType,
             },
@@ -75,7 +74,7 @@ export class PredictiveAnalyticsService {
     /**
      * Predict revenue for next period
      */
-    async predictRevenue(tenantId: string, period: 'month' | 'quarter' | 'year'): Promise<{
+    async predictRevenue(period: 'month' | 'quarter' | 'year'): Promise<{
         predicted: number;
         confidence: number;
         trend: 'up' | 'down' | 'stable';
@@ -90,7 +89,6 @@ export class PredictiveAnalyticsService {
 
             const result = await this.prisma.invoice.aggregate({
                 where: {
-                    tenantId,
                     status: 'PAID',
                     paidAt: {
                         gte: monthStart,
@@ -124,7 +122,7 @@ export class PredictiveAnalyticsService {
     /**
      * Predict client churn risk
      */
-    async predictChurnRisk(tenantId: string, clientId: string): Promise<{
+    async predictChurnRisk(clientId: string): Promise<{
         riskLevel: 'low' | 'medium' | 'high';
         probability: number;
         factors: string[];
@@ -205,15 +203,15 @@ export class PredictiveAnalyticsService {
     /**
      * Generate AI-powered insights (without OpenAI)
      */
-    async generateInsights(tenantId: string): Promise<string[]> {
+    async generateInsights(): Promise<string[]> {
         const insights: string[] = [];
 
         // Get basic stats
         const [openCases, closedCases, pendingInvoices, paidInvoices] = await Promise.all([
-            this.prisma.case.count({ where: { tenantId, status: 'OPEN' } }),
-            this.prisma.case.count({ where: { tenantId, status: 'CLOSED' } }),
-            this.prisma.invoice.count({ where: { tenantId, status: 'PENDING' } }),
-            this.prisma.invoice.count({ where: { tenantId, status: 'PAID' } }),
+            this.prisma.case.count({ where: { status: 'OPEN' } }),
+            this.prisma.case.count({ where: { status: 'CLOSED' } }),
+            this.prisma.invoice.count({ where: { status: 'PENDING' } }),
+            this.prisma.invoice.count({ where: { status: 'PAID' } }),
         ]);
 
         const totalCases = openCases + closedCases;

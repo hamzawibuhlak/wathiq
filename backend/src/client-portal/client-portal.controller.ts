@@ -1,13 +1,4 @@
-import {
-  Controller,
-  Post,
-  Get,
-  Body,
-  Param,
-  Query,
-  UseGuards,
-  Req,
-} from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, Query, UseGuards, Req } from '@nestjs/common';
 import { ApiOperation, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { ClientPortalService } from './client-portal.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -36,7 +27,7 @@ export class ClientPortalController {
   ) {
     return this.clientPortalService.enablePortalAccess(
       clientId,
-      user.tenantId,
+
     );
   }
 
@@ -51,7 +42,7 @@ export class ClientPortalController {
   ) {
     return this.clientPortalService.disablePortalAccess(
       clientId,
-      user.tenantId,
+
     );
   }
 
@@ -91,7 +82,7 @@ export class ClientPortalController {
   async getProfile(@Req() req: any) {
     const profile = await this.clientPortalService.getProfile(
       req.client.clientId,
-      req.client.tenantId,
+
     );
     return { data: profile };
   }
@@ -103,7 +94,7 @@ export class ClientPortalController {
   async getDashboard(@Req() req: any) {
     const stats = await this.clientPortalService.getDashboardStats(
       req.client.clientId,
-      req.client.tenantId,
+
     );
     return { data: stats };
   }
@@ -115,7 +106,7 @@ export class ClientPortalController {
   async getMyCases(@Req() req: any) {
     const cases = await this.clientPortalService.getMyCases(
       req.client.clientId,
-      req.client.tenantId,
+
     );
     return { data: cases };
   }
@@ -131,7 +122,7 @@ export class ClientPortalController {
     const caseData = await this.clientPortalService.getCaseDetails(
       caseId,
       req.client.clientId,
-      req.client.tenantId,
+
     );
     return { data: caseData };
   }
@@ -143,7 +134,7 @@ export class ClientPortalController {
   async getMyInvoices(@Req() req: any) {
     const invoices = await this.clientPortalService.getMyInvoices(
       req.client.clientId,
-      req.client.tenantId,
+
     );
     return { data: invoices };
   }
@@ -159,7 +150,7 @@ export class ClientPortalController {
     const invoice = await this.clientPortalService.getInvoiceDetails(
       invoiceId,
       req.client.clientId,
-      req.client.tenantId,
+
     );
     return { data: invoice };
   }
@@ -174,7 +165,7 @@ export class ClientPortalController {
   ) {
     const documents = await this.clientPortalService.getMyDocuments(
       req.client.clientId,
-      req.client.tenantId,
+
       caseId,
     );
     return { data: documents };
@@ -187,7 +178,7 @@ export class ClientPortalController {
   async getUpcomingHearings(@Req() req: any) {
     const hearings = await this.clientPortalService.getUpcomingHearings(
       req.client.clientId,
-      req.client.tenantId,
+
     );
     return { data: hearings };
   }

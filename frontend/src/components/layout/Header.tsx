@@ -201,7 +201,7 @@ export function Header({ isCollapsed }: HeaderProps) {
                                     <div className="py-1">
                                         <button
                                             onClick={() => {
-                                                navigate(`${slugPrefix}/settings/profile`);
+                                                navigate(`${slugPrefix}/account/profile`);
                                                 setShowUserMenu(false);
                                             }}
                                             className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-muted transition-colors"
@@ -211,7 +211,7 @@ export function Header({ isCollapsed }: HeaderProps) {
                                         </button>
                                         <button
                                             onClick={() => {
-                                                navigate(`${slugPrefix}/settings`);
+                                                navigate(`${slugPrefix}/account`);
                                                 setShowUserMenu(false);
                                             }}
                                             className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-muted transition-colors"

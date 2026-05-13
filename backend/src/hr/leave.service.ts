@@ -5,7 +5,7 @@ import { PrismaService } from '../common/prisma/prisma.service';
 export class LeaveService {
     constructor(private prisma: PrismaService) { }
 
-    async submitRequest(employeeId: string, tenantId: string, data: { leaveTypeId: string; startDate: string; endDate: string; reason: string; attachmentUrl?: string }) {
+    async submitRequest(employeeId: string, data: { leaveTypeId: string; startDate: string; endDate: string; reason: string; attachmentUrl?: string }) {
         const totalDays = this.calculateBusinessDays(new Date(data.startDate), new Date(data.endDate));
         if (totalDays <= 0) throw new BadRequestException('تواريخ غير صحيحة');
 
@@ -16,7 +16,7 @@ export class LeaveService {
         }
 
         const year = new Date().getFullYear();
-        const balance = await this.getOrCreateBalance(employeeId, data.leaveTypeId, year, tenantId);
+        const balance = await this.getOrCreateBalance(employeeId, data.leaveTypeId, year);
         if (balance.remaining < totalDays) {
             throw new BadRequestException(`رصيد الإجازة غير كافي. المتبقي: ${balance.remaining} يوم`);
         }
@@ -24,9 +24,7 @@ export class LeaveService {
         const overlapping = await this.prisma.leaveRequest.findFirst({
             where: {
                 employeeId, status: { in: ['LEAVE_PENDING', 'LEAVE_APPROVED'] },
-                OR: [{ startDate: { lte: new Date(data.endDate) }, endDate: { gte: new Date(data.startDate) } }],
-            },
-        });
+                OR: [{ startDate: { lte: new Date(data.endDate) }, endDate: { gte: new Date(data.startDate) } }] } });
         if (overlapping) throw new BadRequestException('يوجد طلب إجازة متداخل');
 
         return this.prisma.leaveRequest.create({
@@ -34,38 +32,33 @@ export class LeaveService {
                 employeeId, leaveTypeId: data.leaveTypeId,
                 startDate: new Date(data.startDate), endDate: new Date(data.endDate),
                 totalDays, reason: data.reason, attachmentUrl: data.attachmentUrl,
-                status: leaveType.requiresApproval ? 'LEAVE_PENDING' : 'LEAVE_APPROVED',
-                tenantId,
-            },
-            include: { leaveType: true, employee: { select: { id: true, firstName: true, lastName: true, employeeNumber: true } } },
-        });
+                status: leaveType.requiresApproval ? 'LEAVE_PENDING' : 'LEAVE_APPROVED' },
+            include: { leaveType: true, employee: { select: { id: true, firstName: true, lastName: true, employeeNumber: true } } } });
     }
 
-    async reviewRequest(requestId: string, tenantId: string, reviewerId: string, data: { status: 'LEAVE_APPROVED' | 'LEAVE_REJECTED'; reviewNotes?: string }) {
+    async reviewRequest(requestId: string, reviewerId: string, data: { status: 'LEAVE_APPROVED' | 'LEAVE_REJECTED'; reviewNotes?: string }) {
         const request = await this.prisma.leaveRequest.findUnique({ where: { id: requestId }, include: { leaveType: true } });
-        if (!request || request.tenantId !== tenantId) throw new BadRequestException('الطلب غير موجود');
+        if (!request) throw new BadRequestException('الطلب غير موجود');
         if (request.status !== 'LEAVE_PENDING') throw new BadRequestException('الطلب تمت مراجعته بالفعل');
 
         const updated = await this.prisma.leaveRequest.update({
             where: { id: requestId },
             data: { status: data.status, reviewedBy: reviewerId, reviewedAt: new Date(), reviewNotes: data.reviewNotes },
-            include: { employee: true, leaveType: true },
-        });
+            include: { employee: true, leaveType: true } });
 
         if (data.status === 'LEAVE_APPROVED') {
             const year = new Date().getFullYear();
-            const balance = await this.getOrCreateBalance(request.employeeId, request.leaveTypeId, year, tenantId);
+            const balance = await this.getOrCreateBalance(request.employeeId, request.leaveTypeId, year);
             await this.prisma.leaveBalance.update({
                 where: { id: balance.id },
-                data: { used: balance.used + request.totalDays, remaining: balance.remaining - request.totalDays },
-            });
+                data: { used: balance.used + request.totalDays, remaining: balance.remaining - request.totalDays } });
         }
 
         return updated;
     }
 
-    async getLeaveRequests(tenantId: string, filters?: { employeeId?: string; status?: string }) {
-        const where: any = { tenantId };
+    async getLeaveRequests(filters?: { employeeId?: string; status?: string }) {
+        const where: any = {};
         if (filters?.employeeId) where.employeeId = filters.employeeId;
         if (filters?.status) where.status = filters.status;
 
@@ -74,31 +67,29 @@ export class LeaveService {
             include: {
                 employee: { select: { id: true, firstName: true, lastName: true, employeeNumber: true, jobTitle: true, department: true } },
                 leaveType: true,
-                reviewer: { select: { id: true, name: true } },
-            },
-            orderBy: { requestedAt: 'desc' },
-        });
+                reviewer: { select: { id: true, name: true } } },
+            orderBy: { requestedAt: 'desc' } });
     }
 
-    async getEmployeeBalances(employeeId: string, tenantId: string) {
+    async getEmployeeBalances(employeeId: string) {
         const year = new Date().getFullYear();
-        const leaveTypes = await this.prisma.leaveType.findMany({ where: { tenantId, isActive: true } });
+        const leaveTypes = await this.prisma.leaveType.findMany({ where: { isActive: true } });
         const balances = await Promise.all(
-            leaveTypes.map(lt => this.getOrCreateBalance(employeeId, lt.id, year, tenantId)),
+            leaveTypes.map(lt => this.getOrCreateBalance(employeeId, lt.id, year)),
         );
         return balances;
     }
 
     // --- Leave Types ---
-    async getLeaveTypes(tenantId: string) {
-        return this.prisma.leaveType.findMany({ where: { tenantId }, orderBy: { name: 'asc' } });
+    async getLeaveTypes() {
+        return this.prisma.leaveType.findMany({ where: {}, orderBy: { name: 'asc' } });
     }
 
-    async createLeaveType(tenantId: string, data: any) {
-        return this.prisma.leaveType.create({ data: { ...data, tenantId } });
+    async createLeaveType(data: any) {
+        return this.prisma.leaveType.create({ data: { ...data } });
     }
 
-    async initializeDefaultLeaveTypes(tenantId: string) {
+    async initializeDefaultLeaveTypes() {
         const defaults = [
             { name: 'إجازة سنوية', nameAr: 'إجازة سنوية', code: 'ANNUAL', daysPerYear: 21, isPaid: true },
             { name: 'إجازة مرضية', nameAr: 'إجازة مرضية', code: 'SICK', daysPerYear: 30, isPaid: true },
@@ -109,30 +100,27 @@ export class LeaveService {
         ];
 
         for (const lt of defaults) {
-            await this.prisma.leaveType.upsert({
-                where: { tenantId_code: { tenantId, code: lt.code } },
-                update: {},
-                create: { ...lt, tenantId },
-            });
+            const existing = await this.prisma.leaveType.findFirst({ where: { code: lt.code } });
+            if (!existing) {
+                await this.prisma.leaveType.create({ data: { ...lt } });
+            }
         }
 
-        return this.getLeaveTypes(tenantId);
+        return this.getLeaveTypes();
     }
 
     // Helpers
-    private async getOrCreateBalance(employeeId: string, leaveTypeId: string, year: number, tenantId: string) {
+    private async getOrCreateBalance(employeeId: string, leaveTypeId: string, year: number) {
         let balance = await this.prisma.leaveBalance.findUnique({
             where: { employeeId_leaveTypeId_year: { employeeId, leaveTypeId, year } },
-            include: { leaveType: true },
-        });
+            include: { leaveType: true } });
 
         if (!balance) {
             const leaveType = await this.prisma.leaveType.findUnique({ where: { id: leaveTypeId } });
             if (!leaveType) throw new BadRequestException('نوع الإجازة غير موجود');
             balance = await this.prisma.leaveBalance.create({
-                data: { employeeId, leaveTypeId, year, allocated: leaveType.daysPerYear, used: 0, remaining: leaveType.daysPerYear, tenantId },
-                include: { leaveType: true },
-            });
+                data: { employeeId, leaveTypeId, year, allocated: leaveType.daysPerYear, used: 0, remaining: leaveType.daysPerYear },
+                include: { leaveType: true } });
         }
 
         return balance;

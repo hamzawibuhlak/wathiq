@@ -4,7 +4,7 @@ import { Cache } from 'cache-manager';
 
 /**
  * Cache Service - خدمة التخزين المؤقت
- * Redis-based caching with tenant isolation
+ * Redis-based caching for the firm
  */
 @Injectable()
 export class CacheService implements OnModuleInit {
@@ -64,10 +64,10 @@ export class CacheService implements OnModuleInit {
     }
 
     /**
-     * Build tenant-specific key
+     * Build firm-scoped key
      */
-    tenantKey(tenantId: string, namespace: string, ...parts: string[]): string {
-        return this.buildKey('tenant', tenantId, namespace, ...parts);
+    firmKey(namespace: string, ...parts: string[]): string {
+        return this.buildKey('firm', namespace, ...parts);
     }
 
     /**
@@ -130,49 +130,45 @@ export class CacheService implements OnModuleInit {
     }
 
     /**
-     * Invalidate all cache for a tenant
+     * Invalidate all firm-scoped cache
      */
-    async invalidateTenant(tenantId: string): Promise<void> {
-        await this.invalidatePattern(`tenant:${tenantId}:*`);
+    async invalidateAll(): Promise<void> {
+        await this.invalidatePattern('firm:*');
     }
 
     /**
      * Invalidate entity cache
      */
-    async invalidateEntity(tenantId: string, entity: string, id?: string): Promise<void> {
+    async invalidateEntity(entity: string, id?: string): Promise<void> {
         if (id) {
-            await this.del(this.tenantKey(tenantId, entity, id));
+            await this.del(this.firmKey(entity, id));
         }
-        await this.invalidatePattern(this.tenantKey(tenantId, entity, '*'));
+        await this.invalidatePattern(this.firmKey(entity, '*'));
         // Also invalidate list caches
-        await this.invalidatePattern(this.tenantKey(tenantId, `${entity}-list`, '*'));
+        await this.invalidatePattern(this.firmKey(`${entity}-list`, '*'));
     }
 
     /**
      * Cache decorator helper
      */
-    async cached<T>(
-        tenantId: string,
-        entity: string,
+    async cached<T>(entity: string,
         id: string,
         fn: () => Promise<T>,
         ttl = 300
     ): Promise<T> {
-        const key = this.tenantKey(tenantId, entity, id);
+        const key = this.firmKey(entity, id);
         return this.getOrSet(key, fn, ttl);
     }
 
     /**
      * Cache list with pagination info
      */
-    async cacheList<T>(
-        tenantId: string,
-        entity: string,
+    async cacheList<T>(entity: string,
         queryHash: string,
         fn: () => Promise<T>,
         ttl = 60 // Shorter TTL for lists
     ): Promise<T> {
-        const key = this.tenantKey(tenantId, `${entity}-list`, queryHash);
+        const key = this.firmKey(`${entity}-list`, queryHash);
         return this.getOrSet(key, fn, ttl);
     }
 
@@ -185,7 +181,6 @@ export class CacheService implements OnModuleInit {
     }> {
         return {
             isConnected: this.isRedisConnected,
-            type: this.isRedisConnected ? 'redis' : 'memory',
-        };
+            type: this.isRedisConnected ? 'redis' : 'memory' };
     }
 }

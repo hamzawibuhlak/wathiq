@@ -8,7 +8,6 @@ export interface DocumentFolder {
     icon: string | null;
     parentId: string | null;
     clientId: string | null;
-    tenantId: string;
     createdById: string | null;
     createdAt: string;
     updatedAt: string;

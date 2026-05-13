@@ -44,9 +44,7 @@ export class HearingsService {
      * Get all hearings with pagination and filters
      * LAWYER role can only see hearings from their assigned cases
      */
-    async findAll(
-        tenantId: string,
-        filterDto: FilterHearingsDto,
+    async findAll(filterDto: FilterHearingsDto,
         userId?: string,
         userRole?: UserRole,
     ): Promise<PaginatedResponse<unknown>> {
@@ -58,11 +56,10 @@ export class HearingsService {
             startDate,
             endDate,
             sortBy = 'hearingDate',
-            sortOrder = 'asc',
-        } = filterDto;
+            sortOrder = 'asc' } = filterDto;
 
         // Build where clause
-        const where: Prisma.HearingWhereInput = { tenantId };
+        const where: Prisma.HearingWhereInput = {};
 
         // ⚡ LAWYER role restriction: only see their assigned hearings
         if (userRole === UserRole.LAWYER && userId) {
@@ -113,29 +110,21 @@ export class HearingsService {
                             title: true,
                             caseNumber: true,
                             opposingParty: true,
-                            client: { select: { id: true, name: true } },
-                        },
-                    },
+                            client: { select: { id: true, name: true } } } },
                     client: {
                         select: {
                             id: true,
                             name: true,
                             phone: true,
-                            email: true,
-                        },
-                    },
+                            email: true } },
                     assignedTo: {
                         select: {
                             id: true,
                             name: true,
-                            avatar: true,
-                        },
-                    },
-                },
+                            avatar: true } } },
                 orderBy,
                 skip,
-                take: limit,
-            }),
+                take: limit }),
             this.prisma.hearing.count({ where }),
         ]);
 
@@ -145,18 +134,14 @@ export class HearingsService {
                 page,
                 limit,
                 total,
-                totalPages: Math.ceil(total / limit),
-            },
-        };
+                totalPages: Math.ceil(total / limit) } };
     }
 
     /**
      * Get hearings for calendar view (entire month)
      * LAWYER role can only see hearings from their assigned cases
      */
-    async getCalendar(
-        tenantId: string,
-        month?: number,
+    async getCalendar(month?: number,
         year?: number,
         userId?: string,
         userRole?: UserRole,
@@ -171,12 +156,9 @@ export class HearingsService {
 
         // Build where clause
         const where: Prisma.HearingWhereInput = {
-            tenantId,
             hearingDate: {
                 gte: startDate,
-                lte: endDate,
-            },
-        };
+                lte: endDate } };
 
         // LAWYER role restriction: only see their assigned hearings
         if (userRole === UserRole.LAWYER && userId) {
@@ -195,12 +177,8 @@ export class HearingsService {
                         id: true,
                         title: true,
                         caseNumber: true,
-                        client: { select: { name: true } },
-                    },
-                },
-            },
-            orderBy: { hearingDate: 'asc' },
-        });
+                        client: { select: { name: true } } } } },
+            orderBy: { hearingDate: 'asc' } });
 
         // Group by date for calendar view
         const groupedByDate: Record<string, typeof hearings> = {};
@@ -218,18 +196,14 @@ export class HearingsService {
                 year: targetYear,
                 hearings,
                 byDate: groupedByDate,
-                totalCount: hearings.length,
-            },
-        };
+                totalCount: hearings.length } };
     }
 
     /**
      * Get upcoming hearings (next N days)
      * LAWYER role can only see hearings from their assigned cases
      */
-    async getUpcoming(
-        tenantId: string,
-        days: number = 7,
+    async getUpcoming(days: number = 7,
         userId?: string,
         userRole?: UserRole,
     ) {
@@ -239,15 +213,11 @@ export class HearingsService {
 
         // Build where clause
         const where: Prisma.HearingWhereInput = {
-            tenantId,
             hearingDate: {
                 gte: now,
-                lte: endDate,
-            },
+                lte: endDate },
             status: {
-                in: [HearingStatus.SCHEDULED, HearingStatus.POSTPONED],
-            },
-        };
+                in: [HearingStatus.SCHEDULED, HearingStatus.POSTPONED] } };
 
         // LAWYER role restriction: only see their assigned hearings
         if (userRole === UserRole.LAWYER && userId) {
@@ -264,19 +234,13 @@ export class HearingsService {
                         caseNumber: true,
                         opposingParty: true,
                         client: { select: { id: true, name: true, phone: true } },
-                        assignedTo: { select: { id: true, name: true, avatar: true } },
-                    },
-                },
+                        assignedTo: { select: { id: true, name: true, avatar: true } } } },
                 assignedTo: {
                     select: {
                         id: true,
                         name: true,
-                        avatar: true,
-                    },
-                },
-            },
-            orderBy: { hearingDate: 'asc' },
-        });
+                        avatar: true } } },
+            orderBy: { hearingDate: 'asc' } });
 
         // Group by urgency
         const today = hearings.filter(h => {
@@ -303,17 +267,15 @@ export class HearingsService {
                 tomorrow,
                 thisWeek,
                 totalCount: hearings.length,
-                days,
-            },
-        };
+                days } };
     }
 
     /**
      * Get hearing by ID
      */
-    async findOne(id: string, tenantId: string) {
+    async findOne(id: string) {
         const hearing = await this.prisma.hearing.findFirst({
-            where: { id, tenantId },
+            where: { id },
             include: {
                 case: {
                     select: {
@@ -322,26 +284,18 @@ export class HearingsService {
                         caseNumber: true,
                         courtName: true,
                         client: { select: { id: true, name: true, phone: true } },
-                        assignedTo: { select: { id: true, name: true, phone: true } },
-                    },
-                },
+                        assignedTo: { select: { id: true, name: true, phone: true } } } },
                 client: {
                     select: {
                         id: true,
                         name: true,
                         phone: true,
-                        email: true,
-                    },
-                },
+                        email: true } },
                 assignedTo: {
                     select: {
                         id: true,
                         name: true,
-                        email: true,
-                    },
-                },
-            },
-        });
+                        email: true } } } });
 
         if (!hearing) {
             throw new NotFoundException('الجلسة غير موجودة');
@@ -353,12 +307,11 @@ export class HearingsService {
     /**
      * Create new hearing
      */
-    async create(dto: CreateHearingDto, tenantId: string, userId: string) {
+    async create(dto: CreateHearingDto, userId: string) {
         // Verify client exists if provided
         if (dto.clientId) {
             const clientExists = await this.prisma.client.findFirst({
-                where: { id: dto.clientId, tenantId },
-            });
+                where: { id: dto.clientId } });
 
             if (!clientExists) {
                 throw new NotFoundException('العميل غير موجود');
@@ -368,8 +321,7 @@ export class HearingsService {
         // Verify case exists if provided
         if (dto.caseId) {
             const caseExists = await this.prisma.case.findFirst({
-                where: { id: dto.caseId, tenantId },
-            });
+                where: { id: dto.caseId } });
 
             if (!caseExists) {
                 throw new NotFoundException('القضية غير موجودة');
@@ -379,7 +331,7 @@ export class HearingsService {
         // Phase 37: Generate hierarchical hearing code
         const hearingCode = dto.caseId
             ? await this.entityCodeService.generateHearingCode(dto.caseId)
-            : await this.entityCodeService.generateFlatCode(tenantId, 'hearing');
+            : await this.entityCodeService.generateFlatCode('hearing');
 
         const hearing = await this.prisma.hearing.create({
             data: {
@@ -394,40 +346,32 @@ export class HearingsService {
                 courtroom: dto.courtroom || null,
                 status: dto.status,
                 notes: dto.notes || null,
-                tenantId,
+
                 createdById: userId,
                 code: hearingCode.code,
-                codeNumber: hearingCode.codeNumber,
-            },
+                codeNumber: hearingCode.codeNumber },
             include: {
                 case: {
                     select: {
                         id: true,
                         title: true,
                         caseNumber: true,
-                        client: { select: { name: true } },
-                    },
-                },
+                        client: { select: { name: true } } } },
                 client: {
                     select: {
                         id: true,
-                        name: true,
-                    },
-                },
-            },
-        });
+                        name: true } } } });
 
         return {
             data: hearing,
-            message: 'تم إنشاء الجلسة بنجاح',
-        };
+            message: 'تم إنشاء الجلسة بنجاح' };
     }
 
     /**
      * Update hearing
      */
-    async update(id: string, dto: UpdateHearingDto, tenantId: string) {
-        await this.findOne(id, tenantId);
+    async update(id: string, dto: UpdateHearingDto) {
+        await this.findOne(id);
 
         const updateData: Prisma.HearingUpdateInput = { ...dto };
         if (dto.hearingDate) {
@@ -443,23 +387,18 @@ export class HearingsService {
                         id: true,
                         title: true,
                         caseNumber: true,
-                        client: { select: { name: true } },
-                    },
-                },
-            },
-        });
+                        client: { select: { name: true } } } } } });
 
         return {
             data: hearing,
-            message: 'تم تحديث الجلسة بنجاح',
-        };
+            message: 'تم تحديث الجلسة بنجاح' };
     }
 
     /**
      * Delete hearing
      */
-    async remove(id: string, tenantId: string) {
-        await this.findOne(id, tenantId);
+    async remove(id: string) {
+        await this.findOne(id);
 
         await this.prisma.hearing.delete({ where: { id } });
 
@@ -469,24 +408,18 @@ export class HearingsService {
     /**
      * Send email reminder for a hearing
      */
-    async sendReminder(id: string, tenantId: string) {
+    async sendReminder(id: string) {
         const hearing = await this.prisma.hearing.findFirst({
-            where: { id, tenantId },
+            where: { id },
             include: {
                 case: {
                     select: {
                         title: true,
-                        caseNumber: true,
-                    },
-                },
+                        caseNumber: true } },
                 client: {
                     select: {
                         name: true,
-                        email: true,
-                    },
-                },
-            },
-        });
+                        email: true } } } });
 
         if (!hearing) {
             throw new NotFoundException('الجلسة غير موجودة');
@@ -502,8 +435,7 @@ export class HearingsService {
             hearingDate: hearing.hearingDate,
             courtName: hearing.courtName || '',
             caseTitle: hearing.case?.title || '',
-            caseNumber: hearing.case?.caseNumber || '',
-        });
+            caseNumber: hearing.case?.caseNumber || '' });
 
         if (!result.success) {
             throw new InternalServerErrorException('فشل إرسال البريد الإلكتروني: ' + result.error);
@@ -511,14 +443,13 @@ export class HearingsService {
 
         return {
             message: 'تم إرسال التذكير بنجاح',
-            data: { sentTo: hearing.client.email },
-        };
+            data: { sentTo: hearing.client.email } };
     }
 
     /**
      * Bulk update status for multiple hearings
      */
-    async bulkUpdateStatus(ids: string[], status: string, tenantId: string) {
+    async bulkUpdateStatus(ids: string[], status: string) {
         // Validate status
         const validStatuses = ['SCHEDULED', 'COMPLETED', 'POSTPONED', 'CANCELLED'];
         if (!validStatuses.includes(status)) {
@@ -527,33 +458,25 @@ export class HearingsService {
 
         const result = await this.prisma.hearing.updateMany({
             where: {
-                id: { in: ids },
-                tenantId,
-            },
-            data: { status: status as HearingStatus },
-        });
+                id: { in: ids } },
+            data: { status: status as HearingStatus } });
 
         return {
             message: `تم تحديث ${result.count} جلسة بنجاح`,
-            count: result.count,
-        };
+            count: result.count };
     }
 
     /**
      * Bulk delete multiple hearings
      */
-    async bulkDelete(ids: string[], tenantId: string) {
+    async bulkDelete(ids: string[]) {
         const result = await this.prisma.hearing.deleteMany({
             where: {
-                id: { in: ids },
-                tenantId,
-            },
-        });
+                id: { in: ids } } });
 
         return {
             message: `تم حذف ${result.count} جلسة بنجاح`,
-            count: result.count,
-        };
+            count: result.count };
     }
 }
 

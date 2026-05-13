@@ -42,7 +42,7 @@ export class InvoicesService {
     /**
      * Get all invoices with pagination and filters
      */
-    async findAll(tenantId: string, filterDto: FilterInvoicesDto): Promise<PaginatedResponse<unknown>> {
+    async findAll(filterDto: FilterInvoicesDto): Promise<PaginatedResponse<unknown>> {
         const {
             page = 1,
             limit = 10,
@@ -52,11 +52,10 @@ export class InvoicesService {
             startDate,
             endDate,
             sortBy = 'createdAt',
-            sortOrder = 'desc',
-        } = filterDto;
+            sortOrder = 'desc' } = filterDto;
 
         // Build where clause
-        const where: Prisma.InvoiceWhereInput = { tenantId };
+        const where: Prisma.InvoiceWhereInput = {};
 
         // Status filter
         if (status) {
@@ -103,12 +102,10 @@ export class InvoicesService {
                 include: {
                     client: { select: { id: true, name: true, phone: true } },
                     case: { select: { id: true, caseNumber: true, title: true } },
-                    items: true,
-                },
+                    items: true },
                 orderBy,
                 skip,
-                take: limit,
-            }),
+                take: limit }),
             this.prisma.invoice.count({ where }),
         ]);
 
@@ -118,23 +115,19 @@ export class InvoicesService {
                 page,
                 limit,
                 total,
-                totalPages: Math.ceil(total / limit),
-            },
-        };
+                totalPages: Math.ceil(total / limit) } };
     }
 
     /**
      * Get invoice statistics
      */
-    async getStats(tenantId: string) {
+    async getStats() {
         // Get all invoices for stats calculation
         const invoices = await this.prisma.invoice.findMany({
-            where: { tenantId },
+            where: {},
             select: {
                 status: true,
-                totalAmount: true,
-            },
-        });
+                totalAmount: true } });
 
         const stats: InvoiceStats = {
             totalInvoices: invoices.length,
@@ -144,8 +137,7 @@ export class InvoicesService {
             totalAmount: 0,
             totalPaid: 0,
             totalPending: 0,
-            totalOverdue: 0,
-        };
+            totalOverdue: 0 };
 
         for (const invoice of invoices) {
             const amount = Number(invoice.totalAmount);
@@ -179,7 +171,6 @@ export class InvoicesService {
         SUM("totalAmount")::float as total,
         COUNT(*)::integer as count
       FROM "Invoice"
-      WHERE "tenantId" = ${tenantId}
         AND EXTRACT(YEAR FROM "createdAt") = ${currentYear}
       GROUP BY EXTRACT(MONTH FROM "createdAt")
       ORDER BY month
@@ -191,24 +182,20 @@ export class InvoicesService {
                 collectionRate: stats.totalInvoices > 0
                     ? Math.round((stats.paidInvoices / stats.totalInvoices) * 100)
                     : 0,
-                monthlyStats,
-            },
-        };
+                monthlyStats } };
     }
 
     /**
      * Get invoice by ID
      */
-    async findOne(id: string, tenantId: string) {
+    async findOne(id: string) {
         const invoice = await this.prisma.invoice.findFirst({
-            where: { id, tenantId },
+            where: { id },
             include: {
                 client: true,
                 case: { select: { id: true, caseNumber: true, title: true } },
                 createdBy: { select: { id: true, name: true } },
-                items: true,
-            },
-        });
+                items: true } });
 
         if (!invoice) {
             throw new NotFoundException('الفاتورة غير موجودة');
@@ -220,15 +207,14 @@ export class InvoicesService {
     /**
      * Create new invoice with auto-generated number
      */
-    async create(dto: CreateInvoiceDto, tenantId: string, userId: string) {
+    async create(dto: CreateInvoiceDto, userId: string) {
         // Generate invoice number
-        const invoiceNumber = await this.generateInvoiceNumber(tenantId);
+        const invoiceNumber = await this.generateInvoiceNumber();
 
         // Verify client exists
         if (dto.clientId) {
             const client = await this.prisma.client.findFirst({
-                where: { id: dto.clientId, tenantId },
-            });
+                where: { id: dto.clientId } });
             if (!client) {
                 throw new NotFoundException('العميل غير موجود');
             }
@@ -237,8 +223,7 @@ export class InvoicesService {
         // Verify case exists
         if (dto.caseId) {
             const caseExists = await this.prisma.case.findFirst({
-                where: { id: dto.caseId, tenantId },
-            });
+                where: { id: dto.caseId } });
             if (!caseExists) {
                 throw new NotFoundException('القضية غير موجودة');
             }
@@ -259,7 +244,7 @@ export class InvoicesService {
         const { items, taxRate: _, ...invoiceData } = dto;
 
         // Phase 37: Generate flat invoice code
-        const invoiceCode = await this.entityCodeService.generateFlatCode(tenantId, 'invoice');
+        const invoiceCode = await this.entityCodeService.generateFlatCode('invoice');
 
         const invoice = await this.prisma.invoice.create({
             data: {
@@ -269,7 +254,7 @@ export class InvoicesService {
                 taxAmount,
                 totalAmount,
                 dueDate: new Date(dto.dueDate),
-                tenantId,
+
                 createdById: userId,
                 code: invoiceCode.code,
                 codeNumber: invoiceCode.codeNumber,
@@ -279,28 +264,22 @@ export class InvoicesService {
                         description: item.description,
                         quantity: item.quantity,
                         unitPrice: item.unitPrice,
-                        total: item.quantity * item.unitPrice,
-                    })),
-                } : undefined,
-            },
+                        total: item.quantity * item.unitPrice })) } : undefined },
             include: {
                 client: { select: { id: true, name: true } },
                 case: { select: { id: true, caseNumber: true, title: true } },
-                items: true,
-            },
-        });
+                items: true } });
 
         return {
             data: invoice,
-            message: 'تم إنشاء الفاتورة بنجاح',
-        };
+            message: 'تم إنشاء الفاتورة بنجاح' };
     }
 
     /**
      * Update invoice
      */
-    async update(id: string, dto: UpdateInvoiceDto, tenantId: string) {
-        await this.findOne(id, tenantId);
+    async update(id: string, dto: UpdateInvoiceDto) {
+        await this.findOne(id);
 
         // Extract items, taxRate, and dueDate from dto
         const { items, taxRate, dueDate, ...restDto } = dto;
@@ -328,9 +307,7 @@ export class InvoicesService {
                     description: item.description,
                     quantity: item.quantity,
                     unitPrice: item.unitPrice,
-                    total: item.quantity * item.unitPrice,
-                })),
-            });
+                    total: item.quantity * item.unitPrice })) });
         } else if (dto.amount) {
             // Recalculate VAT if only amount changed
             const amount = Number(dto.amount);
@@ -351,21 +328,18 @@ export class InvoicesService {
             include: {
                 client: { select: { id: true, name: true } },
                 case: { select: { id: true, caseNumber: true, title: true } },
-                items: true,
-            },
-        });
+                items: true } });
 
         return {
             data: invoice,
-            message: 'تم تحديث الفاتورة بنجاح',
-        };
+            message: 'تم تحديث الفاتورة بنجاح' };
     }
 
     /**
      * Delete invoice
      */
-    async remove(id: string, tenantId: string) {
-        const invoice = await this.findOne(id, tenantId);
+    async remove(id: string) {
+        const invoice = await this.findOne(id);
 
         // Don't allow deletion of paid invoices
         if (invoice.data.status === InvoiceStatus.PAID) {
@@ -380,18 +354,14 @@ export class InvoicesService {
     /**
      * Generate unique invoice number (INV-YYYY-NNNN)
      */
-    private async generateInvoiceNumber(tenantId: string): Promise<string> {
+    private async generateInvoiceNumber(): Promise<string> {
         const year = new Date().getFullYear();
 
         const count = await this.prisma.invoice.count({
             where: {
-                tenantId,
                 createdAt: {
                     gte: new Date(`${year}-01-01`),
-                    lt: new Date(`${year + 1}-01-01`),
-                },
-            },
-        });
+                    lt: new Date(`${year + 1}-01-01`) } } });
 
         const number = (count + 1).toString().padStart(4, '0');
         return `INV-${year}-${number}`;
@@ -400,14 +370,12 @@ export class InvoicesService {
     /**
      * Send invoice via email
      */
-    async sendEmail(id: string, tenantId: string) {
+    async sendEmail(id: string) {
         const invoice = await this.prisma.invoice.findFirst({
-            where: { id, tenantId },
+            where: { id },
             include: {
                 client: { select: { name: true, email: true } },
-                case: { select: { title: true, caseNumber: true } },
-            },
-        });
+                case: { select: { title: true, caseNumber: true } } } });
 
         if (!invoice) {
             throw new NotFoundException('الفاتورة غير موجودة');
@@ -418,10 +386,8 @@ export class InvoicesService {
         }
 
         // Get tenant info for the email
-        const tenant = await this.prisma.tenant.findUnique({
-            where: { id: tenantId },
-            select: { name: true },
-        });
+        const tenant = await this.prisma.companySettings.findFirst({
+            select: { name: true } });
 
         const result = await this.emailService.sendInvoice({
             to: invoice.client.email,
@@ -430,9 +396,7 @@ export class InvoicesService {
             amount: Number(invoice.totalAmount),
             dueDate: invoice.dueDate,
             firmName: tenant?.name || 'مكتب المحاماة',
-            caseTitle: invoice.case?.title,
-            tenantId: tenantId,
-        });
+            caseTitle: invoice.case?.title });
 
         if (!result.success) {
             throw new InternalServerErrorException('فشل إرسال البريد الإلكتروني: ' + result.error);
@@ -440,20 +404,17 @@ export class InvoicesService {
 
         return {
             message: 'تم إرسال الفاتورة بنجاح',
-            data: { sentTo: invoice.client.email },
-        };
+            data: { sentTo: invoice.client.email } };
     }
 
     /**
      * Send invoice SMS to client
      */
-    async sendSms(id: string, tenantId: string) {
+    async sendSms(id: string) {
         const invoice = await this.prisma.invoice.findFirst({
-            where: { id, tenantId },
+            where: { id },
             include: {
-                client: { select: { name: true, phone: true } },
-            },
-        });
+                client: { select: { name: true, phone: true } } } });
 
         if (!invoice) {
             throw new NotFoundException('الفاتورة غير موجودة');
@@ -464,16 +425,13 @@ export class InvoicesService {
         }
 
         // Get tenant info
-        const tenant = await this.prisma.tenant.findUnique({
-            where: { id: tenantId },
-            select: { name: true },
-        });
+        const tenant = await this.prisma.companySettings.findFirst({
+            select: { name: true } });
 
         const formatCurrency = (amount: number) => {
             return new Intl.NumberFormat('ar-SA', {
                 style: 'currency',
-                currency: 'SAR',
-            }).format(amount);
+                currency: 'SAR' }).format(amount);
         };
 
         const message = `السلام عليكم ${invoice.client.name}،
@@ -484,9 +442,7 @@ ${tenant?.name || 'مكتب المحاماة'}`;
 
         const result = await this.smsService.sendSMS({
             to: invoice.client.phone,
-            message,
-            tenantId,
-        });
+            message });
 
         if (!result.success) {
             throw new InternalServerErrorException('فشل إرسال الرسالة النصية: ' + result.error);
@@ -494,7 +450,6 @@ ${tenant?.name || 'مكتب المحاماة'}`;
 
         return {
             message: 'تم إرسال الرسالة بنجاح',
-            data: { sentTo: invoice.client.phone },
-        };
+            data: { sentTo: invoice.client.phone } };
     }
 }

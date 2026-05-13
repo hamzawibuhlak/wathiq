@@ -17,14 +17,12 @@ async function bootstrap() {
     const logger = new Logger('Bootstrap');
 
     const app = await NestFactory.create(AppModule, {
-        logger: ['error', 'warn', 'log', 'debug'],
-    });
+        logger: ['error', 'warn', 'log', 'debug'] });
 
     // Security headers (helmet)
     app.use(helmet({
         contentSecurityPolicy: false, // Disabled for Swagger UI
-        crossOriginEmbedderPolicy: false,
-    }));
+        crossOriginEmbedderPolicy: false }));
 
     // Response compression (gzip)
     app.use(compression());
@@ -37,8 +35,7 @@ async function bootstrap() {
         origin: process.env.FRONTEND_URL || 'http://localhost:5173',
         methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
         credentials: true,
-        allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
-    });
+        allowedHeaders: ['Content-Type', 'Authorization', 'Accept'] });
 
     // Global Exception Filter
     app.useGlobalFilters(new HttpExceptionFilter());
@@ -53,22 +50,19 @@ async function bootstrap() {
             forbidNonWhitelisted: true,
             transform: true,
             transformOptions: {
-                enableImplicitConversion: true,
-            },
+                enableImplicitConversion: true },
             validationError: {
                 target: false,
-                value: false,
-            },
-        }),
+                value: false } }),
     );
 
     // Swagger setup with enhanced UI
     const config = new DocumentBuilder()
-        .setTitle('Watheeq API')
+        .setTitle('Wasm Altheeqa API')
         .setDescription(`
-# 📚 Watheeq - Law Office Management System API
+# 📚 Wasm Altheeqa - Law Office Management System API
 
-نظام **وثيق** لإدارة المكاتب القانونية
+نظام **وسم الثقة** لإدارة المكاتب القانونية
 
 ## 🔐 Authentication
 جميع الـ endpoints (ما عدا /auth/register و /auth/login) تتطلب JWT token.
@@ -79,8 +73,7 @@ Authorization: Bearer <your-jwt-token>
 \`\`\`
 
 ## 🏢 Multi-Tenancy
-كل البيانات معزولة حسب المكتب (tenantId).
-الـ tenantId يُستخرج تلقائياً من JWT token.
+كل البيانات معزولة حسب المكتب ().
 
 ## 📋 Response Format
 \`\`\`json
@@ -103,7 +96,7 @@ Authorization: Bearer <your-jwt-token>
 \`\`\`
     `)
         .setVersion('1.0.0')
-        .setContact('Watheeq Team', '', 'support@watheeq.sa')
+        .setContact('Wasm Altheeqa Team', '', 'support@wasmaltheeqa.sa')
         .setLicense('Proprietary', '')
         .addServer('http://localhost:3000', 'Development Server')
         .addBearerAuth(
@@ -113,13 +106,12 @@ Authorization: Bearer <your-jwt-token>
                 bearerFormat: 'JWT',
                 name: 'Authorization',
                 description: 'أدخل الـ JWT token الذي حصلت عليه من /auth/login',
-                in: 'header',
-            },
+                in: 'header' },
             'JWT-auth',
         )
         .addTag('Auth', '🔐 تسجيل الدخول والتسجيل')
         .addTag('Users', '👥 إدارة المستخدمين')
-        .addTag('Tenants', '🏢 إعدادات المكتب')
+        .addTag('Firm', '🏢 إعدادات المكتب')
         .addTag('Clients', '👤 إدارة العملاء')
         .addTag('Cases', '⚖️ إدارة القضايا')
         .addTag('Hearings', '📅 إدارة الجلسات')
@@ -131,7 +123,7 @@ Authorization: Bearer <your-jwt-token>
     const document = SwaggerModule.createDocument(app, config);
 
     SwaggerModule.setup('api/docs', app, document, {
-        customSiteTitle: 'Watheeq API Docs',
+        customSiteTitle: 'Wasm Altheeqa API Docs',
         customfavIcon: '/favicon.ico',
         customCss: `
       .swagger-ui .topbar { display: none }
@@ -142,9 +134,7 @@ Authorization: Bearer <your-jwt-token>
             persistAuthorization: true,
             docExpansion: 'none',
             filter: true,
-            showRequestDuration: true,
-        },
-    });
+            showRequestDuration: true } });
 
     // Start server
     const port = process.env.PORT || 3000;

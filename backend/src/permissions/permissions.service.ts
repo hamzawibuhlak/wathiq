@@ -30,17 +30,13 @@ export class PermissionsService implements OnModuleInit {
           where: {
             module_action: {
               module,
-              action,
-            },
-          },
+              action } },
           create: {
             name: `${module}.${action}`,
             description: `${action} ${module}`,
             module,
-            action,
-          },
-          update: {},
-        });
+            action },
+          update: {} });
       }
     }
 
@@ -49,13 +45,11 @@ export class PermissionsService implements OnModuleInit {
 
   async hasPermission(
     userId: string,
-    tenantId: string,
     permissionName: string,
   ): Promise<boolean> {
     const user = await this.prisma.user.findFirst({
-      where: { id: userId, tenantId },
-      select: { role: true },
-    });
+      where: { id: userId },
+      select: { role: true } });
 
     if (!user) return false;
 
@@ -65,29 +59,20 @@ export class PermissionsService implements OnModuleInit {
     const [module, action] = permissionName.split('.');
 
     const permission = await this.prisma.permission.findUnique({
-      where: { module_action: { module, action } },
-    });
+      where: { module_action: { module, action } } });
 
     if (!permission) return false;
 
     const rolePermission = await this.prisma.rolePermission.findUnique({
-      where: {
-        role_permissionId_tenantId: {
-          role: user.role,
-          permissionId: permission.id,
-          tenantId,
-        },
-      },
-    });
+      where: { role_permissionId: { role: user.role, permissionId: permission.id } } });
 
     return !!rolePermission;
   }
 
-  async getUserPermissions(userId: string, tenantId: string) {
+  async getUserPermissions(userId: string) {
     const user = await this.prisma.user.findFirst({
-      where: { id: userId, tenantId },
-      select: { role: true },
-    });
+      where: { id: userId },
+      select: { role: true } });
 
     if (!user) return [];
 
@@ -98,9 +83,8 @@ export class PermissionsService implements OnModuleInit {
     }
 
     const rolePermissions = await this.prisma.rolePermission.findMany({
-      where: { role: user.role, tenantId },
-      include: { permission: true },
-    });
+      where: { role: user.role },
+      include: { permission: true } });
 
     return rolePermissions.map(rp => rp.permission.name);
   }
@@ -108,55 +92,39 @@ export class PermissionsService implements OnModuleInit {
   async assignPermission(
     role: string,
     permissionName: string,
-    tenantId: string,
   ) {
     const [module, action] = permissionName.split('.');
 
     const permission = await this.prisma.permission.findUnique({
-      where: { module_action: { module, action } },
-    });
+      where: { module_action: { module, action } } });
 
     if (!permission) {
       throw new Error('Permission not found');
     }
 
     return this.prisma.rolePermission.upsert({
-      where: {
-        role_permissionId_tenantId: {
-          role,
-          permissionId: permission.id,
-          tenantId,
-        },
-      },
+      where: { role_permissionId: { role, permissionId: permission.id } },
       create: {
         role,
-        permissionId: permission.id,
-        tenantId,
-      },
-      update: {},
-    });
+        permissionId: permission.id },
+      update: {} });
   }
 
   async revokePermission(
     role: string,
     permissionName: string,
-    tenantId: string,
   ) {
     const [module, action] = permissionName.split('.');
 
     const permission = await this.prisma.permission.findUnique({
-      where: { module_action: { module, action } },
-    });
+      where: { module_action: { module, action } } });
 
     if (!permission) return;
 
     await this.prisma.rolePermission.deleteMany({
       where: {
         role,
-        permissionId: permission.id,
-        tenantId,
-      },
-    });
+        permissionId: permission.id } });
   }
 
   async getDefaultPermissionsForRole(role: string) {
@@ -186,23 +154,20 @@ export class PermissionsService implements OnModuleInit {
         'clients.read',
         'documents.read',
         'invoices.read',
-      ],
-    };
+      ] };
 
     return defaults[role] || [];
   }
 
   async getAllPermissions() {
     return this.prisma.permission.findMany({
-      orderBy: [{ module: 'asc' }, { action: 'asc' }],
-    });
+      orderBy: [{ module: 'asc' }, { action: 'asc' }] });
   }
 
-  async getRolePermissions(role: string, tenantId: string) {
+  async getRolePermissions(role: string) {
     const rolePermissions = await this.prisma.rolePermission.findMany({
-      where: { role, tenantId },
-      include: { permission: true },
-    });
+      where: { role },
+      include: { permission: true } });
 
     return rolePermissions.map(rp => rp.permission);
   }

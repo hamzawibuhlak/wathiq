@@ -50,7 +50,7 @@ export class SecurityMonitoringService {
         severity: SecuritySeverity;
         description: string;
         userId?: string;
-        tenantId?: string;
+
         ipAddress?: string;
         userAgent?: string;
         metadata?: any;
@@ -62,7 +62,7 @@ export class SecurityMonitoringService {
         }
 
         // Store in activity log with SECURITY action
-        if (event.userId && event.tenantId) {
+        if (event.userId) {
             await this.prisma.activityLog.create({
                 data: {
                     action: `SECURITY_${event.type}`,
@@ -70,11 +70,9 @@ export class SecurityMonitoringService {
                     entityId: null,
                     description: event.description,
                     userId: event.userId,
-                    tenantId: event.tenantId,
+
                     ipAddress: event.ipAddress,
-                    userAgent: event.userAgent,
-                },
-            });
+                    userAgent: event.userAgent } });
         }
 
         // Alert on critical events
@@ -106,8 +104,7 @@ export class SecurityMonitoringService {
                         description: `محاولات دخول فاشلة متكررة: ${email} من ${ipAddress}`,
                         ipAddress,
                         metadata: { email, failedAttempts: existing.count },
-                        blocked: true,
-                    });
+                        blocked: true });
                     return true; // Account should be locked
                 }
             } else {
@@ -150,8 +147,7 @@ export class SecurityMonitoringService {
                         description: `تجاوز حد الطلبات من ${ipAddress}`,
                         ipAddress,
                         metadata: { requestCount: existing.count },
-                        blocked: true,
-                    });
+                        blocked: true });
                     return true; // Rate limited
                 }
             } else {
@@ -218,8 +214,7 @@ export class SecurityMonitoringService {
                 description: `محاولة SQL Injection من ${ipAddress}`,
                 ipAddress,
                 metadata: { input: input.substring(0, 100) },
-                blocked: true,
-            });
+                blocked: true });
             return { valid: false, threat: 'SQL_INJECTION' };
         }
 
@@ -230,8 +225,7 @@ export class SecurityMonitoringService {
                 description: `محاولة XSS من ${ipAddress}`,
                 ipAddress,
                 metadata: { input: input.substring(0, 100) },
-                blocked: true,
-            });
+                blocked: true });
             return { valid: false, threat: 'XSS' };
         }
 
@@ -241,32 +235,25 @@ export class SecurityMonitoringService {
     /**
      * Get security dashboard data
      */
-    async getSecurityDashboard(tenantId: string) {
+    async getSecurityDashboard() {
         const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000);
         const last7Days = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
         const [recentActivity, failedLogins] = await Promise.all([
             this.prisma.activityLog.count({
                 where: {
-                    tenantId,
                     action: { startsWith: 'SECURITY_' },
-                    createdAt: { gte: last24Hours },
-                },
-            }),
+                    createdAt: { gte: last24Hours } } }),
             this.prisma.activityLog.count({
                 where: {
-                    tenantId,
                     action: 'SECURITY_FAILED_LOGIN',
-                    createdAt: { gte: last7Days },
-                },
-            }),
+                    createdAt: { gte: last7Days } } }),
         ]);
 
         return {
             securityEvents24h: recentActivity,
             failedLogins7d: failedLogins,
-            riskLevel: this.calculateRiskLevel(recentActivity, failedLogins),
-        };
+            riskLevel: this.calculateRiskLevel(recentActivity, failedLogins) };
     }
 
     /**

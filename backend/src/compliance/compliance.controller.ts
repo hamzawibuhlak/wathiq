@@ -23,8 +23,8 @@ export class ComplianceController {
     @Roles('OWNER', 'ADMIN')
     @ApiOperation({ summary: 'عرض لوحة الامتثال الشاملة' })
     @ApiResponse({ status: 200, description: 'بيانات الامتثال' })
-    async getComplianceDashboard(@CurrentUser('tenantId') tenantId: string) {
-        return this.saudiCompliance.getComplianceDashboard(tenantId);
+    async getComplianceDashboard() {
+        return this.saudiCompliance.getComplianceDashboard();
     }
 
     // ============ GDPR ENDPOINTS ============
@@ -81,8 +81,8 @@ export class ComplianceController {
     @Get('saudi/access-controls')
     @Roles('OWNER', 'ADMIN')
     @ApiOperation({ summary: 'تدقيق ضوابط الوصول' })
-    async auditAccessControls(@CurrentUser('tenantId') tenantId: string) {
-        return this.saudiCompliance.auditAccessControls(tenantId);
+    async auditAccessControls() {
+        return this.saudiCompliance.auditAccessControls();
     }
 
     @Get('saudi/encryption')
@@ -105,7 +105,6 @@ export class ComplianceController {
     @ApiResponse({ status: 201, description: 'تم إنشاء التقرير' })
     async createIncidentReport(
         @CurrentUser('id') userId: string,
-        @CurrentUser('tenantId') tenantId: string,
         @Body() incident: {
             type: string;
             severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
@@ -116,8 +115,7 @@ export class ComplianceController {
     ) {
         return this.saudiCompliance.createIncidentReport({
             ...incident,
-            tenantId,
-            reportedBy: userId,
-        });
+
+            reportedBy: userId });
     }
 }

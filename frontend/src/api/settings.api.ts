@@ -109,7 +109,7 @@ export interface UserInvitation {
     createdAt: string;
     inviter: { id: string; name: string; email: string };
     acceptedUser?: { id: string; name: string; email: string };
-    tenant: { id: string; name: string; logo?: string };
+    company: { name: string; logo?: string };
 }
 
 export interface CreateInvitationData {
@@ -162,6 +162,11 @@ export interface FirmSettings {
     taxNumber?: string;
     commercialReg?: string;
     website?: string;
+    primaryColor?: string;
+    secondaryColor?: string;
+    tertiaryColor?: string;
+    fontArabic?: string;
+    fontEnglish?: string;
 }
 
 export interface UpdateFirmData {
@@ -173,14 +178,20 @@ export interface UpdateFirmData {
     taxNumber?: string;
     commercialReg?: string;
     website?: string;
+    primaryColor?: string;
+    secondaryColor?: string;
+    tertiaryColor?: string;
+    fontArabic?: string;
+    fontEnglish?: string;
+    letterheadUrl?: string;
 }
 
 export const firmApi = {
     get: () =>
-        api.get<ApiResponse<FirmSettings>>('/tenants/current').then((res) => res.data),
+        api.get<ApiResponse<FirmSettings>>('/company-settings').then((res) => res.data),
 
     update: (data: UpdateFirmData) =>
-        api.put<ApiResponse<FirmSettings>>('/tenants/current', data).then((res) => res.data),
+        api.patch<ApiResponse<FirmSettings>>('/company-settings', data).then((res) => res.data),
 
     uploadLogo: (file: File) => {
         const formData = new FormData();
@@ -252,13 +263,13 @@ export interface TestEmailData {
 
 export const smtpApi = {
     get: () =>
-        api.get<ApiResponse<SmtpSettings>>('/tenants/smtp-settings').then((res) => res.data),
+        api.get<ApiResponse<SmtpSettings>>('/company-settings/smtp').then((res) => res.data),
 
     update: (data: UpdateSmtpSettingsData) =>
-        api.put<ApiResponse<SmtpSettings>>('/tenants/smtp-settings', data).then((res) => res.data),
+        api.put<ApiResponse<SmtpSettings>>('/company-settings/smtp', data).then((res) => res.data),
 
     test: (data: TestEmailData) =>
-        api.post<{ success: boolean; message: string }>('/tenants/smtp-settings/test', data).then((res) => res.data),
+        api.post<{ success: boolean; message: string }>('/company-settings/smtp/test', data).then((res) => res.data),
 };
 
 export default {

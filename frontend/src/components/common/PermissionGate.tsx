@@ -10,8 +10,6 @@ interface PermissionGateProps {
     resource: string;
     /** Action key (e.g. "create", "edit", "delete") */
     action: string;
-    /** Minimum required level (default: VIEW) */
-    level?: 'VIEW' | 'EDIT' | 'FULL';
     /** Content to show if access is denied */
     fallback?: React.ReactNode;
     /** Children to render if user has permission */
@@ -21,13 +19,12 @@ interface PermissionGateProps {
 export const PermissionGate: React.FC<PermissionGateProps> = ({
     resource,
     action,
-    level = 'VIEW',
     fallback = null,
     children,
 }) => {
     const { can } = usePermissions();
 
-    if (!can(resource, action, level)) {
+    if (!can(resource, action)) {
         return <>{fallback}</>;
     }
 

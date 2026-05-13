@@ -1,21 +1,5 @@
-import {
-    Controller,
-    Get,
-    Post,
-    Patch,
-    Delete,
-    Body,
-    Param,
-    Query,
-    UseGuards,
-    ParseUUIDPipe,
-} from '@nestjs/common';
-import {
-    ApiTags,
-    ApiOperation,
-    ApiBearerAuth,
-    ApiResponse,
-} from '@nestjs/swagger';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards, ParseUUIDPipe } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -23,10 +7,10 @@ import { FilterUsersDto } from './dto/filter-users.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
-import { TenantId } from '../common/decorators/tenant-id.decorator';
+
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { PrismaService } from '../common/prisma/prisma.service';
-import { getDefaultModulesByPlan, getRegistrationDefaults } from '../common/constants/modules.constants';
+import { getDefaultModulesByPlan } from '../common/constants/modules.constants';
 import { UserRole } from '@prisma/client';
 import { IsEnum, IsNotEmpty } from 'class-validator';
 
@@ -50,39 +34,24 @@ export class UsersController {
     // ========== أقسام المكتب (Module Control) ==========
     @Get('my-modules')
     @ApiOperation({ summary: 'الحصول على الأقسام المتاحة للمكتب' })
-    async getMyModules(@TenantId() tenantId: string) {
-        const tenant = await (this.prisma as any).tenant.findUnique({
-            where: { id: tenantId },
-            include: { moduleSettings: true },
-        });
-        if (!tenant) return getRegistrationDefaults();
-
-        // If Super Admin has not configured modules, return restricted defaults
-        if (!tenant.moduleSettings) return getRegistrationDefaults();
-
-        const defaults = getDefaultModulesByPlan(tenant.planType);
-        const saved = tenant.moduleSettings.modules as Record<string, any>;
-        const merged: Record<string, any> = { ...defaults };
-        Object.keys(saved).forEach(key => {
-            if (merged[key]) merged[key] = { ...merged[key], ...saved[key] };
-        });
-        return merged;
+    async getMyModules() {
+        return getDefaultModulesByPlan('ENTERPRISE');
     }
 
     // ========== إحصائيات المستخدمين ==========
     @Get('stats')
     @Roles(UserRole.OWNER, UserRole.ADMIN)
     @ApiOperation({ summary: 'إحصائيات المستخدمين' })
-    async getStats(@TenantId() tenantId: string) {
-        return this.usersService.getStats(tenantId);
+    async getStats() {
+        return this.usersService.getStats();
     }
 
     // ========== المحامين فقط - للاختيار في القضايا ==========
     @Get('lawyers')
     @Roles(UserRole.OWNER, UserRole.ADMIN, UserRole.LAWYER)
     @ApiOperation({ summary: 'الحصول على قائمة المحامين' })
-    async getLawyers(@TenantId() tenantId: string) {
-        return this.usersService.findLawyers(tenantId);
+    async getLawyers() {
+        return this.usersService.findLawyers();
     }
 
     // ========== بيانات المستخدم الحالي (للجميع) ==========
@@ -91,9 +60,9 @@ export class UsersController {
     @ApiResponse({ status: 200, description: 'بيانات المستخدم' })
     async getMe(
         @CurrentUser('id') userId: string,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.usersService.findOne(userId, tenantId);
+        return this.usersService.findOne(userId);
     }
 
     @Patch('me')
@@ -102,9 +71,9 @@ export class UsersController {
     async updateMe(
         @CurrentUser('id') userId: string,
         @Body() updateUserDto: UpdateUserDto,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.usersService.update(userId, updateUserDto, tenantId);
+        return this.usersService.update(userId, updateUserDto);
     }
 
     // ========== إدارة المستخدمين - OWNER/ADMIN ==========
@@ -113,10 +82,10 @@ export class UsersController {
     @ApiResponse({ status: 200, description: 'قائمة المستخدمين' })
     @Roles(UserRole.OWNER, UserRole.ADMIN)
     async findAll(
-        @TenantId() tenantId: string,
+
         @Query() filterDto: FilterUsersDto,
     ) {
-        return this.usersService.findAll(tenantId, filterDto);
+        return this.usersService.findAll(filterDto);
     }
 
     @Get(':id')
@@ -126,9 +95,9 @@ export class UsersController {
     @Roles(UserRole.OWNER, UserRole.ADMIN)
     async findOne(
         @Param('id', ParseUUIDPipe) id: string,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.usersService.findOne(id, tenantId);
+        return this.usersService.findOne(id);
     }
 
     @Post()
@@ -139,9 +108,9 @@ export class UsersController {
     @Roles(UserRole.OWNER, UserRole.ADMIN)
     async create(
         @Body() createUserDto: CreateUserDto,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.usersService.create(createUserDto, tenantId);
+        return this.usersService.create(createUserDto);
     }
 
     @Patch(':id')
@@ -152,9 +121,9 @@ export class UsersController {
     async update(
         @Param('id', ParseUUIDPipe) id: string,
         @Body() updateUserDto: UpdateUserDto,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.usersService.update(id, updateUserDto, tenantId);
+        return this.usersService.update(id, updateUserDto);
     }
 
     @Patch(':id/role')
@@ -165,10 +134,10 @@ export class UsersController {
     async changeRole(
         @Param('id', ParseUUIDPipe) id: string,
         @Body() dto: ChangeRoleDto,
-        @TenantId() tenantId: string,
+
         @CurrentUser('id') currentUserId: string,
     ) {
-        return this.usersService.changeRole(id, dto.role, tenantId, currentUserId);
+        return this.usersService.changeRole(id, dto.role, currentUserId);
     }
 
     @Patch(':id/deactivate')
@@ -177,10 +146,10 @@ export class UsersController {
     @Roles(UserRole.OWNER, UserRole.ADMIN)
     async deactivate(
         @Param('id', ParseUUIDPipe) id: string,
-        @TenantId() tenantId: string,
+
         @CurrentUser('id') currentUserId: string,
     ) {
-        return this.usersService.deactivate(id, tenantId, currentUserId);
+        return this.usersService.deactivate(id, currentUserId);
     }
 
     @Patch(':id/reactivate')
@@ -189,9 +158,9 @@ export class UsersController {
     @Roles(UserRole.OWNER, UserRole.ADMIN)
     async reactivate(
         @Param('id', ParseUUIDPipe) id: string,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.usersService.reactivate(id, tenantId);
+        return this.usersService.reactivate(id);
     }
 
     @Patch(':id/verify')
@@ -200,9 +169,9 @@ export class UsersController {
     @Roles(UserRole.OWNER, UserRole.ADMIN)
     async verifyEmail(
         @Param('id', ParseUUIDPipe) id: string,
-        @TenantId() tenantId: string,
+
     ) {
-        return this.usersService.verifyEmail(id, tenantId);
+        return this.usersService.verifyEmail(id);
     }
 
     @Delete(':id')
@@ -212,9 +181,9 @@ export class UsersController {
     @Roles(UserRole.OWNER)
     async remove(
         @Param('id', ParseUUIDPipe) id: string,
-        @TenantId() tenantId: string,
+
         @CurrentUser('id') currentUserId: string,
     ) {
-        return this.usersService.remove(id, tenantId, currentUserId);
+        return this.usersService.remove(id, currentUserId);
     }
 }

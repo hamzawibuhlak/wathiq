@@ -553,7 +553,7 @@ export function PerformanceReportPage() {
 
                 {/* Print Footer */}
                 <div className="hidden print:block text-center mt-8 pt-4 border-t text-gray-500 text-sm">
-                    <p>تم إنشاء هذا التقرير بواسطة نظام وثيق - {new Date().toLocaleDateString('ar-SA')}</p>
+                    <p>تم إنشاء هذا التقرير بواسطة نظام وسم الثقة - {new Date().toLocaleDateString('ar-SA')}</p>
                 </div>
             </div>
         </div>

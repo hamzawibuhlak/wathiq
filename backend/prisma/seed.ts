@@ -3,111 +3,38 @@ import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
+const OWNER_EMAIL = 'marketing.wasm@gmail.com';
+const OWNER_PASSWORD = 'Wasm123Wasm@#';
+const OWNER_NAME = 'مالك المكتب';
+const COMPANY_NAME = 'شركة وسم الثقة للمحاماة';
+
 async function main() {
-    console.log('🌱 Starting seeding...');
+    console.log('🌱 Seeding single-tenant baseline...');
 
-    // Create Tenant
-    const tenant = await prisma.tenant.upsert({
-        where: { id: 'tenant-001' },
-        update: {},
-        create: {
-            id: 'tenant-001',
-            name: 'مكتب المحاماة التجريبي',
-            nameEn: 'Demo Law Firm',
-            email: 'demo@watheeq.sa',
-            phone: '0500000000',
-            licenseNumber: 'LIC-12345',
-            isActive: true,
-        },
-    });
-    console.log('✅ Tenant created:', tenant.name);
+    const existingCompany = await prisma.companySettings.findFirst();
+    const company = existingCompany
+        ? await prisma.companySettings.update({ where: { id: existingCompany.id }, data: { name: COMPANY_NAME } })
+        : await prisma.companySettings.create({ data: { name: COMPANY_NAME } });
+    console.log('✅ CompanySettings:', company.name);
 
-    // Create Owner User
-    const hashedPassword = await bcrypt.hash('password123', 10);
-
+    const hashedPassword = await bcrypt.hash(OWNER_PASSWORD, 10);
     const owner = await prisma.user.upsert({
-        where: { email: 'owner@watheeq.sa' },
-        update: {},
+        where: { email: OWNER_EMAIL },
+        update: { password: hashedPassword, role: UserRole.OWNER, isActive: true, isVerified: true },
         create: {
-            email: 'owner@watheeq.sa',
+            email: OWNER_EMAIL,
             password: hashedPassword,
-            name: 'المحامي صاحب المكتب',
-            phone: '0500000001',
+            name: OWNER_NAME,
             role: UserRole.OWNER,
-            tenantId: tenant.id,
             isActive: true,
+            isVerified: true,
         },
     });
-    console.log('✅ Owner created:', owner.email);
+    console.log('✅ Owner:', owner.email);
 
-    // Create Lawyer User
-    const lawyer = await prisma.user.upsert({
-        where: { email: 'lawyer@watheeq.sa' },
-        update: {},
-        create: {
-            email: 'lawyer@watheeq.sa',
-            password: hashedPassword,
-            name: 'المحامي أحمد',
-            phone: '0500000002',
-            role: UserRole.LAWYER,
-            tenantId: tenant.id,
-            isActive: true,
-        },
-    });
-    console.log('✅ Lawyer created:', lawyer.email);
-
-    // Create Client
-    const client = await prisma.client.create({
-        data: {
-            name: 'العميل محمد السعود',
-            phone: '0550000001',
-            email: 'client@example.com',
-            tenantId: tenant.id,
-            isActive: true,
-        },
-    });
-    console.log('✅ Client created:', client.name);
-
-    // Create Case
-    const legalCase = await prisma.case.create({
-        data: {
-            caseNumber: '2026-0001',
-            title: 'قضية تجارية - مطالبة مالية',
-            caseType: 'COMMERCIAL',
-            status: 'OPEN',
-            priority: 'HIGH',
-            clientId: client.id,
-            tenantId: tenant.id,
-            assignedToId: lawyer.id,
-            createdById: owner.id,
-        },
-    });
-    console.log('✅ Case created:', legalCase.caseNumber);
-
-    // Create Hearing
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(10, 0, 0, 0);
-
-    await prisma.hearing.create({
-        data: {
-            hearingDate: tomorrow,
-            courtName: 'المحكمة التجارية بالرياض',
-            courtroom: 'قاعة 5',
-            caseId: legalCase.id,
-            clientId: client.id,
-            tenantId: tenant.id,
-            assignedToId: lawyer.id,
-            createdById: owner.id,
-            status: 'SCHEDULED',
-        },
-    });
-    console.log('✅ Hearing created for tomorrow');
-
-    console.log('\n🎉 Seeding completed!');
-    console.log('\n📧 Login credentials:');
-    console.log('   Owner: owner@watheeq.sa / password123');
-    console.log('   Lawyer: lawyer@watheeq.sa / password123');
+    console.log('\n🎉 Done.');
+    console.log(`   Email:    ${OWNER_EMAIL}`);
+    console.log(`   Password: ${OWNER_PASSWORD}`);
 }
 
 main()
