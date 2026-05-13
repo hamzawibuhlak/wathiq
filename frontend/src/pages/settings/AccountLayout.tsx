@@ -1,30 +1,17 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import {
-    Building2,
-    Users,
-    Mail,
-    MessageCircle,
-    Shield,
-    Upload,
-    PhoneCall,
-} from 'lucide-react';
+import { User, Bell } from 'lucide-react';
 
 const tabs = [
-    { to: 'firm', label: 'بيانات المكتب', icon: Building2 },
-    { to: 'users', label: 'المستخدمون', icon: Users },
-    { to: 'email', label: 'البريد (SMTP)', icon: Mail },
-    { to: 'whatsapp', label: 'واتساب', icon: MessageCircle },
-    { to: 'call-center', label: 'مركز الاتصال', icon: PhoneCall },
-    { to: 'security', label: 'الأمان', icon: Shield },
-    { to: 'import', label: 'الاستيراد', icon: Upload },
+    { to: 'profile', label: 'الملف الشخصي', icon: User },
+    { to: 'notifications', label: 'الإشعارات', icon: Bell },
 ];
 
-export function SettingsLayout() {
+export function AccountLayout() {
     return (
         <div className="flex gap-6 p-6">
             <aside className="w-64 shrink-0">
                 <div className="sticky top-6 bg-card rounded-xl border p-3 space-y-1">
-                    <h2 className="text-lg font-bold px-3 py-2">إدارة المكتب</h2>
+                    <h2 className="text-lg font-bold px-3 py-2">الإعدادات</h2>
                     {tabs.map(({ to, label, icon: Icon }) => (
                         <NavLink
                             key={to}
@@ -50,4 +37,4 @@ export function SettingsLayout() {
     );
 }
 
-export default SettingsLayout;
+export default AccountLayout;

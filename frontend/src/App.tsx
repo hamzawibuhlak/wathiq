@@ -49,6 +49,7 @@ const EditInvoicePage = lazy(() => import('@/pages/invoices/EditInvoicePage'));
 
 // Settings
 const SettingsLayout = lazy(() => import('@/pages/settings/SettingsLayout'));
+const AccountLayout = lazy(() => import('@/pages/settings/AccountLayout'));
 const ProfilePage = lazy(() => import('@/pages/settings/ProfilePage'));
 const UsersPage = lazy(() => import('@/pages/settings/UsersPage'));
 const FirmPage = lazy(() => import('@/pages/settings/FirmPage'));
@@ -233,16 +234,20 @@ function App() {
                         <Route path="/invoices/:id/edit" element={<EditInvoicePage />} />
 
                         <Route path="/settings" element={<SettingsLayout />}>
-                            <Route index element={<Navigate to="profile" replace />} />
-                            <Route path="profile" element={<ProfilePage />} />
+                            <Route index element={<Navigate to="firm" replace />} />
                             <Route path="users" element={<UsersPage />} />
                             <Route path="firm" element={<FirmPage />} />
                             <Route path="email" element={<EmailSettingsPage />} />
                             <Route path="whatsapp" element={<WhatsAppSettingsPage />} />
-                            <Route path="notifications" element={<NotificationsPage />} />
                             <Route path="security" element={<TwoFactorPage />} />
                             <Route path="import" element={<ImportPage />} />
                             <Route path="call-center" element={<CallCenterSettingsPage />} />
+                        </Route>
+
+                        <Route path="/account" element={<AccountLayout />}>
+                            <Route index element={<Navigate to="profile" replace />} />
+                            <Route path="profile" element={<ProfilePage />} />
+                            <Route path="notifications" element={<NotificationsPage />} />
                         </Route>
 
                         <Route path="/activity-logs" element={<ActivityLogsPage />} />

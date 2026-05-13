@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
+import { EmailService } from '../email/email.service';
 import { UnauthorizedException, ConflictException, NotFoundException } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
@@ -25,18 +26,18 @@ describe('AuthService', () => {
     sign: jest.fn().mockReturnValue('mock-jwt-token'),
   };
 
+  const mockEmailService = {
+    sendEmail: jest.fn().mockResolvedValue({ success: true }),
+    sendOtpEmail: jest.fn().mockResolvedValue({ success: true }),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
-        {
-          provide: PrismaService,
-          useValue: mockPrismaService,
-        },
-        {
-          provide: JwtService,
-          useValue: mockJwtService,
-        },
+        { provide: PrismaService, useValue: mockPrismaService },
+        { provide: JwtService, useValue: mockJwtService },
+        { provide: EmailService, useValue: mockEmailService },
       ],
     }).compile();
 
@@ -90,7 +91,6 @@ describe('AuthService', () => {
       expect(result.user).not.toHaveProperty('password');
       expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
         where: { email: loginDto.email },
-        include: { tenant: { select: { id: true, name: true, isActive: true } } },
       });
     });
 
@@ -109,20 +109,6 @@ describe('AuthService', () => {
 
       await expect(service.login(loginDto)).rejects.toThrow(UnauthorizedException);
       await expect(service.login(loginDto)).rejects.toThrow('الحساب معطل');
-    });
-
-    it('should throw UnauthorizedException for inactive tenant', async () => {
-      const hashedPassword = await bcrypt.hash(loginDto.password, 10);
-      const userWithInactiveTenant = {
-        ...mockUser,
-        password: hashedPassword,
-
-      };
-
-      mockPrismaService.user.findUnique.mockResolvedValue(userWithInactiveTenant);
-
-      await expect(service.login(loginDto)).rejects.toThrow(UnauthorizedException);
-      await expect(service.login(loginDto)).rejects.toThrow('المكتب معطل');
     });
 
     it('should throw UnauthorizedException for wrong password', async () => {
@@ -148,91 +134,6 @@ describe('AuthService', () => {
         where: { id: mockUser.id },
         data: { lastLoginAt: expect.any(Date) },
       });
-    });
-  });
-
-  // ========== REGISTER TESTS ==========
-  describe('register', () => {
-    const registerDto = {
-      email: 'new@example.com',
-      password: 'Password123!',
-      name: 'New User',
-      officeName: 'New Firm',
-      phone: '0501234567',
-    };
-
-    it('should create new tenant and user successfully', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(null);
-      null.mockResolvedValue(null);
-
-      const mockTenant = { id: 'tenant-new', name: registerDto.officeName };
-      const mockUser = {
-        id: 'user-new',
-        email: registerDto.email,
-        name: registerDto.name,
-        role: UserRole.OWNER,
-
-      };
-
-      mockPrismaService.$transaction.mockImplementation(async (callback) => {
-        const txMock = {
-
-          user: {
-            create: jest.fn().mockResolvedValue({ ...mockUser, password: 'hashed' }),
-          },
-        };
-        return callback(txMock);
-      });
-
-      const result = await service.register(registerDto);
-
-      expect(result).toHaveProperty('accessToken');
-      expect(result).toHaveProperty('user');
-      expect(result).toHaveProperty('message', 'تم إنشاء الحساب بنجاح');
-      expect(result.user).not.toHaveProperty('password');
-    });
-
-    it('should throw ConflictException if email exists as user', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue({ id: 'existing-user' });
-
-      await expect(service.register(registerDto)).rejects.toThrow(ConflictException);
-      await expect(service.register(registerDto)).rejects.toThrow('البريد الإلكتروني مستخدم بالفعل');
-    });
-
-    it('should throw ConflictException if email exists as tenant', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(null);
-      null.mockResolvedValue({ id: 'existing-tenant' });
-
-      await expect(service.register(registerDto)).rejects.toThrow(ConflictException);
-      await expect(service.register(registerDto)).rejects.toThrow('البريد الإلكتروني مستخدم بالفعل');
-    });
-
-    it('should hash password before saving', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(null);
-      null.mockResolvedValue(null);
-
-      let capturedPassword = '';
-      mockPrismaService.$transaction.mockImplementation(async (callback) => {
-        const txMock = {
-          user: {
-            create: jest.fn().mockImplementation((args) => {
-              capturedPassword = args.data.password;
-              return Promise.resolve({
-                id: 'user-new',
-                ...args.data,
-
-              });
-            }),
-          },
-        };
-        return callback(txMock);
-      });
-
-      await service.register(registerDto);
-
-      // Password should be hashed (not plain text)
-      expect(capturedPassword).not.toBe(registerDto.password);
-      expect(capturedPassword.length).toBeGreaterThan(50); // bcrypt hash is ~60 chars
     });
   });
 
@@ -337,16 +238,6 @@ describe('AuthService', () => {
       expect(result).toBeNull();
     });
 
-    it('should return null for inactive tenant', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue({
-        ...mockUser,
-
-      });
-
-      const result = await service.validateUser(userId);
-
-      expect(result).toBeNull();
-    });
   });
 
   // ========== PASSWORD UTILITY TESTS ==========

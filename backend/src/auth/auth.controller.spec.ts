@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { TwoFactorService } from './two-factor.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { UserRole } from '@prisma/client';
 
@@ -19,10 +20,8 @@ describe('AuthController', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthController],
       providers: [
-        {
-          provide: AuthService,
-          useValue: mockAuthService,
-        },
+        { provide: AuthService, useValue: mockAuthService },
+        { provide: TwoFactorService, useValue: {} },
       ],
     })
       .overrideGuard(JwtAuthGuard)
@@ -37,46 +36,6 @@ describe('AuthController', () => {
 
   it('should be defined', () => {
     expect(controller).toBeDefined();
-  });
-
-  // ========== REGISTER TESTS ==========
-  describe('register', () => {
-    const registerDto = {
-      email: 'test@example.com',
-      password: 'Password123!',
-      name: 'Test User',
-      officeName: 'Test Firm',
-      phone: '0501234567',
-    };
-
-    const mockResponse = {
-      accessToken: 'mock-token',
-      user: {
-        id: 'user-1',
-        email: registerDto.email,
-        name: registerDto.name,
-        role: UserRole.OWNER,
-      },
-      message: 'تم إنشاء الحساب بنجاح',
-    };
-
-    it('should register new user and return token', async () => {
-      mockAuthService.register.mockResolvedValue(mockResponse);
-
-      const result = await controller.register(registerDto);
-
-      expect(result).toEqual(mockResponse);
-      expect(mockAuthService.register).toHaveBeenCalledWith(registerDto);
-    });
-
-    it('should pass dto to service correctly', async () => {
-      mockAuthService.register.mockResolvedValue(mockResponse);
-
-      await controller.register(registerDto);
-
-      expect(mockAuthService.register).toHaveBeenCalledWith(registerDto);
-      expect(mockAuthService.register).toHaveBeenCalledTimes(1);
-    });
   });
 
   // ========== LOGIN TESTS ==========

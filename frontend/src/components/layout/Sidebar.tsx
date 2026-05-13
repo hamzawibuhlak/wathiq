@@ -174,13 +174,13 @@ const navGroups: NavGroup[] = [
         ],
     },
     {
-        id: 'settings',
+        id: 'preferences',
         title: 'الإعدادات',
         icon: Settings,
         collapsible: true,
         items: [
-            { path: 'settings/profile', icon: User, label: 'الملف الشخصي' },
-            { path: 'settings/notifications', icon: Bell, label: 'الإشعارات' },
+            { path: 'account/profile', icon: User, label: 'الملف الشخصي' },
+            { path: 'account/notifications', icon: Bell, label: 'الإشعارات' },
         ],
     },
 ];
@@ -446,6 +446,24 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                     <ChevronLeft className="w-4 h-4" />
                 )}
             </button>
+
+            {/* إدارة المكتب — Special Button */}
+            <div className="px-3 pb-2 pt-2 border-t">
+                <Link
+                    to={`${slugPrefix}/settings`}
+                    className={cn(
+                        'flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200 shadow-sm',
+                        'bg-gradient-to-l from-primary to-[hsl(var(--gold))] text-primary-foreground hover:opacity-90',
+                        isCollapsed && 'justify-center px-2'
+                    )}
+                    title={isCollapsed ? 'إدارة المكتب' : undefined}
+                >
+                    <Briefcase className="w-5 h-5 flex-shrink-0" />
+                    {!isCollapsed && (
+                        <span className="text-sm font-semibold">إدارة المكتب</span>
+                    )}
+                </Link>
+            </div>
 
             {/* Footer */}
             {!isCollapsed && (
