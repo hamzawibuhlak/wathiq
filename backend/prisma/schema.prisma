@@ -3808,6 +3808,9 @@ model SocialConversation {
 
   messages SocialMessage[]
 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@unique([platform, externalId])
   @@index([assignedToId])
   @@map("social_conversations")

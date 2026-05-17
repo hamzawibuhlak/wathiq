@@ -1,55 +1,44 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { SocialInboxService } from './social-inbox.service';
 import { SocialPlatform } from '@prisma/client';
 
-// Note: Ensure Auth settings match project standard guards. Using mock ANY for brevity.
-// Assuming your users are authenticated and have req.user = { id, tenantId, role }
-import { AuthGuard } from '@nestjs/passport'; // Example, will adjust to your project's Auth strategy if necessary
-
+@ApiTags('Social Inbox')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('social-inbox')
 export class SocialInboxController {
   constructor(private readonly socialInboxService: SocialInboxService) {}
 
   @Get('conversations')
-  //@UseGuards(AuthGuard('jwt'))
   getConversations(
-    @Req() req: any,
-    @Query('platform') platform?: SocialPlatform
+    @CurrentUser() user: any,
+    @Query('platform') platform?: SocialPlatform,
   ) {
-    // Dummy user context if guard isn't enforcing yet - please ensure to integrate global auth later
-    const tenantId = req.user?.tenantId || req.headers['x-tenant-id'];
-    const userId = req.user?.id || req.headers['x-user-id'];
-    const role = req.user?.role || req.headers['x-user-role'] || 'ADMIN'; 
-    return this.socialInboxService.getConversations(tenantId, userId, role, platform);
+    return this.socialInboxService.getConversations(user.id, user.role, platform);
   }
 
   @Get('conversations/:id/messages')
-  //@UseGuards(AuthGuard('jwt'))
-  getMessages(@Req() req: any, @Param('id') id: string) {
-    const tenantId = req.user?.tenantId || req.headers['x-tenant-id'];
-    return this.socialInboxService.getMessages(tenantId, id);
+  getMessages(@Param('id') id: string) {
+    return this.socialInboxService.getMessages(id);
   }
 
   @Post('conversations/:id/assign')
-  //@UseGuards(AuthGuard('jwt'))
   assignConversation(
-    @Req() req: any,
     @Param('id') id: string,
-    @Body('assigneeId') assigneeId: string
+    @Body('assigneeId') assigneeId: string,
   ) {
-    const tenantId = req.user?.tenantId || req.headers['x-tenant-id'];
-    return this.socialInboxService.assignConversation(tenantId, id, assigneeId);
+    return this.socialInboxService.assignConversation(id, assigneeId);
   }
 
   @Post('conversations/:id/messages')
-  //@UseGuards(AuthGuard('jwt'))
   sendMessage(
-    @Req() req: any,
+    @CurrentUser() user: any,
     @Param('id') id: string,
-    @Body('content') content: string
+    @Body('content') content: string,
   ) {
-    const tenantId = req.user?.tenantId || req.headers['x-tenant-id'];
-    const userId = req.user?.id || req.headers['x-user-id'];
-    return this.socialInboxService.sendMessage(tenantId, id, userId, content);
+    return this.socialInboxService.sendMessage(id, user.id, content);
   }
 }

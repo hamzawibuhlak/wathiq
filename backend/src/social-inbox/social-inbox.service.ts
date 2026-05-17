@@ -1,23 +1,22 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
-import { SocialPlatform, SocialConversationStatus } from '@prisma/client';
+import { SocialPlatform } from '@prisma/client';
 
 @Injectable()
 export class SocialInboxService {
   constructor(private prisma: PrismaService) {}
 
-  async getConversations(tenantId: string, userId: string, userRole: string, platform?: SocialPlatform) {
-    const where: any = { tenantId };
+  async getConversations(userId: string, userRole: string, platform?: SocialPlatform) {
+    const where: any = {};
 
     if (platform) {
       where.platform = platform;
     }
 
-    // Role-based visibility
-    if (userRole !== 'ADMIN' && userRole !== 'OWNER' && userRole !== 'SUPER_ADMIN') {
+    if (userRole !== 'ADMIN' && userRole !== 'OWNER') {
       where.OR = [
         { assignedToId: userId },
-        { assignedToId: null } // Allow seeing unassigned conversations to assign themselves
+        { assignedToId: null },
       ];
     }
 
@@ -30,20 +29,18 @@ export class SocialInboxService {
         _count: {
           select: { messages: true },
         },
-        // Include latest message
         messages: {
           orderBy: { createdAt: 'desc' },
           take: 1,
-        }
+        },
       },
       orderBy: { updatedAt: 'desc' },
     });
   }
 
-  async getMessages(tenantId: string, conversationId: string) {
-    // Verify conversation exists and belongs to tenant
+  async getMessages(conversationId: string) {
     const conv = await this.prisma.socialConversation.findUnique({
-      where: { id: conversationId, tenantId },
+      where: { id: conversationId },
     });
 
     if (!conv) {
@@ -61,10 +58,9 @@ export class SocialInboxService {
     });
   }
 
-  async assignConversation(tenantId: string, conversationId: string, assigneeId: string) {
-    // Verify constraints
+  async assignConversation(conversationId: string, assigneeId: string) {
     const conv = await this.prisma.socialConversation.findUnique({
-      where: { id: conversationId, tenantId },
+      where: { id: conversationId },
     });
 
     if (!conv) {
@@ -73,44 +69,42 @@ export class SocialInboxService {
 
     return this.prisma.socialConversation.update({
       where: { id: conversationId },
-      data: { 
+      data: {
         assignedToId: assigneeId,
         status: 'ASSIGNED',
       },
       include: {
         assignedTo: { select: { id: true, name: true } },
-      }
+      },
     });
   }
 
-  async sendMessage(tenantId: string, conversationId: string, senderId: string, content: string) {
+  async sendMessage(conversationId: string, senderId: string, content: string) {
     const conv = await this.prisma.socialConversation.findUnique({
-      where: { id: conversationId, tenantId },
+      where: { id: conversationId },
     });
 
     if (!conv) {
       throw new NotFoundException('المحادثة غير موجودة');
     }
 
-    // Create the outbound message, storing the senderId
     const message = await this.prisma.socialMessage.create({
       data: {
         conversationId,
-        tenantId,
         direction: 'OUTBOUND',
         content,
-        senderId, // The real employee replying
+        senderId,
         status: 'SENT',
       },
       include: {
-        sender: { select: { id: true, name: true, avatar: true } }
-      }
+        sender: { select: { id: true, name: true, avatar: true } },
+      },
     });
 
-    // Update conversation updatedAt
+    // Touch conversation so it sorts to top
     await this.prisma.socialConversation.update({
       where: { id: conversationId },
-      data: { updatedAt: new Date() }
+      data: { status: conv.status },
     });
 
     return message;

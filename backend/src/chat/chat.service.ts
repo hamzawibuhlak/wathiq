@@ -337,7 +337,7 @@ export class ChatService {
 
     async deleteConversation(conversationId: string, userId: string, tenantId: string) {
         const conv = await this.prisma.chatConversation.findFirst({
-            where: { id: conversationId, tenantId },
+            where: { id: conversationId },
             include: { members: { where: { leftAt: null } } },
         });
 
@@ -393,7 +393,7 @@ export class ChatService {
             ? `${prefix}\n${originalMsg.content}`
             : `${prefix} (ملف)`;
 
-        return this.sendMessage(targetConversationId, senderId, tenantId, {
+        return this.sendMessage(targetConversationId, senderId, {
             content: forwardedContent,
             type: originalMsg.type as any,
             fileUrl: originalMsg.fileUrl ?? undefined,
@@ -429,7 +429,7 @@ export class ChatService {
             where: { conversationId_userId: { conversationId, userId: actorId } },
         });
         if (!actor?.isAdmin) throw new BadRequestException('\u0641\u0642\u0637 \u0627\u0644\u0645\u0634\u0631\u0641 \u064a\u0645\u0643\u0646\u0647 \u0625\u0636\u0627\u0641\u0629 \u0623\u0639\u0636\u0627\u0621');
-        const user = await this.prisma.user.findFirst({ where: { id: userId, tenantId } });
+        const user = await this.prisma.user.findFirst({ where: { id: userId } });
         if (!user) throw new BadRequestException('\u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645 \u063a\u064a\u0631 \u0645\u0648\u062c\u0648\u062f');
         return this.prisma.chatConversationMember.upsert({
             where: { conversationId_userId: { conversationId, userId } },

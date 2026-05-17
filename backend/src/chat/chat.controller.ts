@@ -118,7 +118,7 @@ export class ChatController {
         },
         @CurrentUser() user: any,
     ) {
-        const message = await this.chatService.sendMessage(conversationId, user.id, user.tenantId, data as any);
+        const message = await this.chatService.sendMessage(conversationId, user.id, data as any);
         // Broadcast via socket immediately so all participants see the message in real-time
         this.chatGateway.server
             .to(`conversation:${conversationId}`)
