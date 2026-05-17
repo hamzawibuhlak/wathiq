@@ -9,7 +9,6 @@ import { useAuthStore } from '@/stores/auth.store';
 import { useLogout } from '@/hooks/use-auth';
 import { useMessagesUnreadCount } from '@/hooks/use-notifications';
 import { GlobalSearch } from './GlobalSearch';
-import { UserAvatar } from '@/components/ui';
 import { NotificationsDropdown } from './NotificationsDropdown';
 
 interface HeaderProps {
