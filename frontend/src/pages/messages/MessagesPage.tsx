@@ -871,7 +871,7 @@ function MessageDetailPanel({
     const user = useAuthStore(s => s.user);
 
     const canDelete = isOwner ||
-        can('messages', 'delete', 'FULL') ||
+        can('messages', 'delete') ||
         (!!message && message.senderId === user?.id);
 
     if (isLoading) {
