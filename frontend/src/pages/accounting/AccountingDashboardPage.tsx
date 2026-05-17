@@ -1,93 +1,60 @@
-import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useSlugPath } from '@/hooks/useSlugPath';
 import {
     Calculator, TrendingUp, TrendingDown, DollarSign, CreditCard,
     FileText, BookOpen, Receipt, Wallet, PiggyBank, BarChart3,
-    ArrowUp, ArrowDown, AlertTriangle, CheckCircle
+    ArrowUp, ArrowDown, AlertTriangle, CheckCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui';
-import { useAuthStore } from '@/stores/auth.store';
-import toast from 'react-hot-toast';
-
-const API_BASE = '/api/accounting';
-
-async function fetchApi(url: string) {
-    const token = useAuthStore.getState().token;
-    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-    if (!res.ok) throw new Error('فشل في جلب البيانات');
-    return res.json();
-}
+import { LoadingState } from '@/components/common/LoadingState';
+import {
+    useIncomeStatement,
+    useBalanceSheet,
+    useFinancialRatios,
+    useVATReport,
+    useARAging,
+    useAPAging,
+} from '@/hooks/use-accounting';
 
 export function AccountingDashboardPage() {
     const { p } = useSlugPath();
-    const [loading, setLoading] = useState(true);
-    const [stats, setStats] = useState<any>(null);
-    const [ratios, setRatios] = useState<any>(null);
-    const [vatReport, setVatReport] = useState<any>(null);
 
-    const formatCurrency = (amount: number) =>
-        new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 }).format(amount || 0);
+    const now = new Date();
+    const yearStart = new Date(now.getFullYear(), 0, 1).toISOString();
+    const today = now.toISOString();
 
-    useEffect(() => {
-        const loadData = async () => {
-            try {
-                const now = new Date();
-                const yearStart = new Date(now.getFullYear(), 0, 1).toISOString();
-                const today = now.toISOString();
+    const income = useIncomeStatement(yearStart, today);
+    const balanceSheet = useBalanceSheet(today);
+    const ratios = useFinancialRatios(today);
+    const vat = useVATReport(yearStart, today);
+    const arAging = useARAging();
+    const apAging = useAPAging();
 
-                const [incomeRes, bsRes, ratiosRes, vatRes, arRes, apRes] = await Promise.allSettled([
-                    fetchApi(`${API_BASE}/statements/income?startDate=${yearStart}&endDate=${today}`),
-                    fetchApi(`${API_BASE}/statements/balance-sheet?date=${today}`),
-                    fetchApi(`${API_BASE}/statements/ratios?date=${today}`),
-                    fetchApi(`${API_BASE}/statements/vat?startDate=${yearStart}&endDate=${today}`),
-                    fetchApi(`${API_BASE}/ar/aging`),
-                    fetchApi(`${API_BASE}/ap/aging`),
-                ]);
+    const isLoading =
+        income.isLoading || balanceSheet.isLoading || ratios.isLoading ||
+        vat.isLoading || arAging.isLoading || apAging.isLoading;
 
-                setStats({
-                    income: incomeRes.status === 'fulfilled' ? incomeRes.value : null,
-                    balanceSheet: bsRes.status === 'fulfilled' ? bsRes.value : null,
-                    arAging: arRes.status === 'fulfilled' ? arRes.value : null,
-                    apAging: apRes.status === 'fulfilled' ? apRes.value : null
-                });
-                setRatios(ratiosRes.status === 'fulfilled' ? ratiosRes.value : null);
-                setVatReport(vatRes.status === 'fulfilled' ? vatRes.value : null);
-            } catch (err) {
-                toast.error('فشل في تحميل بيانات المحاسبة');
-            } finally {
-                setLoading(false);
-            }
-        };
-        loadData();
-    }, []);
+    const formatCurrency = (amount?: number) =>
+        new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 })
+            .format(amount || 0);
 
     const quickLinks = [
-        { path: '/accounting/accounts', icon: BookOpen, label: 'شجرة الحسابات', color: 'text-blue-600 bg-blue-100' },
-        { path: '/accounting/journal-entries', icon: FileText, label: 'القيود اليومية', color: 'text-purple-600 bg-purple-100' },
-        { path: '/invoices', icon: Receipt, label: 'الفواتير', color: 'text-green-600 bg-green-100' },
-        { path: '/accounting/expenses', icon: Wallet, label: 'المصروفات', color: 'text-red-600 bg-red-100' },
+        { path: '/accounting/accounts',        icon: BookOpen, label: 'شجرة الحسابات',    color: 'text-blue-600 bg-blue-100' },
+        { path: '/accounting/journal-entries', icon: FileText, label: 'القيود اليومية',  color: 'text-purple-600 bg-purple-100' },
+        { path: '/invoices',                   icon: Receipt,  label: 'الفواتير',         color: 'text-green-600 bg-green-100' },
+        { path: '/accounting/expenses',        icon: Wallet,   label: 'المصروفات',        color: 'text-red-600 bg-red-100' },
     ];
 
-    if (loading) {
-        return (
-            <div className="space-y-6">
-                <div className="flex items-center gap-3">
-                    <Calculator className="w-7 h-7 text-primary animate-pulse" />
-                    <h1 className="text-2xl font-bold">المحاسبة والمالية</h1>
-                </div>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    {[1, 2, 3, 4].map(i => (
-                        <div key={i} className="bg-card rounded-xl border p-5 animate-pulse">
-                            <div className="w-10 h-10 bg-muted rounded-full mb-3" />
-                            <div className="w-2/3 h-4 bg-muted rounded mb-2" />
-                            <div className="w-1/2 h-6 bg-muted rounded" />
-                        </div>
-                    ))}
-                </div>
-            </div>
-        );
+    if (isLoading) {
+        return <LoadingState message="جاري تحميل البيانات المالية..." size="lg" />;
     }
+
+    const inc = income.data;
+    const bs = balanceSheet.data;
+    const r = ratios.data;
+    const vatData = vat.data;
+    const ar = arAging.data;
+    const ap = apAging.data;
 
     return (
         <div className="space-y-6">
@@ -133,7 +100,7 @@ export function AccountingDashboardPage() {
                         </div>
                         <div>
                             <p className="text-sm text-muted-foreground">الإيرادات</p>
-                            <p className="text-lg font-bold text-green-600">{formatCurrency(stats?.income?.totalRevenue)}</p>
+                            <p className="text-lg font-bold text-green-600">{formatCurrency(inc?.totalRevenue)}</p>
                         </div>
                     </div>
                 </div>
@@ -144,19 +111,19 @@ export function AccountingDashboardPage() {
                         </div>
                         <div>
                             <p className="text-sm text-muted-foreground">المصروفات</p>
-                            <p className="text-lg font-bold text-red-600">{formatCurrency(stats?.income?.totalExpenses)}</p>
+                            <p className="text-lg font-bold text-red-600">{formatCurrency(inc?.totalExpenses)}</p>
                         </div>
                     </div>
                 </div>
                 <div className="bg-card rounded-xl border p-4">
                     <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-full ${(stats?.income?.netIncome || 0) >= 0 ? 'bg-emerald-100' : 'bg-red-100'} flex items-center justify-center`}>
-                            <DollarSign className={`w-5 h-5 ${(stats?.income?.netIncome || 0) >= 0 ? 'text-emerald-600' : 'text-red-600'}`} />
+                        <div className={`w-10 h-10 rounded-full ${(inc?.netIncome || 0) >= 0 ? 'bg-emerald-100' : 'bg-red-100'} flex items-center justify-center`}>
+                            <DollarSign className={`w-5 h-5 ${(inc?.netIncome || 0) >= 0 ? 'text-emerald-600' : 'text-red-600'}`} />
                         </div>
                         <div>
                             <p className="text-sm text-muted-foreground">صافي الربح</p>
-                            <p className={`text-lg font-bold ${(stats?.income?.netIncome || 0) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                                {formatCurrency(stats?.income?.netIncome)}
+                            <p className={`text-lg font-bold ${(inc?.netIncome || 0) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                                {formatCurrency(inc?.netIncome)}
                             </p>
                         </div>
                     </div>
@@ -168,7 +135,7 @@ export function AccountingDashboardPage() {
                         </div>
                         <div>
                             <p className="text-sm text-muted-foreground">إجمالي الأصول</p>
-                            <p className="text-lg font-bold text-blue-600">{formatCurrency(stats?.balanceSheet?.assets?.totalAssets)}</p>
+                            <p className="text-lg font-bold text-blue-600">{formatCurrency(bs?.assets?.totalAssets)}</p>
                         </div>
                     </div>
                 </div>
@@ -176,25 +143,24 @@ export function AccountingDashboardPage() {
 
             {/* Financial Ratios + VAT */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Ratios */}
                 <div className="bg-card rounded-xl border p-6">
                     <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                         <BarChart3 className="w-5 h-5 text-primary" />
                         النسب المالية
                     </h2>
-                    {ratios ? (
+                    {r ? (
                         <div className="space-y-4">
                             {[
-                                { label: 'نسبة السيولة الجارية', value: ratios.currentRatio, suffix: ':1', good: ratios.currentRatio >= 1 },
-                                { label: 'هامش الربح', value: ratios.profitMargin, suffix: '%', good: ratios.profitMargin > 0 },
-                                { label: 'العائد على الأصول', value: ratios.returnOnAssets, suffix: '%', good: ratios.returnOnAssets > 0 },
-                                { label: 'نسبة المديونية', value: ratios.debtToEquity, suffix: ':1', good: ratios.debtToEquity < 2 },
-                            ].map(r => (
-                                <div key={r.label} className="flex items-center justify-between">
-                                    <span className="text-sm text-muted-foreground">{r.label}</span>
+                                { label: 'نسبة السيولة الجارية', value: r.currentRatio,    suffix: ':1', good: r.currentRatio >= 1 },
+                                { label: 'هامش الربح',           value: r.profitMargin,    suffix: '%',  good: r.profitMargin > 0 },
+                                { label: 'العائد على الأصول',    value: r.returnOnAssets,  suffix: '%',  good: r.returnOnAssets > 0 },
+                                { label: 'نسبة المديونية',        value: r.debtToEquity,    suffix: ':1', good: r.debtToEquity < 2 },
+                            ].map(item => (
+                                <div key={item.label} className="flex items-center justify-between">
+                                    <span className="text-sm text-muted-foreground">{item.label}</span>
                                     <div className="flex items-center gap-1">
-                                        {r.good ? <CheckCircle className="w-4 h-4 text-green-500" /> : <AlertTriangle className="w-4 h-4 text-yellow-500" />}
-                                        <span className="font-semibold">{r.value}{r.suffix}</span>
+                                        {item.good ? <CheckCircle className="w-4 h-4 text-green-500" /> : <AlertTriangle className="w-4 h-4 text-yellow-500" />}
+                                        <span className="font-semibold">{item.value}{item.suffix}</span>
                                     </div>
                                 </div>
                             ))}
@@ -204,26 +170,25 @@ export function AccountingDashboardPage() {
                     )}
                 </div>
 
-                {/* VAT */}
                 <div className="bg-card rounded-xl border p-6">
                     <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                         <CreditCard className="w-5 h-5 text-primary" />
                         تقرير ضريبة القيمة المضافة (15%)
                     </h2>
-                    {vatReport ? (
+                    {vatData ? (
                         <div className="space-y-4">
                             <div className="flex items-center justify-between py-2 border-b">
                                 <span className="text-muted-foreground">ضريبة المخرجات (مبيعات)</span>
-                                <span className="font-semibold text-red-600">{formatCurrency(vatReport.vatOutput)}</span>
+                                <span className="font-semibold text-red-600">{formatCurrency(vatData.vatOutput)}</span>
                             </div>
                             <div className="flex items-center justify-between py-2 border-b">
                                 <span className="text-muted-foreground">ضريبة المدخلات (مشتريات)</span>
-                                <span className="font-semibold text-green-600">{formatCurrency(vatReport.vatInput)}</span>
+                                <span className="font-semibold text-green-600">{formatCurrency(vatData.vatInput)}</span>
                             </div>
                             <div className="flex items-center justify-between py-3 bg-muted/50 rounded-lg px-3">
                                 <span className="font-medium">صافي الضريبة المستحقة</span>
-                                <span className={`text-lg font-bold ${vatReport.netVAT >= 0 ? 'text-red-600' : 'text-green-600'}`}>
-                                    {formatCurrency(vatReport.netVAT)}
+                                <span className={`text-lg font-bold ${vatData.netVAT >= 0 ? 'text-red-600' : 'text-green-600'}`}>
+                                    {formatCurrency(vatData.netVAT)}
                                 </span>
                             </div>
                         </div>
@@ -235,20 +200,19 @@ export function AccountingDashboardPage() {
 
             {/* AR/AP Aging */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Accounts Receivable */}
                 <div className="bg-card rounded-xl border p-6">
                     <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                         <ArrowUp className="w-5 h-5 text-green-600" />
                         الذمم المدينة (AR)
                     </h2>
-                    {stats?.arAging ? (
+                    {ar ? (
                         <div className="space-y-3">
                             {[
-                                { label: 'حالي', value: stats.arAging.summary?.current, color: 'text-green-600' },
-                                { label: '1-30 يوم', value: stats.arAging.summary?.days30, color: 'text-yellow-600' },
-                                { label: '31-60 يوم', value: stats.arAging.summary?.days60, color: 'text-orange-600' },
-                                { label: '61-90 يوم', value: stats.arAging.summary?.days90, color: 'text-red-500' },
-                                { label: 'أكثر من 90', value: stats.arAging.summary?.over90, color: 'text-red-700' },
+                                { label: 'حالي',          value: ar.summary?.current,  color: 'text-green-600' },
+                                { label: '1-30 يوم',      value: ar.summary?.days30,   color: 'text-yellow-600' },
+                                { label: '31-60 يوم',     value: ar.summary?.days60,   color: 'text-orange-600' },
+                                { label: '61-90 يوم',     value: ar.summary?.days90,   color: 'text-red-500' },
+                                { label: 'أكثر من 90',     value: ar.summary?.over90,   color: 'text-red-700' },
                             ].map(item => (
                                 <div key={item.label} className="flex justify-between items-center">
                                     <span className="text-sm text-muted-foreground">{item.label}</span>
@@ -257,7 +221,7 @@ export function AccountingDashboardPage() {
                             ))}
                             <div className="border-t pt-3 mt-2 flex justify-between">
                                 <span className="font-medium">الإجمالي</span>
-                                <span className="font-bold text-lg">{formatCurrency(stats.arAging.totalOutstanding)}</span>
+                                <span className="font-bold text-lg">{formatCurrency(ar.totalOutstanding)}</span>
                             </div>
                         </div>
                     ) : (
@@ -265,20 +229,19 @@ export function AccountingDashboardPage() {
                     )}
                 </div>
 
-                {/* Accounts Payable */}
                 <div className="bg-card rounded-xl border p-6">
                     <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                         <ArrowDown className="w-5 h-5 text-red-600" />
                         الذمم الدائنة (AP)
                     </h2>
-                    {stats?.apAging ? (
+                    {ap ? (
                         <div className="space-y-3">
                             {[
-                                { label: 'حالي', value: stats.apAging.summary?.current || 0, color: 'text-green-600' },
-                                { label: '1-30 يوم', value: stats.apAging.summary?.days30 || 0, color: 'text-yellow-600' },
-                                { label: '31-60 يوم', value: stats.apAging.summary?.days60 || 0, color: 'text-orange-600' },
-                                { label: '61-90 يوم', value: stats.apAging.summary?.days90 || 0, color: 'text-red-500' },
-                                { label: 'أكثر من 90', value: stats.apAging.summary?.over90 || 0, color: 'text-red-700' },
+                                { label: 'حالي',         value: ap.summary?.current || 0, color: 'text-green-600' },
+                                { label: '1-30 يوم',     value: ap.summary?.days30 || 0,  color: 'text-yellow-600' },
+                                { label: '31-60 يوم',    value: ap.summary?.days60 || 0,  color: 'text-orange-600' },
+                                { label: '61-90 يوم',    value: ap.summary?.days90 || 0,  color: 'text-red-500' },
+                                { label: 'أكثر من 90',    value: ap.summary?.over90 || 0,  color: 'text-red-700' },
                             ].map(item => (
                                 <div key={item.label} className="flex justify-between items-center">
                                     <span className="text-sm text-muted-foreground">{item.label}</span>
@@ -287,7 +250,7 @@ export function AccountingDashboardPage() {
                             ))}
                             <div className="border-t pt-3 mt-2 flex justify-between">
                                 <span className="font-medium">الإجمالي</span>
-                                <span className="font-bold text-lg">{formatCurrency(stats.apAging.totalOutstanding)}</span>
+                                <span className="font-bold text-lg">{formatCurrency(ap.totalOutstanding)}</span>
                             </div>
                         </div>
                     ) : (
