@@ -57,8 +57,8 @@ export type ThemeMode = 'light' | 'dark';
 const THEME_MODE_KEY = 'wasm-theme-mode';
 
 export function getThemeMode(): ThemeMode {
-    if (typeof window === 'undefined') return 'light';
-    return (localStorage.getItem(THEME_MODE_KEY) as ThemeMode) || 'light';
+    if (typeof window === 'undefined') return 'dark';
+    return (localStorage.getItem(THEME_MODE_KEY) as ThemeMode) || 'dark';
 }
 
 export function applyThemeMode(mode: ThemeMode) {
@@ -102,6 +102,14 @@ export function applyTheme(theme: {
     root.style.setProperty('--secondary', hexToHsl(tertiary));
     root.style.setProperty('--secondary-foreground', hexToHsl(secondary));
     root.style.setProperty('--foreground', hexToHsl(secondary));
+
+    // Update RGB values for glow effects
+    const m = primary.trim().replace('#', '');
+    const full = m.length === 3 ? m.split('').map(c => c + c).join('') : m;
+    const r = parseInt(full.slice(0, 2), 16);
+    const g = parseInt(full.slice(2, 4), 16);
+    const b = parseInt(full.slice(4, 6), 16);
+    root.style.setProperty('--primary-rgb', `${r}, ${g}, ${b}`);
 
     ensureGoogleFont(fontAr);
     ensureGoogleFont(fontEn);

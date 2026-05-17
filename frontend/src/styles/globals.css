@@ -21,56 +21,57 @@
 
 @layer base {
   :root {
-    /* Brand: Wasm Altheeqa
+    /* Brand: Wasm Altheeqa — Dark Glassmorphism Theme
        Primary  #c49353  ≈ hsl(30 48% 55%)
-       Secondary #423e3f ≈ hsl(315 3% 25%)
-       Tertiary #e1ded9  ≈ hsl(38 12% 87%) */
-    --background: 0 0% 100%;
-    --foreground: 315 3% 25%;
-    --card: 0 0% 100%;
-    --card-foreground: 315 3% 25%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 315 3% 25%;
+       Primary RGB for glow effects */
+    --primary-rgb: 196, 147, 83;
+    --background: 222 47% 8%;
+    --foreground: 210 40% 96%;
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 96%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 96%;
     --primary: 30 48% 55%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 38 12% 87%;
-    --secondary-foreground: 315 3% 25%;
-    --muted: 38 12% 92%;
-    --muted-foreground: 315 3% 40%;
-    --accent: 38 12% 87%;
-    --accent-foreground: 315 3% 25%;
-    --destructive: 0 84.2% 60.2%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 80%;
+    --muted: 217 33% 16%;
+    --muted-foreground: 215 20% 52%;
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 96%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --border: 38 12% 82%;
-    --input: 38 12% 82%;
+    --border: 215 25% 18%;
+    --input: 215 25% 18%;
     --ring: 30 48% 55%;
-    --radius: 0.5rem;
+    --radius: 0.75rem;
     --gold: 30 48% 55%;
     --gold-foreground: 0 0% 100%;
   }
 
   .dark {
-    --background: 315 3% 14%;
-    --foreground: 38 12% 92%;
-    --card: 315 3% 18%;
-    --card-foreground: 38 12% 92%;
-    --popover: 315 3% 18%;
-    --popover-foreground: 38 12% 92%;
-    --primary: 30 48% 60%;
-    --primary-foreground: 315 3% 14%;
-    --secondary: 315 3% 25%;
-    --secondary-foreground: 38 12% 92%;
-    --muted: 315 3% 22%;
-    --muted-foreground: 38 12% 70%;
-    --accent: 315 3% 25%;
-    --accent-foreground: 38 12% 92%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 38 12% 92%;
-    --border: 315 3% 28%;
-    --input: 315 3% 28%;
-    --ring: 30 48% 60%;
-    --gold: 30 48% 60%;
-    --gold-foreground: 315 3% 14%;
+    --primary-rgb: 196, 147, 83;
+    --background: 222 47% 8%;
+    --foreground: 210 40% 96%;
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 96%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 96%;
+    --primary: 30 48% 55%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 80%;
+    --muted: 217 33% 16%;
+    --muted-foreground: 215 20% 52%;
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 96%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 215 25% 18%;
+    --input: 215 25% 18%;
+    --ring: 30 48% 55%;
+    --gold: 30 48% 55%;
+    --gold-foreground: 0 0% 100%;
   }
 }
 
@@ -91,20 +92,20 @@
 
   /* Custom Scrollbar */
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-muted rounded-full;
+    background: transparent;
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-muted-foreground/30 rounded-full;
+    @apply bg-white/10 rounded-full;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-muted-foreground/50;
+    @apply bg-white/20;
   }
 
   /* Focus Styles */
@@ -483,13 +484,37 @@
      VISUAL EFFECTS
      ═══════════════════════════════════════════════════════════════════ */
 
-  /* Glass effect */
+  /* Glass effect — dark glassmorphism */
   .glass {
-    @apply bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.07);
   }
 
   .glass-subtle {
-    @apply bg-white/50 dark:bg-gray-900/50 backdrop-blur-md;
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  /* Glass card — standard reusable card */
+  .glass-card {
+    @apply rounded-2xl border border-white/[0.07] bg-slate-900/60 backdrop-blur-sm;
+  }
+
+  /* Page section header */
+  .page-header {
+    @apply flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6;
+  }
+
+  .page-title {
+    @apply text-xl font-bold text-white/90;
+  }
+
+  .page-subtitle {
+    @apply text-sm text-white/40 mt-0.5;
   }
 
   /* Gradient text */

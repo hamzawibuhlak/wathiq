@@ -111,7 +111,14 @@ export function AppLayout() {
     }, [isConnected, subscribe, queryClient]);
 
     return (
-        <div className="min-h-screen bg-background" dir="rtl">
+        <div className="min-h-screen bg-[hsl(222,47%,8%)]" dir="rtl">
+            {/* Background gradient blobs */}
+            <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+                <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
+                <div className="absolute top-1/2 left-1/4 w-80 h-80 bg-[hsl(var(--gold))]/3 rounded-full blur-3xl" />
+                <div className="absolute bottom-0 left-0 w-96 h-96 bg-primary/3 rounded-full blur-3xl" />
+            </div>
+
             {/* Sidebar */}
             <Sidebar isCollapsed={isCollapsed} onToggle={() => setIsCollapsed(!isCollapsed)} />
 
@@ -121,8 +128,8 @@ export function AppLayout() {
             {/* Main Content */}
             <main
                 className={cn(
-                    'pt-16 min-h-screen transition-all duration-300',
-                    isCollapsed ? 'mr-16' : 'mr-64'
+                    'relative z-10 pt-16 min-h-screen transition-all duration-300',
+                    isCollapsed ? 'mr-[68px]' : 'mr-64'
                 )}
             >
                 <div className="p-6">
