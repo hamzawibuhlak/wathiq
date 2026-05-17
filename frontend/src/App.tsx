@@ -53,6 +53,7 @@ const SettingsLayout = lazy(() => import('@/pages/settings/SettingsLayout'));
 const AccountLayout = lazy(() => import('@/pages/settings/AccountLayout'));
 const ProfilePage = lazy(() => import('@/pages/settings/ProfilePage'));
 const UsersPage = lazy(() => import('@/pages/settings/UsersPage'));
+const PermissionsPage = lazy(() => import('@/pages/settings/PermissionsPage'));
 const FirmPage = lazy(() => import('@/pages/settings/FirmPage'));
 const ThemePage = lazy(() => import('@/pages/settings/ThemePage'));
 const NotificationsPage = lazy(() => import('@/pages/settings/NotificationsPage'));
@@ -244,6 +245,7 @@ function App() {
                         <Route path="/settings" element={<SettingsLayout />}>
                             <Route index element={<Navigate to="firm" replace />} />
                             <Route path="users" element={<UsersPage />} />
+                            <Route path="permissions" element={<PermissionsPage />} />
                             <Route path="firm" element={<FirmPage />} />
                             <Route path="theme" element={<ThemePage />} />
                             <Route path="email" element={<EmailSettingsPage />} />
