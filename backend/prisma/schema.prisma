@@ -242,7 +242,6 @@ model User {
   sentSocialMessages  SocialMessage[]      @relation("SentSocialMessages")
 
   @@index([email])
-  @@index([email])
 
   @@map("users")
 }
@@ -3809,12 +3808,17 @@ model SocialConversation {
 
   messages SocialMessage[]
 
+  @@unique([platform, externalId])
+  @@index([assignedToId])
+  @@map("social_conversations")
+}
+
 // COMPANY SETTINGS (single row - law office configuration)
 // =====================================================
 
 model CompanySettings {
   id            String  @id @default(uuid())
-  name          String  // اسم المكتب
+  name          String
   nameEn        String?
   email         String?
   phone         String?
@@ -3827,7 +3831,6 @@ model CompanySettings {
   logo          String?
   letterheadUrl String?
 
-  // SMTP Email Settings
   smtpHost     String?
   smtpPort     Int?
   smtpUser     String?
@@ -3837,27 +3840,22 @@ model CompanySettings {
   smtpSecure   Boolean @default(false)
   smtpEnabled  Boolean @default(false)
 
-  // WhatsApp Settings
   whatsappAccessToken   String?
   whatsappPhoneNumberId String?
   whatsappBusinessId    String?
   whatsappWebhookToken  String?
   whatsappEnabled       Boolean @default(false)
 
-  // Theme — visual identity
-  primaryColor   String? // hex e.g. #c49353
-  secondaryColor String? // hex e.g. #423e3f
-  tertiaryColor  String? // hex e.g. #e1ded9
-  fontArabic     String? // Google Font family, e.g. "Almarai"
-  fontEnglish    String? // Google Font family, e.g. "Inter"
+  primaryColor   String?
+  secondaryColor String?
+  tertiaryColor  String?
+  fontArabic     String?
+  fontEnglish    String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@map("company_settings")
-  @@unique([platform, externalId])
-  @@index([assignedToId])
-  @@map("social_conversations")
 }
 
 model SocialMessage {
@@ -3883,6 +3881,4 @@ model SocialMessage {
 
   @@index([conversationId, createdAt])
   @@map("social_messages")
-}
-
 }
