@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { BookOpen, Plus, Search, ChevronDown, ChevronLeft, Loader2 } from 'lucide-react';
+import { BookOpen, Plus, Search, ChevronDown, ChevronLeft, Loader2, Pencil } from 'lucide-react';
 import { Button, Input } from '@/components/ui';
 import { LoadingState } from '@/components/common/LoadingState';
 import { useAccountsHierarchy, useSeedAccounts } from '@/hooks/use-accounting';
+import { AccountFormDialog } from '@/components/accounting/AccountFormDialog';
 import {
     Account, AccountType,
     ACCOUNT_TYPE_LABELS, ACCOUNT_TYPE_COLORS,
@@ -15,6 +16,11 @@ export function ChartOfAccountsPage() {
     const [search, setSearch] = useState('');
     const [typeFilter, setTypeFilter] = useState<AccountType | ''>('');
     const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+
+    const openCreate = () => { setEditingAccount(null); setDialogOpen(true); };
+    const openEdit = (a: Account) => { setEditingAccount(a); setDialogOpen(true); };
 
     const toggleExpand = (id: string) => {
         setExpandedIds(prev => {
@@ -69,21 +75,37 @@ export function ChartOfAccountsPage() {
         return (
             <div key={account.id}>
                 <div
-                    className={`flex items-center gap-3 py-3 px-4 hover:bg-muted/50 border-b cursor-pointer transition ${depth > 0 ? 'bg-muted/20' : ''}`}
+                    className={`flex items-center gap-3 py-3 px-4 hover:bg-muted/50 border-b transition group ${depth > 0 ? 'bg-muted/20' : ''}`}
                     style={{ paddingRight: `${16 + depth * 24}px` }}
-                    onClick={() => hasChildren && toggleExpand(account.id)}
                 >
-                    <div className="w-6">
+                    <div
+                        className="w-6 cursor-pointer"
+                        onClick={() => hasChildren && toggleExpand(account.id)}
+                    >
                         {hasChildren && (isExpanded
                             ? <ChevronDown className="w-4 h-4 text-muted-foreground" />
                             : <ChevronLeft className="w-4 h-4 text-muted-foreground" />)}
                     </div>
                     <span className="font-mono text-sm w-16 text-muted-foreground">{account.accountNumber}</span>
-                    <span className={`font-medium flex-1 ${depth === 0 ? 'text-foreground' : 'text-muted-foreground'}`}>{account.nameAr}</span>
+                    <span
+                        className={`font-medium flex-1 cursor-pointer ${depth === 0 ? 'text-foreground' : 'text-muted-foreground'}`}
+                        onClick={() => hasChildren && toggleExpand(account.id)}
+                    >
+                        {account.nameAr}
+                    </span>
                     <span className="text-xs text-muted-foreground hidden sm:block">{account.nameEn}</span>
                     <span className={`text-xs px-2 py-0.5 rounded-full ${ACCOUNT_TYPE_COLORS[account.accountType] || 'bg-gray-100 text-gray-700'}`}>
                         {ACCOUNT_TYPE_LABELS[account.accountType]}
                     </span>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => { e.stopPropagation(); openEdit(account); }}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="تعديل"
+                    >
+                        <Pencil className="w-4 h-4" />
+                    </Button>
                 </div>
                 {hasChildren && isExpanded && account.childAccounts!.map(child => renderAccount(child, depth + 1))}
             </div>
@@ -114,8 +136,20 @@ export function ChartOfAccountsPage() {
                     )}
                     <Button variant="outline" onClick={expandAll}>توسيع الكل</Button>
                     <Button variant="outline" onClick={collapseAll}>طي الكل</Button>
+                    <Button onClick={openCreate}>
+                        <Plus className="w-4 h-4 ml-2" />
+                        حساب جديد
+                    </Button>
                 </div>
             </div>
+
+            {/* Account Form Dialog */}
+            <AccountFormDialog
+                open={dialogOpen}
+                onOpenChange={setDialogOpen}
+                account={editingAccount}
+                allAccounts={accounts}
+            />
 
             {/* Filters */}
             <div className="bg-card rounded-xl border p-4">
@@ -172,11 +206,17 @@ export function ChartOfAccountsPage() {
                     <div className="p-12 text-center">
                         <BookOpen className="w-16 h-16 text-muted-foreground/50 mx-auto mb-4" />
                         <h3 className="text-lg font-semibold mb-2">لا توجد حسابات</h3>
-                        <p className="text-muted-foreground mb-4">قم بإنشاء الحسابات الافتراضية للبدء</p>
-                        <Button onClick={() => seedMutation.mutate()} disabled={seedMutation.isPending}>
-                            <Plus className="w-4 h-4 ml-2" />
-                            إنشاء الحسابات الافتراضية
-                        </Button>
+                        <p className="text-muted-foreground mb-4">قم بإنشاء الحسابات الافتراضية أو أضف حساباً يدوياً</p>
+                        <div className="flex justify-center gap-2">
+                            <Button variant="outline" onClick={() => seedMutation.mutate()} disabled={seedMutation.isPending}>
+                                <Plus className="w-4 h-4 ml-2" />
+                                الحسابات الافتراضية
+                            </Button>
+                            <Button onClick={openCreate}>
+                                <Plus className="w-4 h-4 ml-2" />
+                                حساب جديد
+                            </Button>
+                        </div>
                     </div>
                 )}
             </div>

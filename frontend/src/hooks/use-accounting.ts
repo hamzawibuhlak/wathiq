@@ -106,6 +106,18 @@ export function usePostJournalEntry() {
     });
 }
 
+export function useReverseJournalEntry() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: (id: string) => accountingApi.reverseJournalEntry(id),
+        onSuccess: () => {
+            toast.success('تم عكس القيد');
+            qc.invalidateQueries({ queryKey: [...accountingKeys.all, 'journal-entries'] });
+        },
+        onError: () => toast.error('فشل في عكس القيد'),
+    });
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // Expenses
 // ═══════════════════════════════════════════════════════════════════

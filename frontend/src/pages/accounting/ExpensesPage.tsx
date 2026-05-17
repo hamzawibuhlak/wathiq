@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Wallet, Plus, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Wallet, Plus, CheckCircle, XCircle, Loader2, Tags } from 'lucide-react';
 import { Button, Input } from '@/components/ui';
 import { LoadingState } from '@/components/common/LoadingState';
 import { EmptyState } from '@/components/common/EmptyState';
+import { ExpenseCategoryDialog } from '@/components/accounting/ExpenseCategoryDialog';
 import {
     useExpenses,
     useExpenseCategories,
@@ -19,6 +20,7 @@ import toast from 'react-hot-toast';
 export function ExpensesPage() {
     const [statusFilter, setStatusFilter] = useState<ExpenseStatus | ''>('');
     const [showCreate, setShowCreate] = useState(false);
+    const [showCategories, setShowCategories] = useState(false);
 
     const { data: expenses = [], isLoading } = useExpenses(statusFilter || undefined);
     const { data: categories = [] } = useExpenseCategories();
@@ -78,10 +80,17 @@ export function ExpensesPage() {
                     </h1>
                     <p className="text-muted-foreground">إدارة ومتابعة المصروفات</p>
                 </div>
-                <Button onClick={() => setShowCreate(!showCreate)}>
-                    <Plus className="w-4 h-4 ml-2" />مصروف جديد
-                </Button>
+                <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => setShowCategories(true)}>
+                        <Tags className="w-4 h-4 ml-2" />التصنيفات
+                    </Button>
+                    <Button onClick={() => setShowCreate(!showCreate)}>
+                        <Plus className="w-4 h-4 ml-2" />مصروف جديد
+                    </Button>
+                </div>
             </div>
+
+            <ExpenseCategoryDialog open={showCategories} onOpenChange={setShowCategories} />
 
             {/* Stats */}
             <div className="grid grid-cols-3 gap-4">

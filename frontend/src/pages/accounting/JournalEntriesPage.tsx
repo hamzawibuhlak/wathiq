@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-    FileText, Plus, CheckCircle, Clock, XCircle, ArrowUpDown, Eye, Loader2,
+    FileText, Plus, CheckCircle, Clock, XCircle, ArrowUpDown, Eye, Loader2, RotateCcw,
 } from 'lucide-react';
 import { Button, Input } from '@/components/ui';
 import { LoadingState } from '@/components/common/LoadingState';
@@ -11,6 +11,7 @@ import {
     useCreateJournalEntry,
     useApproveJournalEntry,
     usePostJournalEntry,
+    useReverseJournalEntry,
 } from '@/hooks/use-accounting';
 import {
     JournalEntry, JournalEntryStatus, JournalEntryType,
@@ -47,6 +48,12 @@ export function JournalEntriesPage() {
     const createMutation = useCreateJournalEntry();
     const approveMutation = useApproveJournalEntry();
     const postMutation = usePostJournalEntry();
+    const reverseMutation = useReverseJournalEntry();
+
+    const handleReverse = (id: string) => {
+        if (!window.confirm('هل أنت متأكد من عكس هذا القيد؟ سيتم إنشاء قيد عكسي.')) return;
+        reverseMutation.mutate(id);
+    };
 
     const entries = entriesData?.entries || [];
     const totalPages = entriesData?.totalPages || 1;
@@ -319,8 +326,20 @@ export function JournalEntriesPage() {
                                                         variant="ghost" size="sm"
                                                         onClick={() => postMutation.mutate(entry.id)}
                                                         className="text-green-600"
+                                                        title="ترحيل"
                                                     >
                                                         <ArrowUpDown className="w-4 h-4" />
+                                                    </Button>
+                                                )}
+                                                {entry.status === 'POSTED' && (
+                                                    <Button
+                                                        variant="ghost" size="sm"
+                                                        onClick={() => handleReverse(entry.id)}
+                                                        className="text-orange-600"
+                                                        title="عكس القيد"
+                                                        disabled={reverseMutation.isPending}
+                                                    >
+                                                        <RotateCcw className="w-4 h-4" />
                                                     </Button>
                                                 )}
                                             </div>
