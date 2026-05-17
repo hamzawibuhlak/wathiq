@@ -16,7 +16,6 @@ import {
     ChevronDown,
     Briefcase,
     CreditCard,
-    Scale,
     MessageSquare,
     CheckSquare,
     BarChart3,
@@ -288,14 +287,15 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                 <Link to={`${slugPrefix}/dashboard`} className="flex items-center gap-3 min-w-0">
                     <div className={cn(
                         'flex-shrink-0 rounded-xl flex items-center justify-center overflow-hidden',
-                        'bg-gradient-to-br from-primary to-[hsl(var(--gold))]',
-                        'shadow-[0_0_16px_rgba(var(--primary-rgb),0.4)]',
+                        'bg-white/[0.04]',
+                        'shadow-[0_0_16px_rgba(var(--primary-rgb),0.25)]',
                         isCollapsed ? 'w-9 h-9' : 'w-9 h-9'
                     )}>
-                        {firm?.logo
-                            ? <img src={firm.logo} alt={firm.name || 'logo'} className="w-full h-full object-contain" />
-                            : <Scale className="w-5 h-5 text-white" />
-                        }
+                        <img
+                            src={firm?.logo || '/icon-512.png'}
+                            alt={firm?.name || 'وسم الثقة'}
+                            className="w-full h-full object-contain p-0.5"
+                        />
                     </div>
                     {!isCollapsed && (
                         <span className="text-[17px] font-bold bg-gradient-to-l from-primary to-[hsl(var(--gold))] bg-clip-text text-transparent truncate">
