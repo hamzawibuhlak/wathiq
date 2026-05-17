@@ -12,7 +12,7 @@ FROM node:20-alpine AS marketing-builder
 WORKDIR /marketing
 
 COPY marketing/package*.json ./
-RUN npm ci
+RUN rm -f package-lock.json && npm install --legacy-peer-deps
 
 COPY marketing/ .
 RUN npm run build
@@ -25,7 +25,7 @@ FROM node:20-alpine AS app-builder
 WORKDIR /app
 
 COPY frontend/package*.json ./
-RUN npm ci
+RUN rm -f package-lock.json && npm install --legacy-peer-deps
 
 COPY frontend/ .
 
@@ -42,8 +42,9 @@ RUN npm run build
 # ═══════════════════════════════════════════════════════════════════
 FROM nginx:alpine AS production
 
-# Copy custom nginx config
-COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
+# nginx config — default: nginx.conf (full SSL), override with nginx.prod.conf (HTTP-only)
+ARG NGINX_CONF=nginx.conf
+COPY frontend/${NGINX_CONF} /etc/nginx/conf.d/default.conf
 
 # Copy marketing site to /marketing
 COPY --from=marketing-builder /marketing/dist /usr/share/nginx/marketing

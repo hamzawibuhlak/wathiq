@@ -1,147 +1,91 @@
-# ═══════════════════════════════════════════════════════════════════
-# WATHEEQ MVP - PRODUCTION DOCKER COMPOSE
-# Optimized for production deployment
-# ═══════════════════════════════════════════════════════════════════
-
-version: '3.8'
-
 services:
-  # ═══════════════════════════════════════════════════════════════════
-  # PostgreSQL Database
-  # ═══════════════════════════════════════════════════════════════════
   postgres:
     image: postgres:15-alpine
-    container_name: watheeq_postgres_prod
-    restart: always
+    container_name: watheeq_postgres
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_DB: ${POSTGRES_DB:-watheeq_prod}
+      POSTGRES_USER: ${POSTGRES_USER:-watheeq}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
-      interval: 30s
-      timeout: 10s
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-watheeq} -d ${POSTGRES_DB:-watheeq_prod}"]
+      interval: 10s
+      timeout: 5s
       retries: 5
-      start_period: 30s
+      start_period: 20s
     networks:
-      - watheeq_internal
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 1G
+      - watheeq_network
 
-  # ═══════════════════════════════════════════════════════════════════
-  # Redis Cache
-  # ═══════════════════════════════════════════════════════════════════
   redis:
     image: redis:7-alpine
-    container_name: watheeq_redis_prod
-    restart: always
-    command: redis-server --appendonly yes
+    container_name: watheeq_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
     volumes:
       - redis_data:/data
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
-      interval: 30s
-      timeout: 10s
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
       retries: 5
     networks:
-      - watheeq_internal
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 256M
+      - watheeq_network
 
-  # ═══════════════════════════════════════════════════════════════════
-  # Backend (NestJS) - Production
-  # ═══════════════════════════════════════════════════════════════════
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: watheeq_backend_prod
-    restart: always
-    environment:
-      NODE_ENV: production
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
-      PORT: 3000
-      REDIS_URL: redis://redis:6379
-      UPLOAD_DIR: /app/uploads
+    container_name: watheeq_backend
+    restart: unless-stopped
+    env_file: ./backend/.env.production
     volumes:
       - backend_uploads:/app/uploads
+      - whatsapp_sessions:/app/whatsapp-sessions
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     healthcheck:
-      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api" ]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
     networks:
-      - watheeq_internal
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 512M
-      replicas: 1
+      - watheeq_network
 
-  # ═══════════════════════════════════════════════════════════════════
-  # Frontend (Nginx) - Production
-  # ═══════════════════════════════════════════════════════════════════
   frontend:
     build:
       context: .
       dockerfile: frontend/Dockerfile
       args:
+        NGINX_CONF: nginx.prod.conf
         VITE_API_URL: /api
-        VITE_APP_NAME: Watheeq
-    container_name: watheeq_frontend_prod
-    restart: always
+        VITE_APP_NAME: وسم الثقة
+    container_name: watheeq_frontend
+    restart: unless-stopped
     ports:
       - "80:80"
-      - "443:443"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     healthcheck:
-      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/health" ]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-    volumes:
-      - backend_uploads:/uploads:ro
-      - /etc/letsencrypt:/etc/letsencrypt:ro
-      - /var/www/certbot:/var/www/certbot:ro
     networks:
-      - watheeq_internal
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 128M
+      - watheeq_network
 
-# ═══════════════════════════════════════════════════════════════════
-# Volumes
-# ═══════════════════════════════════════════════════════════════════
 volumes:
   postgres_data:
-    driver: local
   redis_data:
-    driver: local
   backend_uploads:
-    driver: local
+  whatsapp_sessions:
 
-# ═══════════════════════════════════════════════════════════════════
-# Networks
-# ═══════════════════════════════════════════════════════════════════
 networks:
-  watheeq_internal:
+  watheeq_network:
     driver: bridge
-    internal: false
