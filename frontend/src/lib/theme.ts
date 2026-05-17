@@ -57,8 +57,8 @@ export type ThemeMode = 'light' | 'dark';
 const THEME_MODE_KEY = 'wasm-theme-mode';
 
 export function getThemeMode(): ThemeMode {
-    if (typeof window === 'undefined') return 'dark';
-    return (localStorage.getItem(THEME_MODE_KEY) as ThemeMode) || 'dark';
+    if (typeof window === 'undefined') return 'light';
+    return (localStorage.getItem(THEME_MODE_KEY) as ThemeMode) || 'light';
 }
 
 export function applyThemeMode(mode: ThemeMode) {

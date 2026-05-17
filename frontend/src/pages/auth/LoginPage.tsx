@@ -6,7 +6,6 @@ import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import { Button, Input, Label } from '@/components/ui';
 import { useLogin } from '@/hooks/use-auth';
-import { cn } from '@/lib/utils';
 
 const loginSchema = z.object({
     email: z.string().min(1, 'البريد الإلكتروني مطلوب').email('البريد الإلكتروني غير صالح'),
@@ -26,17 +25,17 @@ export function LoginPage() {
     const onSubmit = (data: LoginFormData) => { loginMutation.mutate(data); };
 
     return (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {/* Email */}
-            <div className="space-y-1.5">
-                <Label htmlFor="email" className="text-white/60 text-[13px]">البريد الإلكتروني</Label>
+            <div className="space-y-2">
+                <Label htmlFor="email">البريد الإلكتروني</Label>
                 <div className="relative">
-                    <Mail className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/25" />
+                    <Mail className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                         id="email"
                         type="email"
                         placeholder="example@wasmaltheeqa.sa"
-                        className="pr-10 bg-white/[0.05] border-white/[0.08] text-white placeholder:text-white/20 focus:border-primary/50 focus:bg-white/[0.07]"
+                        className="pr-10"
                         error={errors.email?.message}
                         {...register('email')}
                     />
@@ -44,26 +43,26 @@ export function LoginPage() {
             </div>
 
             {/* Password */}
-            <div className="space-y-1.5">
+            <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                    <Label htmlFor="password" className="text-white/60 text-[13px]">كلمة المرور</Label>
-                    <Link to="/forgot-password" className="text-[12px] text-primary/70 hover:text-primary transition-colors">
+                    <Label htmlFor="password">كلمة المرور</Label>
+                    <Link to="/forgot-password" className="text-sm text-primary hover:underline">
                         نسيت كلمة المرور؟
                     </Link>
                 </div>
                 <div className="relative">
-                    <Lock className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/25" />
+                    <Lock className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                         id="password"
                         type={showPassword ? 'text' : 'password'}
                         placeholder="••••••••"
-                        className="pr-10 pl-10 bg-white/[0.05] border-white/[0.08] text-white placeholder:text-white/20 focus:border-primary/50 focus:bg-white/[0.07]"
+                        className="pr-10 pl-10"
                         error={errors.password?.message}
                         {...register('password')}
                     />
                     <button
                         type="button"
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-white/25 hover:text-white/60 transition-colors"
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                         onClick={() => setShowPassword(!showPassword)}
                     >
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -72,16 +71,7 @@ export function LoginPage() {
             </div>
 
             {/* Submit */}
-            <Button
-                type="submit"
-                className={cn(
-                    'w-full h-11 text-[14px] font-semibold mt-2',
-                    'bg-gradient-to-l from-primary/90 to-[hsl(var(--gold))]/80 text-white border-0',
-                    'shadow-[0_0_20px_rgba(var(--primary-rgb),0.35)] hover:shadow-[0_0_28px_rgba(var(--primary-rgb),0.5)]',
-                    'transition-all duration-200'
-                )}
-                isLoading={loginMutation.isPending}
-            >
+            <Button type="submit" className="w-full" size="lg" isLoading={loginMutation.isPending}>
                 تسجيل الدخول
             </Button>
         </form>
