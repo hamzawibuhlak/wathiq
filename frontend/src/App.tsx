@@ -62,6 +62,8 @@ const EmailSettingsPage = lazy(() => import('@/pages/settings/EmailSettingsPage'
 const TwoFactorPage = lazy(() => import('@/pages/settings/TwoFactorPage'));
 const ImportPage = lazy(() => import('@/pages/settings/ImportPage'));
 const CallCenterSettingsPage = lazy(() => import('@/pages/settings/CallCenterSettingsPage'));
+const AiSettingsPage = lazy(() => import('@/pages/settings/AiSettingsPage'));
+const LegalLibraryManagerPage = lazy(() => import('@/pages/legal-library/LegalLibraryManagerPage'));
 
 // Activity Logs
 const ActivityLogsPage = lazy(() => import('@/pages/activity-logs/ActivityLogsPage'));
@@ -253,6 +255,7 @@ function App() {
                             <Route path="security" element={<TwoFactorPage />} />
                             <Route path="import" element={<ImportPage />} />
                             <Route path="call-center" element={<CallCenterSettingsPage />} />
+                            <Route path="ai" element={<AiSettingsPage />} />
                         </Route>
 
                         <Route path="/account" element={<AccountLayout />}>
@@ -321,6 +324,7 @@ function App() {
                         <Route path="/legal-library/glossary" element={<GlossaryPage />} />
                         <Route path="/legal-library/bookmarks" element={<BookmarksPage />} />
                         <Route path="/legal-search" element={<LegalAISearchPage />} />
+                        <Route path="/legal-library/manage" element={<LegalLibraryManagerPage />} />
 
                         <Route path="/forms" element={<FormsListPage />} />
                         <Route path="/forms/new" element={<FormBuilderPage />} />

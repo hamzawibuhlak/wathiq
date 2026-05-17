@@ -383,13 +383,15 @@ export class LegalAIService {
 
     private async callAI(context: string, query: string): Promise<{ answer: string; tokensUsed: number }> {
         const userMessage = `${context}\n\nالسؤال: ${query}`;
+        // Prefer custom prompt from DB, fall back to default
+        const systemPrompt = (await this.getCustomPrompt('AI_PROMPT_LEGAL_SEARCH')) || this.getSystemPrompt();
 
         if (this.aiProvider === 'openai') {
             const response = await this.openaiClient.chat.completions.create({
                 model: process.env.OPENAI_MODEL || 'gpt-4o',
                 max_tokens: 2000,
                 messages: [
-                    { role: 'system', content: this.getSystemPrompt() },
+                    { role: 'system', content: systemPrompt },
                     { role: 'user', content: userMessage },
                 ] });
 
@@ -402,7 +404,7 @@ export class LegalAIService {
         const response = await this.anthropicClient.messages.create({
             model: process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20241022',
             max_tokens: 2000,
-            system: this.getSystemPrompt(),
+            system: systemPrompt,
             messages: [
                 { role: 'user', content: userMessage },
             ] });
@@ -417,6 +419,15 @@ export class LegalAIService {
     // ══════════════════════════════════════════════════════════
     // 🔧 PRIVATE HELPERS
     // ══════════════════════════════════════════════════════════
+
+    private async getCustomPrompt(key: string): Promise<string | null> {
+        try {
+            const cfg = await this.prisma.systemConfig.findUnique({ where: { key } });
+            return cfg?.value || null;
+        } catch {
+            return null;
+        }
+    }
 
     private getSystemPrompt(): string {
         return `أنت مساعد قانوني متخصص في الأنظمة واللوائح السعودية. اسمك "وسم الثقة AI".

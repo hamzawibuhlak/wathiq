@@ -9,6 +9,7 @@ import {
     Upload,
     PhoneCall,
     Palette,
+    Bot,
 } from 'lucide-react';
 
 const tabs = [
@@ -19,6 +20,7 @@ const tabs = [
     { to: 'email', label: 'البريد (SMTP)', icon: Mail },
     { to: 'whatsapp', label: 'واتساب', icon: MessageCircle },
     { to: 'call-center', label: 'مركز الاتصال', icon: PhoneCall },
+    { to: 'ai', label: 'الذكاء الاصطناعي', icon: Bot },
     { to: 'security', label: 'الأمان', icon: Shield },
     { to: 'import', label: 'الاستيراد', icon: Upload },
 ];

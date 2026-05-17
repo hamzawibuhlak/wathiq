@@ -64,18 +64,32 @@ export class AiService {
         return this.openai;
     }
 
+    /** Load a system prompt from SystemConfig, falling back to the provided default. */
+    private async loadPrompt(key: string, fallback: string): Promise<string> {
+        try {
+            const cfg = await this.prisma.systemConfig.findUnique({ where: { key } });
+            return cfg?.value || fallback;
+        } catch {
+            return fallback;
+        }
+    }
+
     /**
      * تلخيص المستندات القانونية
      */
     async summarizeDocument(text: string): Promise<{ summary: string }> {
         const client = this.ensureClient();
+        const systemPrompt = await this.loadPrompt(
+            'AI_PROMPT_SUMMARIZE',
+            'أنت مساعد قانوني محترف. قم بتلخيص المستند القانوني التالي بشكل موجز وواضح باللغة العربية.',
+        );
 
         const response = await client.chat.completions.create({
             model: 'gpt-4o-mini',
             messages: [
                 {
                     role: 'system',
-                    content: 'أنت مساعد قانوني محترف. قم بتلخيص المستند القانوني التالي بشكل موجز وواضح باللغة العربية.',
+                    content: systemPrompt,
                 },
                 {
                     role: 'user',
@@ -126,12 +140,17 @@ export class AiService {
 الرجاء الرد بتنسيق JSON فقط.
         `;
 
+        const analyzePrompt = await this.loadPrompt(
+            'AI_PROMPT_ANALYZE_CASE',
+            'أنت خبير قانوني سعودي متخصص في تحليل القضايا. أجب بتنسيق JSON فقط.',
+        );
+
         const response = await client.chat.completions.create({
             model: 'gpt-4o-mini',
             messages: [
                 {
                     role: 'system',
-                    content: 'أنت خبير قانوني سعودي متخصص في تحليل القضايا. أجب بتنسيق JSON فقط.',
+                    content: analyzePrompt,
                 },
                 { role: 'user', content: prompt },
             ],
@@ -203,13 +222,9 @@ export class AiService {
      */
     async chatAssistant(messages: Array<{ role: 'user' | 'assistant'; content: string }>): Promise<{ response: string }> {
         const client = this.ensureClient();
-
-        const response = await client.chat.completions.create({
-            model: 'gpt-4o-mini',
-            messages: [
-                {
-                    role: 'system',
-                    content: `أنت مساعد قانوني ذكي لنظام وسم الثقة (Wasm Altheeqa). 
+        const chatPrompt = await this.loadPrompt(
+            'AI_PROMPT_CHAT',
+            `أنت مساعد قانوني ذكي لنظام وسم الثقة (Wasm Altheeqa).
 ساعد المحامين في:
 - الإجابة عن الأسئلة القانونية
 - شرح الإجراءات القانونية السعودية
@@ -217,6 +232,14 @@ export class AiService {
 - البحث في الأنظمة السعودية
 
 كن دقيقاً ومحترفاً في إجاباتك. أجب باللغة العربية.`,
+        );
+
+        const response = await client.chat.completions.create({
+            model: 'gpt-4o-mini',
+            messages: [
+                {
+                    role: 'system',
+                    content: chatPrompt,
                 },
                 ...messages.map((m) => ({
                     role: m.role as 'user' | 'assistant',
@@ -244,12 +267,17 @@ export class AiService {
     }> {
         const client = this.ensureClient();
 
+        const extractPrompt = await this.loadPrompt(
+            'AI_PROMPT_EXTRACT_INFO',
+            'استخرج المعلومات الرئيسية من النص القانوني التالي. الرد بتنسيق JSON يتضمن: names, dates, amounts, locations, organizations.',
+        );
+
         const response = await client.chat.completions.create({
             model: 'gpt-4o-mini',
             messages: [
                 {
                     role: 'system',
-                    content: 'استخرج المعلومات الرئيسية من النص القانوني التالي. الرد بتنسيق JSON يتضمن: names, dates, amounts, locations, organizations.',
+                    content: extractPrompt,
                 },
                 {
                     role: 'user',

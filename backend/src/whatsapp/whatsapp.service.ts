@@ -3,19 +3,21 @@ import { HttpService } from '@nestjs/axios';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { firstValueFrom } from 'rxjs';
 import { NotificationsService } from '../notifications/notifications.service';
+import * as crypto from 'crypto';
 
 interface WhatsAppConfig {
   apiUrl: string;
   accessToken: string;
   phoneNumberId: string;
   businessAccountId: string;
+  appSecret: string;
   enabled: boolean;
 }
 
 @Injectable()
 export class WhatsAppService {
   private readonly logger = new Logger(WhatsAppService.name);
-  private readonly defaultApiUrl = 'https://graph.facebook.com/v18.0';
+  private readonly defaultApiUrl = 'https://graph.facebook.com/v21.0';
 
   constructor(
     private httpService: HttpService,
@@ -31,10 +33,12 @@ export class WhatsAppService {
 
     return {
       apiUrl: this.defaultApiUrl,
-      accessToken: settings?.whatsappAccessToken || '',
-      phoneNumberId: settings?.whatsappPhoneNumberId || '',
-      businessAccountId: settings?.whatsappBusinessId || '',
-      enabled: settings?.whatsappEnabled || false };
+      accessToken: settings?.whatsappAccessToken || process.env.WHATSAPP_ACCESS_TOKEN || '',
+      phoneNumberId: settings?.whatsappPhoneNumberId || process.env.WHATSAPP_PHONE_ID || '',
+      businessAccountId: settings?.whatsappBusinessId || process.env.WHATSAPP_BUSINESS_ID || '',
+      appSecret: settings?.whatsappAppSecret || process.env.WHATSAPP_APP_SECRET || '',
+      enabled: settings?.whatsappEnabled || false,
+    };
   }
 
   /**
@@ -49,9 +53,13 @@ export class WhatsAppService {
         : '',
       whatsappPhoneNumberId: settings?.whatsappPhoneNumberId || '',
       whatsappBusinessId: settings?.whatsappBusinessId || '',
-      whatsappWebhookToken: settings?.whatsappWebhookToken || '',
+      whatsappWebhookToken: settings?.whatsappWebhookToken || process.env.WHATSAPP_VERIFY_TOKEN || '',
+      whatsappAppSecret: settings?.whatsappAppSecret
+        ? '••••••••' + settings.whatsappAppSecret.slice(-6)
+        : '',
       whatsappEnabled: settings?.whatsappEnabled || false,
-      isConfigured: !!(settings?.whatsappAccessToken && settings?.whatsappPhoneNumberId) };
+      isConfigured: !!(settings?.whatsappAccessToken && settings?.whatsappPhoneNumberId),
+    };
   }
 
   /**
@@ -62,9 +70,9 @@ export class WhatsAppService {
     whatsappPhoneNumberId?: string;
     whatsappBusinessId?: string;
     whatsappWebhookToken?: string;
+    whatsappAppSecret?: string;
     whatsappEnabled?: boolean;
   }) {
-    // Don't update token if it's the masked version
     const updateData: any = {};
 
     if (data.whatsappAccessToken && !data.whatsappAccessToken.startsWith('••••')) {
@@ -78,6 +86,9 @@ export class WhatsAppService {
     }
     if (data.whatsappWebhookToken !== undefined) {
       updateData.whatsappWebhookToken = data.whatsappWebhookToken;
+    }
+    if (data.whatsappAppSecret && !data.whatsappAppSecret.startsWith('••••')) {
+      updateData.whatsappAppSecret = data.whatsappAppSecret;
     }
     if (data.whatsappEnabled !== undefined) {
       updateData.whatsappEnabled = data.whatsappEnabled;
@@ -129,6 +140,26 @@ export class WhatsAppService {
         success: false,
         message: error.response?.data?.error?.message || 'فشل الاتصال - تحقق من البيانات',
         error: error.response?.data?.error };
+    }
+  }
+
+  /**
+   * Verify HMAC-SHA256 signature from Meta webhook header x-hub-signature-256
+   */
+  verifySignature(rawBody: Buffer, signature: string): boolean {
+    if (!signature) return false;
+    const appSecret = process.env.WHATSAPP_APP_SECRET;
+    if (!appSecret) return true; // skip if not configured
+    try {
+      const expected =
+        'sha256=' +
+        crypto.createHmac('sha256', appSecret).update(rawBody).digest('hex');
+      return crypto.timingSafeEqual(
+        Buffer.from(expected),
+        Buffer.from(signature),
+      );
+    } catch {
+      return false;
     }
   }
 

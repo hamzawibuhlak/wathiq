@@ -264,14 +264,14 @@ export default function WhatsAppMessagesPage() {
                         <Card>
                             <CardHeader className="pb-2">
                                 <CardDescription>إجمالي الرسائل</CardDescription>
-                                <CardTitle className="text-2xl">{stats?.totalMessages || 0}</CardTitle>
+                                <CardTitle className="text-2xl">{stats?.total || 0}</CardTitle>
                             </CardHeader>
                         </Card>
                         <Card>
                             <CardHeader className="pb-2">
                                 <CardDescription>تم الإرسال</CardDescription>
                                 <CardTitle className="text-2xl text-blue-600">
-                                    {stats?.sentMessages || 0}
+                                    {stats?.sent || 0}
                                 </CardTitle>
                             </CardHeader>
                         </Card>
@@ -279,7 +279,7 @@ export default function WhatsAppMessagesPage() {
                             <CardHeader className="pb-2">
                                 <CardDescription>تم التوصيل</CardDescription>
                                 <CardTitle className="text-2xl text-green-600">
-                                    {stats?.deliveredMessages || 0}
+                                    {stats?.delivered || 0}
                                 </CardTitle>
                             </CardHeader>
                         </Card>
@@ -287,7 +287,7 @@ export default function WhatsAppMessagesPage() {
                             <CardHeader className="pb-2">
                                 <CardDescription>فشل الإرسال</CardDescription>
                                 <CardTitle className="text-2xl text-red-600">
-                                    {stats?.failedMessages || 0}
+                                    {stats?.failed || 0}
                                 </CardTitle>
                             </CardHeader>
                         </Card>

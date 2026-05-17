@@ -17,15 +17,22 @@ export const legalLibraryApi = {
     getRegulations: (params?: any) => api.get('/legal-library/regulations', { params }).then((r: any) => r.data),
     getRegulationById: (id: string) => api.get(`/legal-library/regulations/${id}`).then((r: any) => r.data),
     createRegulation: (data: any) => api.post('/legal-library/regulations', data).then((r: any) => r.data),
+    updateRegulation: (id: string, data: any) => api.patch(`/legal-library/regulations/${id}`, data).then((r: any) => r.data),
     deleteRegulation: (id: string) => api.delete(`/legal-library/regulations/${id}`).then((r: any) => r.data),
 
     // Precedents
     getPrecedents: (params?: any) => api.get('/legal-library/precedents', { params }).then((r: any) => r.data),
     getPrecedentById: (id: string) => api.get(`/legal-library/precedents/${id}`).then((r: any) => r.data),
+    createPrecedent: (data: any) => api.post('/legal-library/precedents', data).then((r: any) => r.data),
+    updatePrecedent: (id: string, data: any) => api.patch(`/legal-library/precedents/${id}`, data).then((r: any) => r.data),
+    deletePrecedent: (id: string) => api.delete(`/legal-library/precedents/${id}`).then((r: any) => r.data),
 
     // Terms (Glossary)
     getTerms: (params?: any) => api.get('/legal-library/terms', { params }).then((r: any) => r.data),
     getTermById: (id: string) => api.get(`/legal-library/terms/${id}`).then((r: any) => r.data),
+    createTerm: (data: any) => api.post('/legal-library/terms', data).then((r: any) => r.data),
+    updateTerm: (id: string, data: any) => api.patch(`/legal-library/terms/${id}`, data).then((r: any) => r.data),
+    deleteTerm: (id: string) => api.delete(`/legal-library/terms/${id}`).then((r: any) => r.data),
 
     // Article Notes
     getArticleNotes: (articleId: string) => api.get(`/legal-library/articles/${articleId}/notes`).then((r: any) => r.data),

@@ -15,7 +15,14 @@ const Softphone = lazy(() => import('@/components/call-center/Softphone'));
 
 export function AppLayout() {
     const [isCollapsed, setIsCollapsed] = useState(false);
+    // Mobile drawer state: hidden by default on phones, shown when toggled
+    const [isMobileOpen, setIsMobileOpen] = useState(false);
     const location = useLocation();
+
+    // Close the mobile drawer whenever the route changes
+    useEffect(() => {
+        setIsMobileOpen(false);
+    }, [location.pathname]);
     const { subscribe, isConnected } = useWebSocket();
     const queryClient = useQueryClient();
     const { data: firmData } = useFirmSettings();
@@ -112,20 +119,41 @@ export function AppLayout() {
 
     return (
         <div className="min-h-screen bg-background" dir="rtl">
-            {/* Sidebar */}
-            <Sidebar isCollapsed={isCollapsed} onToggle={() => setIsCollapsed(!isCollapsed)} />
+            {/* Sidebar — hidden by default below lg, shown as drawer when isMobileOpen */}
+            <div
+                className={cn(
+                    'lg:translate-x-0 transition-transform duration-300',
+                    isMobileOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0',
+                )}
+            >
+                <Sidebar isCollapsed={isCollapsed} onToggle={() => setIsCollapsed(!isCollapsed)} />
+            </div>
+
+            {/* Mobile overlay backdrop */}
+            {isMobileOpen && (
+                <div
+                    className="fixed inset-0 bg-black/40 z-30 lg:hidden"
+                    onClick={() => setIsMobileOpen(false)}
+                    aria-label="إغلاق القائمة"
+                />
+            )}
 
             {/* Header */}
-            <Header isCollapsed={isCollapsed} />
+            <Header
+                isCollapsed={isCollapsed}
+                onMobileMenu={() => setIsMobileOpen((v) => !v)}
+            />
 
             {/* Main Content */}
             <main
                 className={cn(
                     'pt-16 min-h-screen transition-all duration-300',
-                    isCollapsed ? 'mr-[68px]' : 'mr-64'
+                    // Mobile: full width. lg+: respect sidebar width.
+                    'mr-0',
+                    isCollapsed ? 'lg:mr-[68px]' : 'lg:mr-64',
                 )}
             >
-                <div className="p-6">
+                <div className="p-4 md:p-6">
                     <AnimatePresence mode="wait">
                         <PageTransition key={location.pathname}>
                             <Outlet />

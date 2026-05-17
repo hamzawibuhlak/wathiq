@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link, useParams } from 'react-router-dom';
 import {
     Search, User, Settings, LogOut, ChevronDown,
-    Plus, Briefcase, Calendar, Users, FileText, Mail, Command,
+    Plus, Briefcase, Calendar, Users, FileText, Mail, Command, Menu,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth.store';
@@ -13,6 +13,7 @@ import { NotificationsDropdown } from './NotificationsDropdown';
 
 interface HeaderProps {
     isCollapsed: boolean;
+    onMobileMenu?: () => void;
 }
 
 const quickActions = [
@@ -22,7 +23,7 @@ const quickActions = [
     { label: 'مستند جديد',  icon: FileText,  path: '/documents',    color: 'text-violet-400', bg: 'bg-violet-400/10' },
 ];
 
-export function Header({ isCollapsed }: HeaderProps) {
+export function Header({ isCollapsed, onMobileMenu }: HeaderProps) {
     const [showUserMenu, setShowUserMenu]       = useState(false);
     const [showQuickActions, setShowQuickActions] = useState(false);
     const [showSearch, setShowSearch]           = useState(false);
@@ -69,9 +70,22 @@ export function Header({ isCollapsed }: HeaderProps) {
                 'bg-slate-900/80 backdrop-blur-xl',
                 'border-b border-white/[0.07]',
                 'shadow-[0_4px_24px_rgba(0,0,0,0.3)]',
-                isCollapsed ? 'right-[68px]' : 'right-64'
+                // Mobile: full width. lg+: respect sidebar.
+                'right-0',
+                isCollapsed ? 'lg:right-[68px]' : 'lg:right-64'
             )}>
-                <div className="h-full px-5 flex items-center justify-between gap-4">
+                <div className="h-full px-3 md:px-5 flex items-center justify-between gap-2 md:gap-4">
+
+                    {/* Mobile menu toggle */}
+                    {onMobileMenu && (
+                        <button
+                            onClick={onMobileMenu}
+                            className="lg:hidden w-9 h-9 rounded-xl flex items-center justify-center bg-white/[0.05] border border-white/[0.08] text-white/70 hover:bg-white/[0.10] transition"
+                            aria-label="فتح القائمة"
+                        >
+                            <Menu className="w-5 h-5" />
+                        </button>
+                    )}
 
                     {/* ── Search ── */}
                     <div className="flex-1 max-w-sm">

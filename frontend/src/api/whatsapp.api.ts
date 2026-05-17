@@ -35,10 +35,15 @@ export interface WhatsAppTemplate {
 }
 
 export interface WhatsAppStats {
-    totalMessages: number;
-    sentMessages: number;
-    deliveredMessages: number;
-    failedMessages: number;
+    total: number;
+    sent: number;
+    delivered: number;
+    read: number;
+    failed: number;
+    last24h: number;
+    last7d: number;
+    inbound: number;
+    outbound: number;
 }
 
 export interface SendMessageDto {
@@ -61,6 +66,7 @@ export interface WhatsAppSettings {
     whatsappPhoneNumberId: string;
     whatsappBusinessId: string;
     whatsappWebhookToken: string;
+    whatsappAppSecret: string;
     whatsappEnabled: boolean;
     isConfigured: boolean;
 }
@@ -70,6 +76,7 @@ export interface UpdateWhatsAppSettingsDto {
     whatsappPhoneNumberId?: string;
     whatsappBusinessId?: string;
     whatsappWebhookToken?: string;
+    whatsappAppSecret?: string;
     whatsappEnabled?: boolean;
 }
 

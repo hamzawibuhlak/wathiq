@@ -857,9 +857,9 @@ export function AnalyticsDashboardPage() {
                     </div>
                     <div className="space-y-2">
                         <p className="text-sm font-medium text-muted-foreground mb-2">حسب النوع:</p>
-                        {analytics?.documents?.byType?.map((type: any) => (
-                            <div key={type.type} className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
-                                <span>{type.type}</span>
+                        {analytics?.documents?.byType?.map((type: any, idx: number) => (
+                            <div key={`doc-${type.type || 'na'}-${idx}`} className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
+                                <span>{type.type || 'غير محدد'}</span>
                                 <span className="font-medium">{type.count}</span>
                             </div>
                         ))}
@@ -886,9 +886,9 @@ export function AnalyticsDashboardPage() {
                     </div>
                     <div className="space-y-2">
                         <p className="text-sm font-medium text-muted-foreground mb-2">حسب النوع:</p>
-                        {analytics?.clients?.byType?.map((type: any) => (
-                            <div key={type.type} className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
-                                <span>{type.type}</span>
+                        {analytics?.clients?.byType?.map((type: any, idx: number) => (
+                            <div key={`client-${type.type || 'na'}-${idx}`} className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
+                                <span>{type.type || 'غير محدد'}</span>
                                 <span className="font-medium">{type.count}</span>
                             </div>
                         ))}
@@ -921,9 +921,9 @@ export function AnalyticsDashboardPage() {
                     </div>
                     <div className="space-y-2">
                         <p className="text-sm font-medium text-muted-foreground mb-2">حسب الحالة:</p>
-                        {analytics?.tasks?.byStatus?.map((status: any) => (
-                            <div key={status.status} className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
-                                <span>{status.label}</span>
+                        {analytics?.tasks?.byStatus?.map((status: any, idx: number) => (
+                            <div key={`task-${status.status || 'na'}-${idx}`} className="flex items-center justify-between p-2 rounded-lg bg-muted/30">
+                                <span>{status.label || status.status || 'غير محدد'}</span>
                                 <span className="font-medium">{status.count}</span>
                             </div>
                         ))}

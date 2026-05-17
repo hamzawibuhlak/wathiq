@@ -769,12 +769,17 @@ model Permission {
   name        String // e.g., "cases.create", "invoices.delete"
   description String?
   module      String // e.g., "cases", "invoices", "clients"
-  action      String // e.g., "create", "read", "update", "delete"
+  action      String // e.g., "create", "read", "update", "delete", or any custom action
+  labelAr     String? // الاسم العربي للعرض في الواجهة
+  category    String   @default("core") // core | work | comms | marketing | analytics | hr | finance | settings | custom
+  isSystem    Boolean  @default(true) // false = صلاحية مضافة يدوياً يمكن حذفها
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   rolePermissions RolePermission[]
 
   @@unique([module, action])
+  @@index([category])
   @@map("permissions")
 }
 
@@ -3847,6 +3852,7 @@ model CompanySettings {
   whatsappPhoneNumberId String?
   whatsappBusinessId    String?
   whatsappWebhookToken  String?
+  whatsappAppSecret     String?
   whatsappEnabled       Boolean @default(false)
 
   primaryColor   String?

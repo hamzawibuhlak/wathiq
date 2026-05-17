@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useSlugPath } from '@/hooks/useSlugPath';
 import {
@@ -19,9 +20,16 @@ import {
 export function AccountingDashboardPage() {
     const { p } = useSlugPath();
 
-    const now = new Date();
-    const yearStart = new Date(now.getFullYear(), 0, 1).toISOString();
-    const today = now.toISOString();
+    // Memoize date range so the React Query keys are stable across re-renders.
+    // Without this, `now = new Date()` on each render created a new key every render,
+    // causing infinite refetches that hammered the API into a 429.
+    const { yearStart, today } = useMemo(() => {
+        const n = new Date();
+        return {
+            yearStart: new Date(n.getFullYear(), 0, 1).toISOString(),
+            today: n.toISOString(),
+        };
+    }, []);
 
     const income = useIncomeStatement(yearStart, today);
     const balanceSheet = useBalanceSheet(today);
@@ -30,9 +38,9 @@ export function AccountingDashboardPage() {
     const arAging = useARAging();
     const apAging = useAPAging();
 
-    const isLoading =
-        income.isLoading || balanceSheet.isLoading || ratios.isLoading ||
-        vat.isLoading || arAging.isLoading || apAging.isLoading;
+    // Show the page even if some queries are still loading — partial data is fine.
+    // Only block the entire page while the primary income query is loading on first mount.
+    const isLoading = income.isLoading && !income.data;
 
     const formatCurrency = (amount?: number) =>
         new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 })

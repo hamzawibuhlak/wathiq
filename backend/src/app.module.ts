@@ -77,7 +77,9 @@ import { SocialInboxModule } from './social-inbox/social-inbox.module';
 
         ThrottlerModule.forRoot([{
             ttl: 60000,
-            limit: 100,
+            // Generous limit for authenticated apps with many polling intervals
+            // (chat heartbeat, notifications, etc.). For production set THROTTLE_LIMIT in env.
+            limit: parseInt(process.env.THROTTLE_LIMIT || '5000', 10),
         }]),
 
         AuthModule,
