@@ -127,10 +127,10 @@ export function ActivityLogsPage() {
   const { data, isLoading, refetch } = useActivityLogs({ ...applied, page, limit });
   const { data: statsData } = useActivityStats();
   const { data: clientsData } = useQuery({
-    queryKey: ['clients-filter'], queryFn: () => clientsApi.getAll({ limit: 200 }),
+    queryKey: ['clients-filter'], queryFn: () => clientsApi.getAll({ limit: 100 }),
   });
   const { data: casesData } = useQuery({
-    queryKey: ['cases-filter'], queryFn: () => casesApi.getAll({ limit: 200 }),
+    queryKey: ['cases-filter'], queryFn: () => casesApi.getAll({ limit: 100 }),
   });
 
   const logs = (data?.data as any)?.data || [];

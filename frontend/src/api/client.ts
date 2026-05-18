@@ -60,23 +60,26 @@ api.interceptors.response.use(
 
         switch (status) {
             case 401:
-                // Unauthorized - logout user
                 useAuthStore.getState().logout();
-                toast.error('انتهت صلاحية الجلسة، يرجى تسجيل الدخول مرة أخرى');
+                toast.error('انتهت صلاحية الجلسة، يرجى تسجيل الدخول مرة أخرى', { id: 'session-expired' });
                 window.location.href = '/login';
                 break;
             case 403:
-                toast.error('ليس لديك صلاحية للوصول');
+                toast.error('ليس لديك صلاحية للوصول', { id: 'forbidden' });
                 break;
             case 404:
-                toast.error(message || 'العنصر غير موجود');
+                // Don't toast — 404 is often expected (record doesn't exist yet)
+                break;
+            case 429:
+                // Deduplicate with a fixed id so 6 simultaneous failures show one toast
+                toast.error('طلبات كثيرة جداً، يرجى الانتظار لحظة...', { id: 'rate-limit' });
                 break;
             case 422:
             case 400:
                 toast.error(message);
                 break;
             case 500:
-                toast.error('خطأ في الخادم، يرجى المحاولة لاحقاً');
+                toast.error('خطأ في الخادم، يرجى المحاولة لاحقاً', { id: 'server-error' });
                 break;
             default:
                 toast.error(message);

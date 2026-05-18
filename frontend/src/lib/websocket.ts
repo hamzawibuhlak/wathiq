@@ -16,7 +16,10 @@ export const connectWebSocket = () => {
         return null;
     }
 
-    if (socket?.connected) {
+    // Return the existing socket regardless of connection state — let Socket.IO
+    // handle reconnection internally. Creating a new socket on every call causes
+    // duplicate sockets and floods the server with connection attempts.
+    if (socket) {
         return socket;
     }
 
@@ -27,7 +30,8 @@ export const connectWebSocket = () => {
         transports: ['websocket', 'polling'],
         reconnection: true,
         reconnectionAttempts: 5,
-        reconnectionDelay: 1000,
+        reconnectionDelay: 2000,
+        reconnectionDelayMax: 10000,
     });
 
     socket.on('connect', () => {
