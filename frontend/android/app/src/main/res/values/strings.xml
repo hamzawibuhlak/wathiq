@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">وسم الثقة</string>
+    <string name="title_activity_main">وسم الثقة</string>
+    <string name="package_name">sa.bewathiq.app</string>
+    <string name="custom_url_scheme">sa.bewathiq.app</string>
+</resources>

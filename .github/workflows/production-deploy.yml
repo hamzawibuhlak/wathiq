@@ -175,7 +175,10 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
-          context: ./frontend
+          # Dockerfile is multi-stage and copies both `marketing/` and `frontend/`
+          # from the repo root, so the build context must be the repo root.
+          context: .
+          file: ./frontend/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

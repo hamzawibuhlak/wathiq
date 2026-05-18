@@ -10,9 +10,27 @@
         "preview": "vite preview",
         "test": "vitest run",
         "test:watch": "vitest",
-        "test:coverage": "vitest run --coverage"
+        "test:coverage": "vitest run --coverage",
+
+        "cap:sync": "npm run build && cap sync",
+        "ios": "npm run build && cap sync ios && cap open ios",
+        "ios:run": "npm run build && cap sync ios && cap run ios",
+        "android": "npm run build && cap sync android && cap open android",
+        "android:run": "npm run build && cap sync android && cap run android",
+
+        "tauri": "tauri",
+        "tauri:dev": "tauri dev",
+        "tauri:build": "tauri build"
     },
     "dependencies": {
+        "@capacitor/android": "^8.3.4",
+        "@capacitor/app": "^8.1.0",
+        "@capacitor/cli": "^8.3.4",
+        "@capacitor/core": "^8.3.4",
+        "@capacitor/haptics": "^8.0.2",
+        "@capacitor/ios": "^8.3.4",
+        "@capacitor/keyboard": "^8.0.3",
+        "@capacitor/status-bar": "^8.0.2",
         "@fullcalendar/core": "^6.1.20",
         "@fullcalendar/daygrid": "^6.1.20",
         "@fullcalendar/interaction": "^6.1.20",
@@ -38,6 +56,7 @@
         "@radix-ui/react-tooltip": "^1.0.7",
         "@tanstack/react-query": "^5.17.19",
         "@tanstack/react-query-devtools": "^5.17.18",
+        "@tauri-apps/api": "^2.11.0",
         "axios": "^1.6.7",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.0",
@@ -64,6 +83,7 @@
         "zustand": "^4.5.0"
     },
     "devDependencies": {
+        "@tauri-apps/cli": "^2.11.2",
         "@testing-library/dom": "^10.4.1",
         "@testing-library/jest-dom": "^6.9.1",
         "@testing-library/react": "^16.3.2",

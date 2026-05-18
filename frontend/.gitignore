@@ -44,3 +44,22 @@ pnpm-debug.log*
 *.njsproj
 *.sln
 *.sw?
+
+# Capacitor / native build artifacts
+android/.gradle/
+android/local.properties
+android/.idea/
+android/app/build/
+android/build/
+android/captures/
+android/app/release/
+ios/App/Pods/
+ios/App/build/
+ios/DerivedData/
+ios/App/Podfile.lock
+ios/.symlinks
+ios/build/
+
+# Tauri build artifacts
+src-tauri/target/
+src-tauri/gen/

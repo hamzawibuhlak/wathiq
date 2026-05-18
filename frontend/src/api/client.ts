@@ -2,8 +2,18 @@ import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'ax
 import { useAuthStore } from '@/stores/auth.store';
 import toast from 'react-hot-toast';
 
+// In Capacitor native apps the bundled web view has no nginx proxy, so a relative
+// "/api" path resolves to the local capacitor:// scheme. Native builds must hit
+// the absolute production API URL instead.
+const isCapacitor = typeof window !== 'undefined' &&
+    (window as any).Capacitor?.isNativePlatform?.() === true;
+
+const NATIVE_API_URL = import.meta.env.VITE_NATIVE_API_URL || 'https://bewathiq.com/api';
+
 // API base URL
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+const API_BASE_URL = isCapacitor
+    ? NATIVE_API_URL
+    : (import.meta.env.VITE_API_URL || '/api');
 
 // Create axios instance
 const api: AxiosInstance = axios.create({
