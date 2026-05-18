@@ -38,9 +38,8 @@ export function AccountingDashboardPage() {
     const arAging = useARAging();
     const apAging = useAPAging();
 
-    // Show the page even if some queries are still loading — partial data is fine.
-    // Only block the entire page while the primary income query is loading on first mount.
-    const isLoading = income.isLoading && !income.data;
+    // Only show full-page loader on first fetch with no cached data and no error.
+    const isLoading = income.isPending && !income.isError;
 
     const formatCurrency = (amount?: number) =>
         new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR', maximumFractionDigits: 0 })

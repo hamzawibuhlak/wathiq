@@ -175,11 +175,14 @@ export function useRejectExpense() {
 // ═══════════════════════════════════════════════════════════════════
 // Financial Statements
 // ═══════════════════════════════════════════════════════════════════
+const STATEMENT_STALE = 10 * 60 * 1000; // financial statements stale after 10 min
+
 export function useIncomeStatement(startDate: string, endDate: string) {
     return useQuery({
         queryKey: accountingKeys.incomeStatement(startDate, endDate),
         queryFn: () => accountingApi.getIncomeStatement(startDate, endDate),
         enabled: !!(startDate && endDate),
+        staleTime: STATEMENT_STALE,
     });
 }
 
@@ -188,6 +191,7 @@ export function useBalanceSheet(date: string) {
         queryKey: accountingKeys.balanceSheet(date),
         queryFn: () => accountingApi.getBalanceSheet(date),
         enabled: !!date,
+        staleTime: STATEMENT_STALE,
     });
 }
 
@@ -196,6 +200,7 @@ export function useFinancialRatios(date: string) {
         queryKey: accountingKeys.ratios(date),
         queryFn: () => accountingApi.getFinancialRatios(date),
         enabled: !!date,
+        staleTime: STATEMENT_STALE,
     });
 }
 
@@ -204,6 +209,7 @@ export function useVATReport(startDate: string, endDate: string) {
         queryKey: accountingKeys.vat(startDate, endDate),
         queryFn: () => accountingApi.getVATReport(startDate, endDate),
         enabled: !!(startDate && endDate),
+        staleTime: STATEMENT_STALE,
     });
 }
 
@@ -211,6 +217,7 @@ export function useARAging() {
     return useQuery({
         queryKey: accountingKeys.arAging(),
         queryFn: () => accountingApi.getARAging(),
+        staleTime: STATEMENT_STALE,
     });
 }
 
@@ -218,5 +225,6 @@ export function useAPAging() {
     return useQuery({
         queryKey: accountingKeys.apAging(),
         queryFn: () => accountingApi.getAPAging(),
+        staleTime: STATEMENT_STALE,
     });
 }
